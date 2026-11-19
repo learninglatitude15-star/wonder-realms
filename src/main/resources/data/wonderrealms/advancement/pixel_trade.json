@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:emerald_pixel"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.pixel_trade.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.pixel_trade.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:dewdrop"
+}

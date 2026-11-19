@@ -1,0 +1,26 @@
+{
+  "criteria": {
+    "joined": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:shrinking_draught"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.root.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.root.description"
+    },
+    "background": "wonderrealms:gui/advancements/backgrounds/sky",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "requirements": [
+    [
+      "joined"
+    ]
+  ]
+}

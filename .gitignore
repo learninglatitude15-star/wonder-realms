@@ -1,0 +1,16 @@
+# Gradle / Loom output
+.gradle/
+build/
+out/
+run/
+bin/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# OS and Python leftovers
+.DS_Store
+__pycache__/
+*.pyc

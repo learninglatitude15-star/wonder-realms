@@ -1,0 +1,28 @@
+{
+  "criteria": {
+    "crafted": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipes": "wonderrealms:diamond_from_pixels"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:diamond_pixel"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.pixel_gem.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.pixel_gem.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "crafted"
+    ]
+  ],
+  "parent": "wonderrealms:pixel_trade"
+}

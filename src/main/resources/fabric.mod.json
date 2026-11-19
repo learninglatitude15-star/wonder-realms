@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "wonderrealms",
+	"version": "${version}",
+	"name": "Wonder Realms",
+	"description": "Worlds beyond the everyday. Tiny Worlds: shrink to insect size, carve blocks pixel by pixel and trade with the Pixel Miners. Dragons: win eggs from the dragons of the sky islands, raise them, saddle up and fly, breathing fire, frost or lightning, and even hatch the End's Dragon Egg. Sky Islands & Airships: floating islands with dragon roosts, ruins and pillager sky outposts to conquer, and airships to build or capture.",
+	"authors": [
+		"lightdance"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/wonderrealms/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.wonderrealms.WonderRealms"
+		],
+		"client": [
+			"com.wonderrealms.client.WonderRealmsClient"
+		]
+	},
+	"mixins": [
+		"wonderrealms.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*",
+		"geckolib": ">=5.5.6"
+	}
+}

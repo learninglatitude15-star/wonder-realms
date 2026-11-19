@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "WWW",
+    "SFS",
+    "PBP"
+  ],
+  "key": {
+    "W": "#minecraft:wool",
+    "S": "minecraft:string",
+    "F": "minecraft:furnace",
+    "P": "#minecraft:planks",
+    "B": "#minecraft:boats"
+  },
+  "result": {
+    "id": "wonderrealms:airship",
+    "count": 1
+  }
+}

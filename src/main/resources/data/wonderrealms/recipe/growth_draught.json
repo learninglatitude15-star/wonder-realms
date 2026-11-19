@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:glass_bottle",
+    "minecraft:red_mushroom",
+    "minecraft:bone_meal"
+  ],
+  "result": {
+    "id": "wonderrealms:growth_draught",
+    "count": 1
+  }
+}

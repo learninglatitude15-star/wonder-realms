@@ -1,0 +1,29 @@
+{
+  "criteria": {
+    "shrunk": {
+      "trigger": "minecraft:effects_changed",
+      "conditions": {
+        "effects": {
+          "wonderrealms:shrunken": {}
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:shrinking_draught"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.shrink.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.shrink.description"
+    }
+  },
+  "requirements": [
+    [
+      "shrunk"
+    ]
+  ],
+  "parent": "wonderrealms:root"
+}

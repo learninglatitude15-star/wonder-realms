@@ -1,0 +1,35 @@
+{
+  "criteria": {
+    "rode": {
+      "trigger": "minecraft:started_riding",
+      "conditions": {
+        "player": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:vehicle": {
+              "minecraft:entity_type": "#wonderrealms:dragons"
+            }
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:saddle"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.ride_dragon.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.ride_dragon.description"
+    }
+  },
+  "requirements": [
+    [
+      "rode"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

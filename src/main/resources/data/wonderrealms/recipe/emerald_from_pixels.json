@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel",
+    "wonderrealms:emerald_pixel"
+  ],
+  "result": {
+    "id": "minecraft:emerald",
+    "count": 1
+  }
+}

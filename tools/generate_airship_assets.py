@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Generates the airship model, animations, skin, item icon, recipe and lang.
+
+Run from the wonder-realms/tools folder:  python3 generate_airship_assets.py
+"""
+import json
+from pathlib import Path
+
+from generate_dragon_assets import box_uv_size, faces, noise, shade, write_png
+
+ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ASSETS = ROOT / "assets" / "wonderrealms"
+DATA = ROOT / "data" / "wonderrealms"
+NS = "wonderrealms"
+TEX = 256
+
+COLORS = {"wood": (0x9a, 0x6a, 0x3a), "darkwood": (0x5a, 0x3a, 0x20), "iron": (0x6a, 0x6e, 0x74),
+          "rope": (0xc8, 0xa8, 0x70), "red": (0xc0, 0x30, 0x2a), "cream": (0xf0, 0xe4, 0xc8)}
+
+# Faces -Z (the bow points north). Units are pixels.
+BONES = [
+    ("root", None, [0, 0, 0], []),
+    ("hull", "root", [0, 0, 0], [
+        ("floor", [-12, 0, -24], [24, 2, 48], "wood", False),
+        ("keel", [-2, -2, -22], [4, 2, 44], "darkwood", False),
+        ("side", [10, 2, -24], [2, 8, 48], "wood", False),
+        ("side", [-12, 2, -24], [2, 8, 48], "wood", True),
+        ("end", [-10, 2, -24], [20, 8, 2], "wood", False),
+        ("end", [-10, 2, 22], [20, 8, 2], "wood", True),
+        ("engine", [-4, 2, 13], [8, 7, 6], "iron", False),
+        ("chimney", [-1, 9, 15], [2, 7, 2], "iron", False),
+    ]),
+    ("ropes", "root", [0, 10, 0], [
+        ("rope", [10, 10, -19], [1, 28, 1], "rope", False),
+        ("rope", [-11, 10, -19], [1, 28, 1], "rope", False),
+        ("rope", [10, 10, 18], [1, 28, 1], "rope", False),
+        ("rope", [-11, 10, 18], [1, 28, 1], "rope", False),
+    ]),
+    ("balloon", "root", [0, 49, 0], [("envelope", [-15, 38, -30], [30, 22, 60], "cloth", False)]),
+    ("wheel", "hull", [0, 13, 19], [
+        ("wheel_post", [-0.5, 2, 19], [1, 10, 1], "darkwood", False),
+        ("spoke_h", [-3, 12.5, 18.5], [6, 1, 1], "wood", False),
+        ("spoke_v", [-0.5, 10, 18.5], [1, 6, 1], "wood", False),
+    ]),
+    ("propeller", "root", [0, 8, 30], [
+        ("shaft", [-0.5, 7.5, 24], [1, 1, 6], "iron", False),
+        ("blade_h", [-7, 7.5, 30], [14, 1, 1], "iron", False),
+        ("blade_v", [-0.5, 1, 30], [1, 14, 1], "iron", False),
+    ]),
+]
+
+
+def pack():
+    spots, order = {}, []
+    for _, _, _, cubes in BONES:
+        for name, _, size, kind, _ in cubes:
+            if name not in spots:
+                spots[name] = (size, kind)
+                order.append(name)
+    placed, x, y, shelf = {}, 0, 0, 0
+    for name in sorted(order, key=lambda n: -box_uv_size(spots[n][0])[1]):
+        size, kind = spots[name]
+        bw, bh = box_uv_size(size)
+        if x + bw > TEX:
+            x, y, shelf = 0, y + shelf, 0
+        assert y + bh <= TEX, name
+        placed[name] = (x, y, size, kind)
+        x += bw
+        shelf = max(shelf, bh)
+    return placed
+
+
+def skin(placed):
+    img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
+    for name, (u, v, size, kind) in placed.items():
+        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
+            for yy in range(fh):
+                for xx in range(fw):
+                    px, py = fx + xx, fy + yy
+                    n = noise(px, py, 9)
+                    if kind == "cloth":
+                        c = COLORS["red"] if (xx // 6) % 2 == 0 else COLORS["cream"]
+                        c = shade(c, 0.92 + 0.1 * n)
+                    elif kind == "wood":
+                        c = shade(COLORS["wood"], 0.85 + 0.25 * noise(px // 4, py, 2))
+                        if (yy % 4 == 0 and face in ("north", "south", "east", "west")) or (xx % 4 == 0 and face in ("top", "bottom")):
+                            c = shade(COLORS["wood"], 0.7)  # plank seams
+                    elif kind == "iron":
+                        c = shade(COLORS["iron"], 0.85 + 0.3 * n)
+                        if name == "engine" and face == "north" and 2 <= yy <= 4 and 2 <= xx <= fw - 3:
+                            c = (0xff, 0x9a, 0x30)  # firebox glow
+                    else:
+                        c = shade(COLORS[kind], 0.85 + 0.25 * n)
+                    img[py][px] = (*c, 255)
+    return img
+
+
+def geometry(placed):
+    bones = []
+    for name, parent, pivot, cubes in BONES:
+        bone = {"name": name, "pivot": pivot}
+        if parent:
+            bone["parent"] = parent
+        if cubes:
+            bone["cubes"] = []
+            for cname, origin, size, _, mirror in cubes:
+                u, v, _, _ = placed[cname]
+                cube = {"origin": origin, "size": size, "uv": [u, v]}
+                if mirror:
+                    cube["mirror"] = True
+                bone["cubes"].append(cube)
+        bones.append(bone)
+    return {"format_version": "1.12.0", "minecraft:geometry": [{
+        "description": {"identifier": "geometry.airship", "texture_width": TEX, "texture_height": TEX,
+                        "visible_bounds_width": 6, "visible_bounds_height": 6, "visible_bounds_offset": [0, 2, 0]},
+        "bones": bones}]}
+
+
+def kf(*pairs):
+    return {f"{t:.2f}": v for t, v in pairs}
+
+
+def animations():
+    bob = {"balloon": {"position": kf((0, [0, 0, 0]), (2, [0, 0.6, 0]), (4, [0, 0, 0]))}}
+    idle = {**bob, "propeller": {"rotation": [0, 0, 0]}}
+    fly = {"balloon": {"position": kf((0, [0, 0, 0]), (1, [0, 0.4, 0]), (2, [0, 0, 0])),
+                       "rotation": kf((0, [1, 0, 0]), (1, [-1, 0, 0]), (2, [1, 0, 0]))},
+           "propeller": {"rotation": kf((0, [0, 0, 0]), (0.2, [0, 0, 180]), (0.4, [0, 0, 360]))}}
+    anim = lambda bones, length: {"loop": True, "animation_length": length, "bones": bones}
+    return {"format_version": "1.8.0", "animations": {"misc.idle": anim(idle, 4), "move.fly": anim(fly, 0.4 if False else 2)}}
+
+
+ICON = [
+    "................",
+    "....RRCCRRCC....",
+    "...RRCCRRCCRR...",
+    "..RRCCRRCCRRCC..",
+    "..RRCCRRCCRRCC..",
+    "...RRCCRRCCRR...",
+    "....RRCCRRCC....",
+    ".....r....r.....",
+    ".....r....r.....",
+    ".....r....r.....",
+    "..WWWWWWWWWWWW..",
+    "..WwwwwwwwwwwW..",
+    "...WWWWWWWWWW...",
+    "....dddddddd....",
+    "................",
+    "................",
+]
+ICON_PAL = {"R": (0xc0, 0x30, 0x2a, 255), "C": (0xf0, 0xe4, 0xc8, 255), "r": (0xc8, 0xa8, 0x70, 255),
+            "W": (0x9a, 0x6a, 0x3a, 255), "w": (0x7a, 0x52, 0x2a, 255), "d": (0x5a, 0x3a, 0x20, 255)}
+
+
+def main():
+    placed = pack()
+    (ASSETS / "geckolib" / "models" / "entity" / "airship.geo.json").write_text(json.dumps(geometry(placed), indent=1))
+    # Propeller spins faster than the balloon sways: give it its own short loop inside a longer animation.
+    anims = animations()
+    fly = anims["animations"]["move.fly"]
+    fly["bones"]["propeller"]["rotation"] = {f"{t:.2f}": [0, 0, a] for t, a in [(i * 0.1, (i % 4) * 90 + (360 * (i // 4))) for i in range(21)]}
+    (ASSETS / "geckolib" / "animations" / "entity" / "airship.animation.json").write_text(json.dumps(anims, indent=1))
+    write_png(ASSETS / "textures" / "entity" / "airship.png", skin(placed))
+
+    icon = [[ICON_PAL.get(ch, (0, 0, 0, 0)) for ch in row] for row in ICON]
+    write_png(ASSETS / "textures" / "item" / "airship.png", icon)
+    (ASSETS / "models" / "item" / "airship.json").write_text(json.dumps({"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/airship"}}, indent=2))
+    (ASSETS / "items" / "airship.json").write_text(json.dumps({"model": {"type": "minecraft:model", "model": f"{NS}:item/airship"}}, indent=2))
+    (DATA / "recipe" / "airship.json").write_text(json.dumps({
+        "type": "minecraft:crafting_shaped", "category": "misc",
+        "pattern": ["WWW", "SFS", "PBP"],
+        "key": {"W": "#minecraft:wool", "S": "minecraft:string", "F": "minecraft:furnace", "P": "#minecraft:planks", "B": "#minecraft:boats"},
+        "result": {"id": f"{NS}:airship", "count": 1}}, indent=2))
+
+    lang_path = ASSETS / "lang" / "en_us.json"
+    lang = json.loads(lang_path.read_text())
+    lang["entity.wonderrealms.airship"] = "Airship"
+    lang["item.wonderrealms.airship"] = "Airship"
+    lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
+    print("Packed", len(placed), "airship cubes; wrote model, animations, skin, icon, recipe")
+
+
+if __name__ == "__main__":
+    main()

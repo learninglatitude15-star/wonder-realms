@@ -1,0 +1,29 @@
+{
+  "criteria": {
+    "drank": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "wonderrealms:dewdrop"
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dewdrop"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.dewdrop.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.dewdrop.description"
+    }
+  },
+  "requirements": [
+    [
+      "drank"
+    ]
+  ],
+  "parent": "wonderrealms:shrink"
+}

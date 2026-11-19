@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel",
+    "wonderrealms:diamond_pixel"
+  ],
+  "result": {
+    "id": "minecraft:diamond",
+    "count": 1
+  }
+}

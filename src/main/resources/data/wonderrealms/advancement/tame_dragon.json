@@ -1,0 +1,33 @@
+{
+  "criteria": {
+    "tamed": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "#wonderrealms:dragons"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:lead"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.tame_dragon.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.tame_dragon.description"
+    }
+  },
+  "requirements": [
+    [
+      "tamed"
+    ]
+  ],
+  "parent": "wonderrealms:root"
+}

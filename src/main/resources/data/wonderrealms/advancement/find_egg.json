@@ -1,0 +1,35 @@
+{
+  "criteria": {
+    "egg": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "wonderrealms:ember_egg",
+              "wonderrealms:frost_egg",
+              "wonderrealms:storm_egg"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:ember_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.find_egg.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.find_egg.description"
+    }
+  },
+  "requirements": [
+    [
+      "egg"
+    ]
+  ],
+  "parent": "wonderrealms:root"
+}
