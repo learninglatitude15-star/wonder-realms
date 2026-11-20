@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:cake"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.two_riders.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.two_riders.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:ride_dragon"
+}

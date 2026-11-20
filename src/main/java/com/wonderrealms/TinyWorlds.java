@@ -21,6 +21,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -41,6 +42,7 @@ import net.minecraft.world.level.block.state.BlockState;
  *   <li>Bugs are bosses now: spiders, silverfish, bees and endermites hit you twice as hard, and beating one while
  *   tiny drops a hoard of loot.</li>
  *   <li>Grass hides dewdrops you can only find when you're small enough to see them.</li>
+ *   <li>A Shrink Ray shrinks mobs for thirty seconds; a Pixel Chisel carves pixels at full size.</li>
  * </ul>
  */
 public final class TinyWorlds {
@@ -48,6 +50,8 @@ public final class TinyWorlds {
 	/** Arthropods hit a shrunken player this much harder. */
 	public static final float BUG_DAMAGE_MULTIPLIER = 2.0F;
 	private static final float DEWDROP_CHANCE = 0.4F;
+	/** A shrunken mob hits anything full-sized this much more weakly. */
+	public static final float SHRUNKEN_MOB_DAMAGE_MULTIPLIER = 0.25F;
 
 	public static final Holder<MobEffect> SHRUNKEN = Registry.registerForHolder(BuiltInRegistries.MOB_EFFECT, WonderRealms.id("shrunken"), new ShrunkenEffect());
 
@@ -68,6 +72,10 @@ public final class TinyWorlds {
 			.consumeSeconds(0.6F)
 			.onConsume(new ApplyStatusEffectsConsumeEffect(new MobEffectInstance(MobEffects.REGENERATION, 20 * 5, 0)))
 			.build())));
+	/** Zaps a mob down to bug size for thirty seconds. */
+	public static final Item SHRINK_RAY = item("shrink_ray", p -> new ShrinkRayItem(p.durability(64)));
+	/** Carves pixels at full size. */
+	public static final Item PIXEL_CHISEL = item("pixel_chisel", p -> new Item(p.durability(250)));
 
 	private TinyWorlds() {
 	}
@@ -87,6 +95,10 @@ public final class TinyWorlds {
 			output.accept(GROWTH_DRAUGHT);
 			output.accept(DEWDROP);
 		});
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> {
+			output.accept(SHRINK_RAY);
+			output.accept(PIXEL_CHISEL);
+		});
 
 		// Dewdrops cling to grass, too small to notice at normal size.
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
@@ -105,9 +117,20 @@ public final class TinyWorlds {
 		});
 	}
 
-	/** How much harder something hits a tiny target. Bugs tower over you now. */
+	/**
+	 * How much harder (or softer) a hit lands, given who's tiny. Full-sized bugs tower over a tiny target and hit it
+	 * twice as hard; a mob shrunk by a Shrink Ray can only nibble at anything full-sized.
+	 */
 	public static float damageMultiplier(LivingEntity target, DamageSource source) {
-		if (isTiny(target) && source.getEntity() instanceof LivingEntity attacker && attacker.is(EntityTypeTags.ARTHROPOD)) {
+		if (!(source.getEntity() instanceof LivingEntity attacker)) {
+			return 1F;
+		}
+		boolean targetTiny = isTiny(target);
+		boolean attackerTiny = isTiny(attacker);
+		if (attackerTiny && !targetTiny && !(attacker instanceof Player)) {
+			return SHRUNKEN_MOB_DAMAGE_MULTIPLIER;
+		}
+		if (targetTiny && !attackerTiny && attacker.is(EntityTypeTags.ARTHROPOD)) {
 			return BUG_DAMAGE_MULTIPLIER;
 		}
 		return 1F;

@@ -9,6 +9,8 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -29,7 +31,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
 import net.minecraft.world.level.levelgen.structure.Structure;
 
-/** The airship: its entity type, the item that places it, and the airships pillager outposts send up. */
+/** The airship: its entity type, the item that places it, its cannon and cannonballs, and the airships pillager outposts send up. */
 public final class Airships {
 	private static final ResourceKey<EntityType<?>> TYPE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, WonderRealms.id("airship"));
 	public static final EntityType<AirshipEntity> TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, TYPE_KEY,
@@ -40,6 +42,18 @@ public final class Airships {
 
 	private static final ResourceKey<Item> ITEM_KEY = ResourceKey.create(Registries.ITEM, WonderRealms.id("airship"));
 	public static final Item AIRSHIP_ITEM = Registry.register(BuiltInRegistries.ITEM, ITEM_KEY, new AirshipItem(new Item.Properties().setId(ITEM_KEY).stacksTo(1)));
+
+	private static final ResourceKey<Item> CANNON_KEY = ResourceKey.create(Registries.ITEM, WonderRealms.id("airship_cannon"));
+	/** Use on an airship to mount a cannon at its bow. */
+	public static final Item CANNON_ITEM = Registry.register(BuiltInRegistries.ITEM, CANNON_KEY, new Item(new Item.Properties().setId(CANNON_KEY).stacksTo(1)));
+
+	private static final ResourceKey<EntityType<?>> CANNONBALL_KEY = ResourceKey.create(Registries.ENTITY_TYPE, WonderRealms.id("cannonball"));
+	public static final EntityType<Cannonball> CANNONBALL = Registry.register(BuiltInRegistries.ENTITY_TYPE, CANNONBALL_KEY,
+		EntityType.Builder.<Cannonball>of(Cannonball::new, MobCategory.MISC)
+			.sized(0.4F, 0.4F)
+			.clientTrackingRange(8)
+			.updateInterval(10)
+			.build(CANNONBALL_KEY));
 
 	private Airships() {
 	}
@@ -53,7 +67,16 @@ public final class Airships {
 	private static final long OUTPOST_RESTOCK_TICKS = 48000;
 
 	public static void init() {
-		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> output.accept(AIRSHIP_ITEM));
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> {
+			output.accept(AIRSHIP_ITEM);
+			output.accept(CANNON_ITEM);
+		});
+		PayloadTypeRegistry.serverboundPlay().register(CannonPayload.TYPE, CannonPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(CannonPayload.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AirshipEntity ship && ship.getControllingPassenger() == context.player()) {
+				ship.fireCannon(context.player(), context.player().getLookAngle());
+			}
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % OUTPOST_CHECK_TICKS == 0) {
 				launchOutpostAirships(server.overworld());

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generates the airship model, animations, skin, item icon, recipe and lang.
+"""Generates the airship models (with and without a bow cannon), animations, skins (the classic striped balloon
+and one per dye color), item icon, recipe and lang.
 
 Run from the wonder-realms/tools folder:  python3 generate_airship_assets.py
 """
@@ -15,7 +16,23 @@ NS = "wonderrealms"
 TEX = 256
 
 COLORS = {"wood": (0x9a, 0x6a, 0x3a), "darkwood": (0x5a, 0x3a, 0x20), "iron": (0x6a, 0x6e, 0x74),
-          "rope": (0xc8, 0xa8, 0x70), "red": (0xc0, 0x30, 0x2a), "cream": (0xf0, 0xe4, 0xc8)}
+          "rope": (0xc8, 0xa8, 0x70), "red": (0xc0, 0x30, 0x2a), "cream": (0xf0, 0xe4, 0xc8), "gunmetal": (0x2e, 0x30, 0x34)}
+
+# Dye colors in Minecraft's id order, with their names: each gets a balloon striped in that color and a lighter tint.
+DYES = [("white", 0xF9FFFE), ("orange", 0xF9801D), ("magenta", 0xC74EBD), ("light_blue", 0x3AB3DA), ("yellow", 0xFED83D),
+        ("lime", 0x80C71F), ("pink", 0xF38BAA), ("gray", 0x474F52), ("light_gray", 0x9D9D97), ("cyan", 0x169C9C),
+        ("purple", 0x8932B8), ("blue", 0x3C44AA), ("brown", 0x835432), ("green", 0x5E7C16), ("red", 0xB02E26), ("black", 0x1D1D21)]
+
+
+def rgb(value):
+    return (value >> 16 & 0xFF, value >> 8 & 0xFF, value & 0xFF)
+
+
+def tint(color, amount):
+    """Mixes a color toward cream (amount > 0) or toward black (amount < 0)."""
+    target = COLORS["cream"] if amount > 0 else (0, 0, 0)
+    a = abs(amount)
+    return tuple(int(c + (t - c) * a) for c, t in zip(color, target))
 
 # Faces -Z (the bow points north). Units are pixels.
 BONES = [
@@ -41,6 +58,12 @@ BONES = [
         ("wheel_post", [-0.5, 2, 19], [1, 10, 1], "darkwood", False),
         ("spoke_h", [-3, 12.5, 18.5], [6, 1, 1], "wood", False),
         ("spoke_v", [-0.5, 10, 18.5], [1, 6, 1], "wood", False),
+    ]),
+    # Only in the cannon model: a gun carriage behind the bow wall, its barrel run out over the top.
+    ("cannon", "hull", [0, 2, -20], [
+        ("carriage", [-3, 2, -21], [6, 8, 4], "darkwood", False),
+        ("barrel", [-1.5, 10, -31], [3, 3, 12], "gunmetal", False),
+        ("muzzle", [-2, 9.5, -32], [4, 4, 1], "gunmetal", False),
     ]),
     ("propeller", "root", [0, 8, 30], [
         ("shaft", [-0.5, 7.5, 24], [1, 1, 6], "iron", False),
@@ -70,7 +93,7 @@ def pack():
     return placed
 
 
-def skin(placed):
+def skin(placed, stripes=(COLORS["red"], COLORS["cream"])):
     img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
     for name, (u, v, size, kind) in placed.items():
         for face, (fx, fy, fw, fh) in faces(u, v, size).items():
@@ -79,7 +102,7 @@ def skin(placed):
                     px, py = fx + xx, fy + yy
                     n = noise(px, py, 9)
                     if kind == "cloth":
-                        c = COLORS["red"] if (xx // 6) % 2 == 0 else COLORS["cream"]
+                        c = stripes[0] if (xx // 6) % 2 == 0 else stripes[1]
                         c = shade(c, 0.92 + 0.1 * n)
                     elif kind == "wood":
                         c = shade(COLORS["wood"], 0.85 + 0.25 * noise(px // 4, py, 2))
@@ -95,9 +118,11 @@ def skin(placed):
     return img
 
 
-def geometry(placed):
+def geometry(placed, cannon=False):
     bones = []
     for name, parent, pivot, cubes in BONES:
+        if name == "cannon" and not cannon:
+            continue
         bone = {"name": name, "pivot": pivot}
         if parent:
             bone["parent"] = parent
@@ -155,12 +180,17 @@ ICON_PAL = {"R": (0xc0, 0x30, 0x2a, 255), "C": (0xf0, 0xe4, 0xc8, 255), "r": (0x
 def main():
     placed = pack()
     (ASSETS / "geckolib" / "models" / "entity" / "airship.geo.json").write_text(json.dumps(geometry(placed), indent=1))
+    (ASSETS / "geckolib" / "models" / "entity" / "airship_cannon.geo.json").write_text(json.dumps(geometry(placed, cannon=True), indent=1))
     # Propeller spins faster than the balloon sways: give it its own short loop inside a longer animation.
     anims = animations()
     fly = anims["animations"]["move.fly"]
     fly["bones"]["propeller"]["rotation"] = {f"{t:.2f}": [0, 0, a] for t, a in [(i * 0.1, (i % 4) * 90 + (360 * (i // 4))) for i in range(21)]}
     (ASSETS / "geckolib" / "animations" / "entity" / "airship.animation.json").write_text(json.dumps(anims, indent=1))
     write_png(ASSETS / "textures" / "entity" / "airship.png", skin(placed))
+    for name, value in DYES:
+        color = rgb(value)
+        light = name in ("white", "light_gray", "yellow")
+        write_png(ASSETS / "textures" / "entity" / f"airship_{name}.png", skin(placed, (color, tint(color, -0.25) if light else tint(color, 0.45))))
 
     icon = [[ICON_PAL.get(ch, (0, 0, 0, 0)) for ch in row] for row in ICON]
     write_png(ASSETS / "textures" / "item" / "airship.png", icon)
@@ -176,8 +206,9 @@ def main():
     lang = json.loads(lang_path.read_text())
     lang["entity.wonderrealms.airship"] = "Airship"
     lang["item.wonderrealms.airship"] = "Airship"
+    lang["entity.wonderrealms.cannonball"] = "Cannonball"
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
-    print("Packed", len(placed), "airship cubes; wrote model, animations, skin, icon, recipe")
+    print("Packed", len(placed), "airship cubes; wrote 2 models, animations,", len(DYES) + 1, "skins, icon, recipe")
 
 
 if __name__ == "__main__":

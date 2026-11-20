@@ -4,6 +4,18 @@ Shrink to the size of a bug, raise and ride elemental dragons, and raid pillager
 
 **Three adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
 
+## ✨ New in 1.2
+
+- **Elemental sky islands:** volcanic Ember islands, snowy Frost islands, Storm islands crowned with lightning rods, and lush Verdant islands. Each roost's dragon matches its island.
+- **The Verdant Dragon:** a nature dragon whose breath poisons foes and makes plants burst into growth.
+- **Dragon armor** in iron, gold, diamond and netherite, which shows on your dragon.
+- **The Dragon Whistle** calls your dragons to you from far away.
+- **Two riders:** a friend can climb on behind you.
+- **Airship cannons and dyed balloons,** and pillager ships that fire back.
+- **The Shrink Ray** shrinks mobs to bug size. A tiny creeper is not scary.
+- **The Pixel Chisel** lets you carve pixels at full size.
+- **12 new advancements.**
+
 ---
 
 ## 🐜 Tiny Worlds
@@ -46,17 +58,26 @@ Nine **Diamond Pixels** craft into a whole diamond, and nine **Emerald Pixels** 
 
 At your size, spiders, cave spiders, silverfish, bees and endermites are giants, and they hit **twice as hard**. Beat one while you're tiny and it's a boss victory. It drops a hoard: string, spider eyes and cobwebs, with a chance of emeralds or a fresh Shrinking Draught.
 
+### The Shrink Ray
+
+Turn the tables. Aim the **Shrink Ray** at a mob and zap it down to bug size for 30 seconds. A shrunken mob can only do **a quarter of its usual damage** to anything full-sized, so a shrunken zombie is a nuisance and a shrunken creeper's blast barely stings. Like you, they can scuttle up walls while they're tiny. It works on almost anything except players and bosses.
+
+### The Pixel Chisel
+
+Love carving but don't want to shrink? Hold a **Pixel Chisel** and you can carve blocks pixel by pixel at full size, quickly, whatever the block.
+
 ---
 
 ## 🐉 Dragons
 
-### The four dragons
+### The five dragons
 
 | Dragon | Breath | Favourite food |
 | --- | --- | --- |
 | 🔥 **Ember** | Fire: sets targets alight, melts snow and ice, and lights campfires and candles | Meat |
 | ❄️ **Frost** | Ice: slows and freezes targets, turns water into ice you can walk on, and cools lava into obsidian | Meat or fish |
 | ⚡ **Storm** | Lightning: crackling hits that sometimes call down a lightning bolt | Meat |
+| 🌿 **Verdant** | Spores: poisons foes, makes plants and crops burst into growth, and turns bare dirt to grass | Meat, berries or apples |
 | 🟣 **Ender** | Ender fire: lifts targets off their feet | Meat or chorus fruit |
 
 Fire breath never sets your blocks on fire, and storm lightning won't burn your house down.
@@ -99,7 +120,24 @@ Put a **saddle** on your fully grown dragon (it shows on the dragon), then use i
 | Climb | Hold jump |
 | Gain speed | Dive by looking down |
 | Land | Come down to the ground looking level or lower |
-| Breathe | **V** (change it under Controls, "Dragon Breath") |
+| Breathe | **V** (change it under Controls, "Dragon Breath / Airship Cannon") |
+
+**Bring a friend.** Once you're in the saddle, a friend can climb on behind you.
+
+### Dragon armor
+
+Craft armor from iron, gold or diamonds wrapped around leather, or upgrade diamond armor to **netherite** at a smithing table. Use it on your dragon and it **shows on the dragon**. Use another piece to swap it, or shears to take it off.
+
+| Armor | Protection |
+| --- | --- |
+| Iron | 6 armor |
+| Gold | 8 armor |
+| Diamond | 12 armor, plus toughness |
+| Netherite | 16 armor, plus toughness and knockback resistance |
+
+### The Dragon Whistle
+
+Made from a bone, an iron nugget and string. Blow it and **every dragon of yours within earshot comes flying**. Sneak and blow it to tell them all to sit and wait.
 
 ### The Ender Dragon
 
@@ -111,16 +149,24 @@ Bring the End's **Dragon Egg** home and feed it **chorus fruit**. Every fruit is
 
 ### Finding them
 
-Floating islands drift **between y 180 and 230** above every overworld biome, about a hundred blocks apart. Look up as you explore: some islands have a spring that spills a **waterfall all the way down to the ground**, and at night their glow berries give them away.
+Floating islands drift **between y 180 and 230** above every overworld biome, about a hundred blocks apart. Look up as you explore: some islands have a spring that spills a **waterfall all the way down to the ground**, Ember islands send up **columns of smoke**, and at night glow berries give them away.
 
-### What's up there
+### Five kinds of island
 
-Every island is different. Each one has a few lobes of rolling meadow with oak, birch and flowering azalea trees, wildflowers, tall grass and firefly bushes. Some have a pond with lily pads and sugar cane. Underneath, rocky spikes hang down into the sky, packed with coal, iron, copper, gold and emerald ore, with **diamonds and lapis toward the tips**. Glow berries and roots trail below, and small rocks float nearby.
+Every island is different: a few ragged lobes of land with rocky spikes hanging down into the sky, packed with ore, with **diamonds toward the tips**. Each has a theme:
+
+| Island | What you'll find |
+| --- | --- |
+| 🌼 **Meadow** | Rolling grass, oak, birch and azalea, wildflowers and fireflies, ponds, glow berries hanging beneath |
+| 🌋 **Ember** | Blackstone and basalt, patches of magma, smoking vents, basalt columns, lava pools, charred trees, gilded blackstone |
+| 🧊 **Frost** | Snowfields, ice spikes, frozen ponds, snow-laden spruce, icicles beneath |
+| ⚡ **Storm** | Windswept rock, stone spires crowned with lightning rods that draw the storm's strikes, chains and lanterns beneath |
+| 🌿 **Verdant** | Moss, flowering azalea, pink petals, spore blossoms and glow berries thick beneath |
 
 There are three kinds of island:
 
-- **Wild islands** hide a ruined shrine of mossy stone with a treasure chest. Expect gold, iron, emeralds, diamonds, golden apples, enchanted books, Tiny Worlds draughts, sometimes a saddle, and rarely a whole airship.
-- **Dragon roosts** have a nest of hay and bones around a **dragon's hoard**: gold above all, plus gems, golden apples, golden horse armour, a chance of an enchanted golden apple, and **always a saddle**. A wild dragon guards it.
+- **Wild islands** hide a ruined shrine with a treasure chest. Expect gold, iron, emeralds, diamonds, golden apples, enchanted books, Tiny Worlds draughts, sometimes a saddle, a whistle, a chisel or a Shrink Ray, and rarely a whole airship.
+- **Dragon roosts** have a nest around a **dragon's hoard**: gold above all, plus gems, golden apples, sometimes **dragon armor**, a chance of an enchanted golden apple, and **always a saddle**. A wild dragon guards it, and its kind matches the island: Ember dragons on volcanic islands, Frost dragons on snowy ones, and so on.
 - **Pillager sky outposts** have a dark oak watchtower with a lookout chest, a dock with a **pillager airship**, a garrison of pillagers and a vindicator, and pillagers riding **dragons instead of ravagers**.
 
 ### Conquering an outpost
@@ -164,13 +210,25 @@ Out of fuel, it can only drift slowly and sinks. Leave it empty and it hovers ri
 
 **Sneak and use the ship with an empty hand** to open its 27-slot cargo hold. That's a whole chest of storage that flies with you.
 
+### Paint the sky
+
+Use any **dye** on your airship to recolor its balloon. There are sixteen colors to choose from.
+
+### Cannons
+
+Craft an **Airship Cannon** (three iron ingots over gunpowder, a dispenser and gunpowder) and use it on your ship to mount it at the bow. At the helm, press **V** to fire where you're looking. Each shot burns ten seconds of fuel.
+
+- Cannonballs hurt whatever they hit, and anyone right beside it, but **never break blocks**.
+- **Four hits sink an airship.** Holes stay until you patch them with **planks**.
+- They won't hit your own ship or anyone aboard her.
+
 ### Picking it up
 
 Punch it a few times quickly to pack it back into an item. Stray arrows and crossbow bolts bounce off, so a passing skeleton can't knock you out of the sky.
 
 ### Pillager airships
 
-The pillagers have airships too. A pillager outpost on the ground sends one up now and then when you come near, and every sky outpost keeps one docked. They patrol, hunt players, and fly in close so their crews can fire crossbows at you. **Shoot the crew down and take the helm.** The ship is yours, with a little fuel left in the tank and their plunder in the hold.
+The pillagers have airships too. A pillager outpost on the ground sends one up now and then when you come near, and every sky outpost keeps one docked. They fly under **dark balloons**, patrol, hunt players, and fly in close so their crews can fire crossbows at you, and **every one carries a cannon**. **Shoot the crew down and take the helm**, and the ship is yours, with a little fuel left in the tank and their plunder in the hold. Or sink it with a cannon of your own.
 
 ---
 
@@ -178,9 +236,9 @@ The pillagers have airships too. A pillager outpost on the ground sends one up n
 
 The **Wonder Realms** advancement tab tracks your adventures:
 
-- **Tiny Worlds:** Honey, I Shrunk Myself · Morning Dew · Small Business · Nine Pixels Make a Gem · Pixel Perfect · Giant Slayer
-- **Dragons:** Here Be Dragons · Hatchling · Dragon Tamer · Dragon Rider · Touch the Sky · Liberator · The Dragon Reborn
-- **Sky:** Up, Up and Away · Sky Pirate
+- **Tiny Worlds:** Honey, I Shrunk Myself · Morning Dew · Small Business · Nine Pixels Make a Gem · Pixel Perfect · Giant Slayer · Honey, I Shrunk the Mobs · Tiny Terror · Sculptor
+- **Dragons:** Here Be Dragons · Hatchling · Dragon Tamer · Dragon Rider · Touch the Sky · Liberator · The Dragon Reborn · Knight of the Sky · Unbreakable · Here, Dragon! · Green Thumb · Room for Two · Dragon Collector
+- **Sky:** Up, Up and Away · Sky Pirate · Paint the Sky · Broadside! · Shot Down
 
 ---
 
@@ -196,7 +254,10 @@ Build an airship, glide in with an elytra, or build a tower. Once you have a dra
 Defeat a wild dragon at a roost or a sky outpost. After that, your own grown dragon lays eggs.
 
 **My dragon won't let me ride it.**
-It has to be yours, fully grown and saddled, and your hand must be empty. Feeding it helps it grow faster.
+It has to be yours, fully grown and saddled, and your hand must be empty. Feeding it helps it grow faster. (And a dragon shrunk by a Shrink Ray is far too small to carry anyone.)
+
+**My dragon is miles away.**
+Blow a Dragon Whistle and it will fly to you.
 
 **Why can't I tame the pillagers' dragons?**
 They're still captives. Defeat every pillager around the outpost first.
@@ -219,4 +280,4 @@ It's built for it: install it on the server and on every player's game.
 - **Fabric API**
 - **GeckoLib** 5.5.6 or newer
 
-Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all four dragons and the Pixel Miner.
+Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all five dragons and the Pixel Miner.

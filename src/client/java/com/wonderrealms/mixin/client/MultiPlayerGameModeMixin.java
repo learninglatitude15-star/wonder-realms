@@ -1,6 +1,5 @@
 package com.wonderrealms.mixin.client;
 
-import com.wonderrealms.TinyWorlds;
 import com.wonderrealms.pixel.PixelMining;
 import com.wonderrealms.pixel.PixelatedBlockEntity;
 import net.minecraft.client.Minecraft;
@@ -30,7 +29,7 @@ public abstract class MultiPlayerGameModeMixin {
 	private void wonderrealms$predictPixelChip(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
 		Player player = this.minecraft.player;
 		Level level = this.minecraft.level;
-		if (player == null || level == null || !TinyWorlds.isTiny(player)) {
+		if (player == null || level == null || !PixelMining.canCarve(player)) {
 			return;
 		}
 		if (level.getBlockEntity(pos) instanceof PixelatedBlockEntity pixels) {

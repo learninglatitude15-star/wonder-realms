@@ -1,0 +1,94 @@
+{
+  "criteria": {
+    "ember": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:ember_dragon"
+          }
+        }
+      }
+    },
+    "frost": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:frost_dragon"
+          }
+        }
+      }
+    },
+    "storm": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:storm_dragon"
+          }
+        }
+      }
+    },
+    "verdant": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:verdant_dragon"
+          }
+        }
+      }
+    },
+    "ender": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:ender_dragon"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:dragon_head"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.all_dragons.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.all_dragons.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "ember"
+    ],
+    [
+      "frost"
+    ],
+    [
+      "storm"
+    ],
+    [
+      "verdant"
+    ],
+    [
+      "ender"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

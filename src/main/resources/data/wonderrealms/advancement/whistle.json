@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dragon_whistle"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.whistle.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.whistle.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

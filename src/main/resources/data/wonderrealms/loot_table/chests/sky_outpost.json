@@ -147,6 +147,19 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "name": "wonderrealms:airship_cannon"
+        },
+        {
+          "type": "minecraft:empty",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
           "name": "minecraft:book",
           "modifier": {
             "type": "minecraft:enchant_randomly",

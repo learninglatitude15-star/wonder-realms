@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": "minecraft:netherite_upgrade_smithing_template",
+  "base": "wonderrealms:diamond_dragon_armor",
+  "addition": "#minecraft:netherite_tool_materials",
+  "result": {
+    "id": "wonderrealms:netherite_dragon_armor"
+  }
+}

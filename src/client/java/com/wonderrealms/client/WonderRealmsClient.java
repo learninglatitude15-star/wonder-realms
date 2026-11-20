@@ -7,6 +7,7 @@ import com.wonderrealms.TinyWorlds;
 import com.wonderrealms.WonderRealms;
 import com.wonderrealms.airship.AirshipEntity;
 import com.wonderrealms.airship.Airships;
+import com.wonderrealms.airship.CannonPayload;
 import com.wonderrealms.dragon.BreathPayload;
 import com.wonderrealms.dragon.DragonElement;
 import com.wonderrealms.dragon.DragonEntity;
@@ -26,6 +27,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Input;
@@ -33,7 +35,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
 public class WonderRealmsClient implements ClientModInitializer {
-	/** Breathe while riding a dragon. */
+	/** Breathe while riding a dragon; fire the cannon at an airship's helm. */
 	private static final KeyMapping BREATH_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 		"key.wonderrealms.dragon_breath", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, KeyMapping.Category.GAMEPLAY));
 
@@ -45,6 +47,7 @@ public class WonderRealmsClient implements ClientModInitializer {
 		EntityRendererRegistry.register(PixelMiners.TYPE, context -> new GeoEntityRenderer<PixelMinerEntity, LivingEntityRenderState>(context,
 			new DefaultedEntityGeoModel<PixelMinerEntity>(WonderRealms.id("pixel_miner"))));
 		EntityRendererRegistry.register(Airships.TYPE, AirshipRenderer::new);
+		EntityRendererRegistry.register(Airships.CANNONBALL, ThrownItemRenderer::new);
 		BlockEntityRenderers.register(PixelMining.BLOCK_ENTITY, context -> new PixelatedBlockRenderer());
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
@@ -54,8 +57,13 @@ public class WonderRealmsClient implements ClientModInitializer {
 				ship.setInput(keys.forward(), keys.backward(), keys.left(), keys.right(), keys.jump(), keys.sprint());
 			}
 			while (BREATH_KEY.consumeClick()) {
-				if (mc.player != null && mc.player.getVehicle() instanceof DragonEntity) {
+				if (mc.player == null) {
+					continue;
+				}
+				if (mc.player.getVehicle() instanceof DragonEntity) {
 					ClientPlayNetworking.send(BreathPayload.INSTANCE);
+				} else if (mc.player.getVehicle() instanceof AirshipEntity ship && ship.hasCannon() && ship.getControllingPassenger() == mc.player) {
+					ClientPlayNetworking.send(CannonPayload.INSTANCE);
 				}
 			}
 		});
@@ -72,6 +80,11 @@ public class WonderRealmsClient implements ClientModInitializer {
 		tips.put(PixelMiners.DIAMOND_PIXEL, "gem_pixel");
 		tips.put(PixelMiners.EMERALD_PIXEL, "gem_pixel");
 		tips.put(Airships.AIRSHIP_ITEM, "airship");
+		tips.put(Airships.CANNON_ITEM, "airship_cannon");
+		tips.put(TinyWorlds.SHRINK_RAY, "shrink_ray");
+		tips.put(TinyWorlds.PIXEL_CHISEL, "pixel_chisel");
+		tips.put(Dragons.WHISTLE, "dragon_whistle");
+		Dragons.ARMOR_ITEMS.values().forEach(armor -> tips.put(armor, "dragon_armor"));
 		Dragons.EGG_ITEMS.values().forEach(egg -> tips.put(egg, "dragon_egg"));
 		tips.put(Items.DRAGON_EGG, "ender_egg"); // a hint: it hatches on chorus fruit
 		ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
@@ -83,7 +96,7 @@ public class WonderRealmsClient implements ClientModInitializer {
 	}
 
 	private static void addLines(List<Component> lines, String key) {
-		for (int i = 1; i <= 3; i++) {
+		for (int i = 1; i <= 4; i++) {
 			String line = "tooltip.wonderrealms." + key + "." + i;
 			Component text = Component.translatable(line);
 			if (text.getString().equals(line)) {

@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:pixel_chisel"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.sculptor.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.sculptor.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:carve_pixel"
+}

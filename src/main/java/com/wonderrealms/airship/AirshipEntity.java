@@ -10,6 +10,7 @@ import com.wonderrealms.WonderAdvancements;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -18,6 +19,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -41,6 +43,7 @@ import net.minecraft.world.entity.monster.illager.Pillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -54,11 +57,16 @@ import net.minecraft.world.phys.Vec3;
  * (first aboard) steers with WASD, climbs with jump and descends with sprint; up to three passengers ride along.
  * The engine burns coal, charcoal, blaze rods or coal blocks (use them on the ship). Out of fuel it can only drift
  * slowly and sinks. Left empty, it hovers where it was parked. Punch it to pack it back into an item.
- * Sneak and use it with an empty hand to open its cargo hold. Pillagers fly them too: a pillager at the helm
- * patrols its outpost and hunts players while the crew shoots, and their hold carries their plunder.
+ * Sneak and use it with an empty hand to open its cargo hold. Dye recolors the balloon. A cannon (use one on the
+ * ship) fires from the bow when the pilot presses the cannon key; cannonballs hole a hull, and planks patch it.
+ * Pillagers fly them too, under dark balloons: a pillager at the helm patrols its outpost and hunts players while
+ * the crew shoots and the bow cannon fires, and their hold carries their plunder.
  */
 public class AirshipEntity extends Entity implements GeoEntity {
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(AirshipEntity.class, EntityDataSerializers.INT);
+	/** The balloon's dye color id, or -1 for the classic red and cream stripes. */
+	private static final EntityDataAccessor<Integer> COLOR = SynchedEntityData.defineId(AirshipEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Boolean> CANNON = SynchedEntityData.defineId(AirshipEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final int MAX_PASSENGERS = 4;
 	private static final int MAX_FUEL = 20 * 60 * 30;
 	private static final float BREAK_DAMAGE = 40F;
@@ -74,6 +82,12 @@ public class AirshipEntity extends Entity implements GeoEntity {
 	private static final double ATTACK_RING = 3.5, ATTACK_HEIGHT = 3.5;
 	/** Fuel left aboard a captured pillager ship. */
 	private static final int LOOT_FUEL = 20 * 120;
+	/** Cannonball hits wear the hull down (they don't mend by themselves); four sink a ship. Planks patch it. */
+	private static final float HULL_STRENGTH = 100F, CANNONBALL_HULL_DAMAGE = 25F, PLANK_REPAIR = 25F;
+	/** Ticks between shots: a player's cannon, a pillager's. Each player shot burns this much fuel. */
+	private static final int CANNON_COOLDOWN = 30, RAIDER_CANNON_COOLDOWN = 80, SHOT_FUEL = 20 * 10;
+	private static final double RAIDER_CANNON_RANGE = 28;
+	private static final DyeColor[] PILLAGER_COLORS = {DyeColor.GRAY, DyeColor.BLACK, DyeColor.BROWN};
 
 	private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("misc.idle");
 	private static final RawAnimation FLY = RawAnimation.begin().thenLoop("move.fly");
@@ -81,6 +95,8 @@ public class AirshipEntity extends Entity implements GeoEntity {
 	private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 	private boolean inputForward, inputBack, inputLeft, inputRight, inputUp, inputDown;
 	private float damage;
+	private float hullDamage;
+	private int cannonCooldown;
 	/** The outpost a pillager ship patrols around. Null for player-built ships. */
 	private BlockPos home;
 	/** A chest's worth of cargo, opened by sneaking and using the ship with an empty hand. */
@@ -100,10 +116,21 @@ public class AirshipEntity extends Entity implements GeoEntity {
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		builder.define(FUEL, 0);
+		builder.define(COLOR, -1);
+		builder.define(CANNON, false);
 	}
 
 	public int fuel() {
 		return this.entityData.get(FUEL);
+	}
+
+	/** The balloon's dye color id (see {@link DyeColor#getId()}), or -1 for the classic stripes. */
+	public int balloonColor() {
+		return this.entityData.get(COLOR);
+	}
+
+	public boolean hasCannon() {
+		return this.entityData.get(CANNON);
 	}
 
 	private void setFuel(int fuel) {
@@ -130,6 +157,12 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		super.tick();
 		if (this.damage > 0) {
 			this.damage = Math.max(0, this.damage - 1F); // dents knock out over time; only a quick beating breaks it
+		}
+		if (this.cannonCooldown > 0) {
+			this.cannonCooldown--;
+		}
+		if (this.hullDamage >= HULL_STRENGTH / 2 && this.tickCount % 8 == 0 && this.level() instanceof ServerLevel level) {
+			level.sendParticles(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 0.8, this.getZ(), 1, 0.6, 0.2, 0.6, 0.01); // badly holed
 		}
 		if (this.isLocalInstanceAuthoritative()) {
 			if (this.isRaiderCrewed()) {
@@ -192,6 +225,51 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		Vec3 motion = this.getDeltaMovement().lerp(target3, 0.1);
 		this.setDeltaMovement(motion);
 		this.move(MoverType.SELF, motion);
+
+		// A cannon at the bow: the pilot fires on players in range whenever it's loaded.
+		if (target != null && this.hasCannon() && this.cannonCooldown <= 0 && this.distanceTo(target) < RAIDER_CANNON_RANGE
+				&& this.getFirstPassenger() instanceof LivingEntity gunner && gunner.hasLineOfSight(target)) {
+			this.fireCannon(gunner, target.getEyePosition().subtract(this.muzzle()));
+		}
+	}
+
+	// ---- Cannon ---------------------------------------------------------------------------------------------
+
+	private Vec3 muzzle() {
+		return this.position().add(this.forward().scale(2.4)).add(0, 0.5, 0);
+	}
+
+	/**
+	 * Fires the bow cannon along {@code direction} (server side). A player's shots each burn ten seconds of fuel;
+	 * pillagers reload more slowly and aim less steadily. Returns whether it fired.
+	 */
+	public boolean fireCannon(LivingEntity gunner, Vec3 direction) {
+		if (!(this.level() instanceof ServerLevel level) || !this.hasCannon() || this.cannonCooldown > 0 || direction.lengthSqr() < 1.0E-6) {
+			return false;
+		}
+		boolean player = gunner instanceof Player;
+		if (player && this.fuel() < SHOT_FUEL) {
+			if (gunner instanceof ServerPlayer serverPlayer) {
+				serverPlayer.sendOverlayMessage(Component.translatable("message.wonderrealms.cannon_no_fuel").withStyle(ChatFormatting.RED));
+			}
+			return false;
+		}
+		Vec3 muzzle = this.muzzle();
+		Cannonball ball = new Cannonball(level, gunner);
+		ball.setPos(muzzle.x, muzzle.y, muzzle.z);
+		ball.shoot(direction.x, direction.y, direction.z, 2.2F, player ? 0.5F : 3F);
+		level.addFreshEntity(ball);
+		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.NEUTRAL, 0.8F, 1.6F);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, 6, 0.15, 0.15, 0.15, 0.03);
+		level.sendParticles(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, 4, 0.1, 0.1, 0.1, 0.05);
+		this.cannonCooldown = player ? CANNON_COOLDOWN : RAIDER_CANNON_COOLDOWN;
+		if (player) {
+			this.setFuel(this.fuel() - SHOT_FUEL);
+			if (gunner instanceof ServerPlayer serverPlayer) {
+				WonderAdvancements.award(serverPlayer, "broadside");
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -208,6 +286,9 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		ship.home = pos.immutable();
 		ship.setFuel(LOOT_FUEL);
 		ship.stockPlunder(server.getRandom());
+		// Pillagers fly dark balloons, and every one of their ships carries a cannon.
+		ship.entityData.set(COLOR, PILLAGER_COLORS[server.getRandom().nextInt(PILLAGER_COLORS.length)].getId());
+		ship.entityData.set(CANNON, true);
 		for (int i = 0; i < crew; i++) {
 			Pillager pillager = EntityTypes.PILLAGER.create(server, EntitySpawnReason.STRUCTURE);
 			if (pillager == null) {
@@ -289,6 +370,37 @@ public class AirshipEntity extends Entity implements GeoEntity {
 					stack.consume(1, player);
 					this.playSound(SoundEvents.FIRECHARGE_USE, 0.6F, 1.2F);
 				}
+			}
+			return InteractionResult.SUCCESS;
+		}
+		// Dye recolors the balloon.
+		DyeColor dye = stack.get(DataComponents.DYE);
+		if (dye != null && !this.isRaiderCrewed()) {
+			if (!this.level().isClientSide() && this.balloonColor() != dye.getId()) {
+				this.entityData.set(COLOR, dye.getId());
+				stack.consume(1, player);
+				this.playSound(SoundEvents.DYE_USE, 1F, 1F);
+				if (player instanceof ServerPlayer serverPlayer) {
+					WonderAdvancements.award(serverPlayer, "paint_the_sky");
+				}
+			}
+			return InteractionResult.SUCCESS;
+		}
+		if (stack.is(Airships.CANNON_ITEM) && !this.hasCannon()) {
+			if (!this.level().isClientSide()) {
+				this.entityData.set(CANNON, true);
+				stack.consume(1, player);
+				this.playSound(SoundEvents.ANVIL_USE, 0.5F, 1.4F);
+			}
+			return InteractionResult.SUCCESS;
+		}
+		// Planks patch a hull holed by cannon fire.
+		if (stack.is(ItemTags.PLANKS) && this.hullDamage > 0) {
+			if (this.level() instanceof ServerLevel level) {
+				this.hullDamage = Math.max(0, this.hullDamage - PLANK_REPAIR);
+				stack.consume(1, player);
+				this.playSound(SoundEvents.WOOD_PLACE, 1F, 0.9F);
+				level.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 0.6, this.getZ(), 5, 0.8, 0.2, 0.8, 0.0);
 			}
 			return InteractionResult.SUCCESS;
 		}
@@ -378,27 +490,53 @@ public class AirshipEntity extends Entity implements GeoEntity {
 
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-		// Only a player's own fists or blade can knock an airship apart: stray arrows and crossbow bolts bounce off.
-		if (this.isRemoved() || this.isInvulnerableToBase(source) || !(source.getDirectEntity() instanceof Player)) {
+		if (this.isRemoved() || this.isInvulnerableToBase(source)) {
+			return false;
+		}
+		// Cannonballs hole the hull, and the holes stay until they're patched with planks.
+		if (source.getDirectEntity() instanceof Cannonball) {
+			this.hullDamage += CANNONBALL_HULL_DAMAGE;
+			this.playSound(SoundEvents.WOOD_BREAK, 1F, 0.7F);
+			if (this.hullDamage >= HULL_STRENGTH) {
+				if (source.getEntity() instanceof ServerPlayer shooter && (this.isRaiderCrewed() || this.home != null)) {
+					WonderAdvancements.award(shooter, "shot_down");
+				}
+				this.breakApart(level, true);
+			}
+			return true;
+		}
+		// Otherwise only a player's own fists or blade can knock an airship apart: stray arrows and bolts bounce off.
+		if (!(source.getDirectEntity() instanceof Player)) {
 			return false;
 		}
 		boolean creative = source.getEntity() instanceof Player player && player.isCreative();
 		this.damage += amount * 10F;
 		this.playSound(SoundEvents.WOOD_HIT, 1F, 0.8F);
 		if (creative || this.damage > BREAK_DAMAGE) {
-			if (!creative) {
-				this.spawnAtLocation(level, new ItemStack(Airships.AIRSHIP_ITEM));
-			}
-			Containers.dropContents(level, this, this.cargo);
-			this.ejectPassengers();
-			this.discard();
+			this.breakApart(level, !creative);
 		}
 		return true;
+	}
+
+	/** Packs the ship up (or wrecks it): its cargo and cannon spill out, and everyone aboard falls off. */
+	private void breakApart(ServerLevel level, boolean dropShip) {
+		if (dropShip) {
+			this.spawnAtLocation(level, new ItemStack(Airships.AIRSHIP_ITEM));
+			if (this.hasCannon()) {
+				this.spawnAtLocation(level, new ItemStack(Airships.CANNON_ITEM));
+			}
+		}
+		Containers.dropContents(level, this, this.cargo);
+		this.ejectPassengers();
+		this.discard();
 	}
 
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		output.putInt("fuel", this.fuel());
+		output.putInt("balloon_color", this.balloonColor());
+		output.putBoolean("cannon", this.hasCannon());
+		output.putFloat("hull_damage", this.hullDamage);
 		if (this.home != null) {
 			output.putLong("home", this.home.asLong());
 		}
@@ -412,6 +550,9 @@ public class AirshipEntity extends Entity implements GeoEntity {
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		this.setFuel(input.getIntOr("fuel", 0));
+		this.entityData.set(COLOR, Mth.clamp(input.getIntOr("balloon_color", -1), -1, 15));
+		this.entityData.set(CANNON, input.getBooleanOr("cannon", false));
+		this.hullDamage = input.getFloatOr("hull_damage", 0F);
 		long home = input.getLongOr("home", Long.MIN_VALUE);
 		this.home = home == Long.MIN_VALUE ? null : BlockPos.of(home);
 		NonNullList<ItemStack> items = NonNullList.withSize(CARGO_SLOTS, ItemStack.EMPTY);

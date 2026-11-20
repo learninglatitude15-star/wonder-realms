@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:netherite_dragon_armor"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.netherite_dragon.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.netherite_dragon.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:dragon_armor"
+}

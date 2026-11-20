@@ -140,6 +140,21 @@
           "type": "minecraft:item",
           "name": "minecraft:name_tag",
           "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:pixel_chisel",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:dragon_whistle",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:shrink_ray",
+          "weight": 2
         }
       ]
     },

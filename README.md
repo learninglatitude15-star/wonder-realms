@@ -2,9 +2,23 @@
 
 A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) with three adventures in one:
 
-- **Tiny Worlds**: shrink to the size of a bug.
-- **Dragons**: win an egg, raise a dragon, and fly it.
-- **Sky Islands & Airships**: explore floating islands, raid pillager sky outposts, and sail the skies.
+- **Tiny Worlds**: shrink to the size of a bug, and shrink your enemies too.
+- **Dragons**: win an egg, raise a dragon, armor it, and fly it.
+- **Sky Islands & Airships**: explore floating islands of five kinds, raid pillager sky outposts, and fight battles
+  between airships.
+
+## What's new in 1.2
+
+- **Elemental sky islands**: volcanic Ember islands, snowy Frost islands, Storm islands crowned with lightning rods,
+  and lush Verdant islands. Each roost's dragon matches its island.
+- **The Verdant Dragon**: a nature dragon whose breath poisons foes and makes plants burst into growth.
+- **Dragon armor** in iron, gold, diamond and netherite, which shows on your dragon.
+- **The Dragon Whistle** calls your dragons to you.
+- **Two riders**: a friend can ride behind you.
+- **Airship cannons and dyed balloons**. Pillager ships fire back.
+- **The Shrink Ray** shrinks mobs to bug size.
+- **The Pixel Chisel** lets you carve pixels at full size.
+- **12 new advancements.**
 
 ## Tiny Worlds
 
@@ -23,15 +37,32 @@ for five minutes. While you're tiny:
 
 **Growth Draught** (glass bottle + red mushroom + bone meal) brings you back to full size early.
 
+**Shrink Ray**: aim it at a mob and use it to shrink that mob to bug size for 30 seconds. Shrunken mobs only do a
+quarter of their usual damage to anything full-sized, so a shrunken creeper's blast barely stings. Like you, they
+can climb walls while they're tiny. It doesn't work on players or bosses. Craft it as follows:
+
+```
+          amethyst shard
+iron ingot  Shrinking Draught  iron ingot
+          iron ingot
+```
+
+**Pixel Chisel** (iron ingot + stick + amethyst shard): hold it to carve blocks pixel by pixel at full size.
+
 ## Dragons
 
-Dragons live only on **sky islands**, and they come in three wild kinds:
+Dragons live only on **sky islands**, and they come in four wild kinds:
 
-- **Ember** breathes fire. It sets things alight, melts snow and ice, and lights campfires and candles.
-- **Frost** breathes ice. It slows and freezes targets, turns water into ice you can walk on, and cools lava.
-- **Storm** breathes lightning. It crackles, and sometimes calls down a real bolt.
+| Dragon | Breath | Food |
+| --- | --- | --- |
+| **Ember** | Fire: sets things alight, melts snow and ice, lights campfires and candles | Meat |
+| **Frost** | Ice: slows and freezes, turns water into ice you can walk on, cools lava | Meat or fish |
+| **Storm** | Lightning: crackles, and sometimes calls down a real bolt | Meat |
+| **Verdant** | Spores: poisons foes, makes plants grow, and turns bare dirt to grass | Meat, berries or apples |
 
-There's a fourth, secret kind: feed the End's **Dragon Egg** chorus fruit and it may hatch an **Ender Dragon**,
+Fire breath never sets your blocks alight, and storm lightning never starts fires.
+
+There's a fifth, secret kind: feed the End's **Dragon Egg** chorus fruit and it may hatch an **Ender Dragon**,
 whose breath lifts targets off their feet.
 
 **Getting an egg.** Wild dragons guard roosts on sky islands. Defeat one and it drops its egg. A tamed, grown
@@ -40,16 +71,36 @@ dragon also lays an egg every two or three in-game days.
 **Hatching.** Place the egg and wait. It cracks over a few minutes, then hatches a dragon that bonds with the
 nearest player.
 
-**Taming a wild dragon.** Feed it meat (Frost dragons also eat fish; Ender dragons eat chorus fruit). Wild adults
-take patience and will fight back. Hatchlings and freed dragons warm to you quickly.
+**Taming a wild dragon.** Feed it its favourite food. Wild adults take patience and will fight back. Hatchlings and
+freed dragons warm to you quickly.
 
 **Raising.** Hatchlings grow to full size over two in-game days, and feeding them speeds that up. They get bigger
-and tougher as they grow, from 20 to 80 health.
+and tougher as they grow, from 20 to 80 health. What your dragon kills counts as your kill, experience and all.
 
 **Commands.** Sneak and use an empty hand on your dragon to make it sit or follow. Tamed dragons defend you, and
 follow you into the air when you're gliding, on an airship, or on another dragon.
 
-**Riding.** Put a saddle on a grown dragon, then use it with an empty hand to climb on.
+**Dragon Whistle** (bone + iron nugget + string): use it to call every dragon of yours within earshot. They stop
+sitting and fly to you. Sneak and use it to tell them all to sit.
+
+**Dragon armor**: use it on your dragon to armor it. Using another piece swaps the old one out, and shears take
+armor off (and after that, the saddle). The armor shows on your dragon.
+
+| Armor | Recipe | Armor points |
+| --- | --- | --- |
+| Iron | iron ingots around leather (see below) | 6 |
+| Gold | gold ingots around leather | 8 |
+| Diamond | diamonds around leather | 12, plus toughness |
+| Netherite | upgrade diamond dragon armor at a smithing table | 16, plus toughness and knockback resistance |
+
+```
+ingot  .       ingot
+ingot  leather ingot
+ingot  ingot   ingot
+```
+
+**Riding.** Put a saddle on a grown dragon, then use it with an empty hand to climb on. Once you're in the saddle, a
+friend can climb on behind you.
 
 | Action | Control |
 | --- | --- |
@@ -58,23 +109,31 @@ follow you into the air when you're gliding, on an airship, or on another dragon
 | Climb | Hold jump |
 | Dive for speed | Look down |
 | Land | Come down to the ground looking level or lower |
-| Breathe | **V** (rebindable under Controls, "Dragon Breath") |
+| Breathe | **V** (rebindable under Controls, "Dragon Breath / Airship Cannon") |
 
 ## Sky Islands
 
-Floating islands drift between y 180 and 230 in every overworld biome, roughly a hundred blocks apart. Each one has
-rolling meadows, trees and flowers, a rocky underside full of ore that's richest toward the tip, glow berries and
-roots trailing beneath, and small rocks floating nearby. Some have ponds.
+Floating islands drift between y 180 and 230 in every overworld biome, roughly a hundred blocks apart. Each has a
+rocky underside full of ore that's richest toward the tip, and small rocks floating nearby. They come in five
+themes:
 
-**How to find one.** Look up! Some islands have a spring that pours a waterfall all the way to the ground. Fireflies
-over the meadows and glow berries underneath give them away at night.
+- **Meadow**: rolling grass, oak, birch and azalea, flowers and fireflies, ponds, and glow berries hanging beneath.
+- **Ember**: blackstone and basalt with patches of magma, smoking vents, basalt columns, lava pools, charred trees,
+  and gilded blackstone in the rock.
+- **Frost**: snowfields, ice spikes, frozen ponds, snow-laden spruce, and icicles beneath.
+- **Storm**: windswept rock and grass, and stone spires crowned with lightning rods that draw the storm's strikes.
+  Chains, lanterns and copper rods hang beneath.
+- **Verdant**: moss, flowering azalea, pink petals, and spore blossoms and glow berries thick beneath.
+
+**How to find one.** Look up! Some islands have a spring that pours a waterfall all the way to the ground, and Ember
+islands send up tall columns of smoke. Fireflies and glow berries give them away at night.
 
 There are three kinds of island:
 
 - **Wild islands** hide a ruined shrine with a treasure chest: gold, gems, enchanted books, Tiny Worlds draughts,
-  sometimes a saddle or even an airship.
-- **Dragon roosts** have a hay nest strewn with bones, a dragon's hoard (always with a saddle), and the wild dragon
-  that guards it.
+  sometimes a saddle, a whistle, a chisel, a Shrink Ray, or even an airship.
+- **Dragon roosts** have a nest made from what's on the island, a dragon's hoard (always with a saddle, sometimes
+  dragon armor), and the wild dragon that guards it. Its kind matches the island's theme.
 - **Pillager sky outposts** have a dark oak watchtower with a lookout chest, a dock with a pillager airship, a
   garrison, and pillagers riding dragons instead of ravagers.
 
@@ -99,19 +158,33 @@ To use one:
 - **Out of fuel**, it drifts slowly and sinks. Left empty, it hovers where you parked it.
 - **Seats**: up to four players (the first aboard pilots).
 - **Cargo hold**: sneak and use the ship with an empty hand to open 27 slots of storage.
+- **Balloon color**: use any dye on the ship.
 - **Picking it up**: punch it a few times quickly. Stray arrows and crossbow bolts bounce off.
 
-Pillagers fly airships too. Ground outposts launch one now and then when a player is near, and sky outposts keep one
-docked. Shoot the crew off, and the ship and the plunder in its hold are yours to take.
+**Airship Cannon**: use one on your ship to mount it at the bow, then press **V** at the helm to fire where you're
+looking. Each shot burns ten seconds of fuel. Cannonballs hurt whatever they hit (and anyone right beside it) but
+never break blocks. Four hits sink a ship, and planks patch the holes. Craft the cannon as follows:
+
+```
+iron ingot  iron ingot  iron ingot
+gunpowder   dispenser   gunpowder
+```
+
+Pillagers fly airships too, under dark balloons, and every one carries a cannon. Ground outposts launch one now and
+then when a player is near, and sky outposts keep one docked. Shoot the crew off and the ship, and the plunder in
+its hold, are yours to take. Or sink it with your own cannon.
 
 ## Advancements
 
 The **Wonder Realms** tab tracks these:
 
-- **Tiny Worlds**: shrinking, dewdrops, trading, carving and gem-crafting with pixels, and defeating a bug while tiny.
-- **Dragons**: winning an egg, hatching, taming, riding, flying above y 256, freeing an outpost's dragon, and
-  hatching the Ender Dragon.
-- **Sky**: boarding an airship, and capturing a pillager airship.
+- **Tiny Worlds**: shrinking, dewdrops, trading, carving and gem-crafting with pixels, defeating a bug while tiny,
+  shrinking mobs (and a creeper), and sculpting at full size with a chisel.
+- **Dragons**: winning an egg, hatching, taming, riding, flying above y 256, freeing an outpost's dragon, hatching
+  the Ender Dragon, armoring your dragon (and in netherite), calling it with a whistle, making plants grow with
+  Verdant breath, riding with a friend, and taming every kind of dragon.
+- **Sky**: boarding an airship, capturing a pillager airship, dyeing a balloon, firing a cannon, and sinking a
+  pillager ship.
 
 ## For developers
 
@@ -130,13 +203,14 @@ The build compiles against GeckoLib 5.5.7 for 26.3, looking for the jar at
 ./gradlew build -Pgeckolib_jar=/path/to/geckolib-fabric-26.3-5.5.7.jar
 ```
 
-Models, animations, textures, item models, loot tables, advancements and text are all generated by scripts in
-`tools/`. Run them from this folder in this order:
+Models, animations, textures, item models, recipes, loot tables, advancements and text are all generated by scripts
+in `tools/`. Run them from this folder in this order:
 
 ```
 python3 tools/generate_assets.py
 python3 tools/generate_miner_assets.py
 python3 tools/generate_airship_assets.py
 python3 tools/generate_dragon_assets.py
+python3 tools/generate_gear_assets.py
 python3 tools/generate_data.py
 ```

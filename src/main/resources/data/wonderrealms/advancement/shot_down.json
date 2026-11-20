@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:fire_charge"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.shot_down.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.shot_down.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:broadside"
+}

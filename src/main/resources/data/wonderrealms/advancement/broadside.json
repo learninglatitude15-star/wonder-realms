@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:airship_cannon"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.broadside.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.broadside.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:airship"
+}

@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:shrink_ray"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.shrink_mob.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.shrink_mob.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:shrink"
+}

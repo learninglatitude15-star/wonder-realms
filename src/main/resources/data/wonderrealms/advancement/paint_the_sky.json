@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:light_blue_dye"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.paint_the_sky.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.paint_the_sky.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:airship"
+}

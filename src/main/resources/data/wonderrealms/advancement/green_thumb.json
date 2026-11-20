@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:bone_meal"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.green_thumb.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.green_thumb.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

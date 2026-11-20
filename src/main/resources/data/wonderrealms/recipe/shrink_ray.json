@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " A ",
+    "IDI",
+    " I "
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "I": "minecraft:iron_ingot",
+    "D": "wonderrealms:shrinking_draught"
+  },
+  "result": {
+    "id": "wonderrealms:shrink_ray",
+    "count": 1
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:creeper_head"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.tiny_terror.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.tiny_terror.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:shrink_mob"
+}

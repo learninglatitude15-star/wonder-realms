@@ -16,7 +16,7 @@ ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
-DRAGONS = [f"{NS}:{element}_dragon" for element in ("ember", "frost", "storm", "ender")]
+DRAGONS = [f"{NS}:{element}_dragon" for element in ("ember", "frost", "storm", "verdant", "ender")]
 
 # --- Text ------------------------------------------------------------------------------------------------------
 
@@ -29,6 +29,10 @@ TEXT = {
     "message.wonderrealms.too_young": "This dragon is too young to ride. Feed it to help it grow.",
     "message.wonderrealms.dragon_sits": "Your dragon settles down to wait.",
     "message.wonderrealms.dragon_follows": "Your dragon follows you.",
+    "message.wonderrealms.whistle_come": "Your dragons heard you! (%s on the way)",
+    "message.wonderrealms.whistle_sit": "Your dragons settle down to wait. (%s)",
+    "message.wonderrealms.whistle_unheard": "No dragon of yours is close enough to hear.",
+    "message.wonderrealms.cannon_no_fuel": "The cannon needs fuel: each shot burns ten seconds of it.",
 }
 
 TOOLTIPS = {
@@ -40,7 +44,19 @@ TOOLTIPS = {
     "gem_pixel": ["Nine of them craft into a whole gem."],
     "airship": ["Place it on the ground, then fuel it with coal, charcoal or blaze rods.",
                 "WASD steers, jump climbs, sprint descends.",
-                "Sneak and use it empty-handed to open the cargo hold."],
+                "Sneak and use it empty-handed to open the cargo hold.",
+                "Use dye on it to color the balloon."],
+    "airship_cannon": ["Use on your airship to mount it at the bow.",
+                       "At the helm, press V to fire. Each shot burns some fuel.",
+                       "Planks patch a hull holed by cannon fire."],
+    "dragon_armor": ["Use on your tamed dragon to armor it.",
+                     "Shears take it off again."],
+    "dragon_whistle": ["Calls every dragon of yours within earshot.",
+                       "Sneak and use it to tell them to sit and wait."],
+    "shrink_ray": ["Zap a mob to shrink it for 30 seconds.",
+                   "Shrunken mobs can barely hurt you."],
+    "pixel_chisel": ["Hold it to carve blocks pixel by pixel,",
+                     "even at full size."],
     "dragon_egg": ["Set it down and wait: it hatches into a dragon",
                    "that bonds with whoever is closest."],
     "ender_egg": ["Something stirs inside... perhaps it's hungry for chorus fruit?"],
@@ -73,7 +89,7 @@ ADVANCEMENTS = {
     # Dragons
     "find_egg": ("root", f"{NS}:ember_egg", "Here Be Dragons", "Win a dragon egg from a sky island dragon", "task",
                  {"egg": {"trigger": "minecraft:inventory_changed",
-                          "conditions": {"items": [{"items": [f"{NS}:ember_egg", f"{NS}:frost_egg", f"{NS}:storm_egg"]}]}}}),
+                          "conditions": {"items": [{"items": [f"{NS}:ember_egg", f"{NS}:frost_egg", f"{NS}:storm_egg", f"{NS}:verdant_egg"]}]}}}),
     "hatch_dragon": ("find_egg", f"{NS}:frost_egg", "Hatchling", "Hatch a dragon egg", "task", None),
     "hatch_ender_dragon": ("hatch_dragon", "minecraft:dragon_egg", "The Dragon Reborn",
                            "Hatch an Ender Dragon by feeding the End's Dragon Egg chorus fruit", "challenge", None),
@@ -92,7 +108,27 @@ ADVANCEMENTS = {
                 {"boarded": {"trigger": "minecraft:started_riding",
                              "conditions": {"player": entity({"minecraft:vehicle": {"minecraft:entity_type": f"{NS}:airship"}})}}}),
     "sky_pirate": ("airship", "minecraft:crossbow", "Sky Pirate", "Take the helm of a captured pillager airship", "goal", None),
+
+    # 1.2: more for dragons, Tiny Worlds and airships
+    "dragon_armor": ("tame_dragon", f"{NS}:iron_dragon_armor", "Knight of the Sky", "Put armor on your dragon", "task", None),
+    "netherite_dragon": ("dragon_armor", f"{NS}:netherite_dragon_armor", "Unbreakable", "Give your dragon netherite armor", "challenge", None),
+    "whistle": ("tame_dragon", f"{NS}:dragon_whistle", "Here, Dragon!", "Call your dragons with a Dragon Whistle", "task", None),
+    "green_thumb": ("tame_dragon", "minecraft:bone_meal", "Green Thumb", "Make plants grow with a Verdant dragon's breath", "task", None),
+    "two_riders": ("ride_dragon", "minecraft:cake", "Room for Two", "Ride a dragon with a friend", "task", None),
+    "all_dragons": ("tame_dragon", "minecraft:dragon_head", "Dragon Collector", "Tame every kind of dragon: Ember, Frost, Storm, Verdant and Ender",
+                    "challenge", {element: {"trigger": "minecraft:tame_animal",
+                                            "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{element}_dragon"})}}
+                    for element in ("ember", "frost", "storm", "verdant", "ender")}),
+    "shrink_mob": ("shrink", f"{NS}:shrink_ray", "Honey, I Shrunk the Mobs", "Shrink a mob with a Shrink Ray", "task", None),
+    "tiny_terror": ("shrink_mob", "minecraft:creeper_head", "Tiny Terror", "Shrink a creeper", "goal", None),
+    "sculptor": ("carve_pixel", f"{NS}:pixel_chisel", "Sculptor", "Carve a pixel at full size with a Pixel Chisel", "task", None),
+    "paint_the_sky": ("airship", "minecraft:light_blue_dye", "Paint the Sky", "Dye an airship's balloon", "task", None),
+    "broadside": ("airship", f"{NS}:airship_cannon", "Broadside!", "Fire an airship's cannon", "task", None),
+    "shot_down": ("broadside", "minecraft:fire_charge", "Shot Down", "Sink a pillager airship with cannon fire", "challenge", None),
 }
+
+# Advancements whose criteria must all be met, rather than any one of them.
+ALL_REQUIRED = {"all_dragons"}
 
 
 def advancement(key, parent, icon, title, description, frame, criteria):
@@ -107,7 +143,8 @@ def advancement(key, parent, icon, title, description, frame, criteria):
         display.update(background=f"{NS}:gui/advancements/backgrounds/sky", show_toast=False, announce_to_chat=False)
     if criteria is None:
         criteria = {"done": {"trigger": "minecraft:impossible"}}
-    result = {"criteria": criteria, "display": display, "requirements": [list(criteria)]}
+    requirements = [[name] for name in criteria] if key in ALL_REQUIRED else [list(criteria)]
+    result = {"criteria": criteria, "display": display, "requirements": requirements}
     if parent is not None:
         result["parent"] = f"{NS}:{parent}"
     return result
@@ -161,7 +198,8 @@ LOOT = {
              item("gold_ingot", 15, (2, 5)), item("iron_ingot", 15, (3, 7)), item("emerald", 8, (1, 4)),
              item("diamond", 4, (1, 2)), item("golden_apple", 6), item("feather", 10, (4, 10)), item("coal", 10, (4, 12)),
              item("bread", 10, (2, 5)), item(f"{NS}:shrinking_draught", 8, (1, 2)), item(f"{NS}:growth_draught", 5),
-             item("saddle", 4), item("book", 4, enchant=True), item("name_tag", 3)),
+             item("saddle", 4), item("book", 4, enchant=True), item("name_tag", 3),
+             item(f"{NS}:pixel_chisel", 4), item(f"{NS}:dragon_whistle", 3), item(f"{NS}:shrink_ray", 2)),
         pool(1, item(f"{NS}:airship"), empty(11))),
     # What a roost's dragon guards: gold above all, and always a saddle for whoever means to ride.
     "dragon_hoard": chest("dragon_hoard",
@@ -169,7 +207,8 @@ LOOT = {
              item("gold_ingot", 20, (3, 8)), item("gold_nugget", 15, (6, 16)), item("raw_gold", 10, (2, 5)),
              item("emerald", 10, (2, 6)), item("diamond", 6, (1, 3)), item("golden_apple", 6), item("golden_carrot", 6, (2, 5)),
              item("lapis_lazuli", 8, (3, 9)), item("amethyst_shard", 8, (2, 6)), item("golden_horse_armor", 3),
-             item("bone", 10, (2, 6))),
+             item("bone", 10, (2, 6)), item(f"{NS}:iron_dragon_armor", 4), item(f"{NS}:golden_dragon_armor", 3),
+             item(f"{NS}:diamond_dragon_armor", 1)),
         pool(1, item("saddle")),
         pool(1, item("enchanted_golden_apple"), empty(12))),
     # A sky outpost's lookout: pillager supplies, and sometimes a spare airship.
@@ -180,6 +219,7 @@ LOOT = {
              item("dark_oak_log", 5, (2, 4)), item("string", 8, (2, 6)), item("wheat", 6, (3, 7)), item("golden_apple", 3),
              item(f"{NS}:shrinking_draught", 2), item("saddle", 3)),
         pool(1, item(f"{NS}:airship"), empty(4)),
+        pool(1, item(f"{NS}:airship_cannon"), empty(5)),
         pool(1, item("book", enchant=True), empty(3))),
 }
 

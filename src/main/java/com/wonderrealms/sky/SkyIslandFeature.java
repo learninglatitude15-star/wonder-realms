@@ -27,6 +27,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.CaveVines;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
@@ -38,7 +39,9 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.Feature;
@@ -46,15 +49,19 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.LootTable;
 
 /**
- * A floating island high in the overworld sky. Each is a few overlapping, ragged lobes of rolling meadow with a
- * rocky underside that hangs down to a point, studded with ore and trailing glow berries and roots, and a few
- * small rocks drifting nearby. Some have a pond; some a spring that spills off the edge in a waterfall you can see
- * from the ground; wild ones hide a chest in a ruined shrine.
- * <p>
- * Some islands are claimed: about one in five is a dragon roost (a hay nest round a hoard, guarded by a wild
- * dragon), and about one in five is a pillager sky outpost (a watchtower and its garrison, a dock with an airship,
- * and pillagers riding dragons). Sky islands are the only place dragons are found. They float between y 180 and
- * 230, roughly a hundred blocks apart.
+ * A floating island high in the overworld sky. Each is a few overlapping, ragged lobes with a rocky underside that
+ * hangs down to a point, studded with ore, and a few small rocks drifting nearby. Islands come in five themes:
+ * <ul>
+ *   <li><b>Meadow</b>: rolling grass, oak and birch, ponds, and waterfalls you can see from the ground.</li>
+ *   <li><b>Ember</b>: blackstone and basalt, magma, smoking vents, lava pools and charred trees.</li>
+ *   <li><b>Frost</b>: snowfields, ice spikes, frozen ponds and snow-laden spruce, with icicles beneath.</li>
+ *   <li><b>Storm</b>: windswept rock and grass, stone spires crowned with lightning rods, chains and copper beneath.</li>
+ *   <li><b>Verdant</b>: moss, flowering azalea and petals, spore blossoms and glow berries beneath.</li>
+ * </ul>
+ * Wild islands hide a chest in a ruined shrine. About one island in five is a dragon roost (a nest round a hoard,
+ * guarded by a wild dragon whose element matches its island), and about one in five a pillager sky outpost (a
+ * watchtower and garrison, a dock with an airship, and pillagers riding dragons). Sky islands are the only place
+ * dragons are found. They float between y 180 and 230, roughly a hundred blocks apart.
  * <p>
  * Everything is built within {@link #REACH} blocks of the middle of the chunk being decorated: the area a feature
  * may build in during world generation.
@@ -89,12 +96,21 @@ public record SkyIslandFeature() implements Feature {
 		BlockPos center = new BlockPos((origin.getX() & ~15) + 8, top, (origin.getZ() & ~15) + 8);
 		int roll = random.nextInt(20);
 		Kind kind = roll < 4 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : Kind.WILD;
+		DragonElement guardian = DragonElement.WILD[random.nextInt(DragonElement.WILD.length)];
+		Theme theme = switch (kind) {
+			case ROOST -> Theme.of(guardian);
+			case OUTPOST -> random.nextBoolean() ? Theme.MEADOW : Theme.STORM;
+			case WILD -> {
+				int pick = random.nextInt(20);
+				yield pick < 8 ? Theme.MEADOW : pick < 11 ? Theme.EMBER : pick < 14 ? Theme.FROST : pick < 17 ? Theme.STORM : Theme.VERDANT;
+			}
+		};
 		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : 7 + random.nextInt(5);
 
-		Island island = Island.shape(level, center, radius, random);
+		Island island = Island.shape(level, center, radius, theme, random);
 		island.build(random);
 		switch (kind) {
-			case ROOST -> roost(island, random);
+			case ROOST -> roost(island, guardian, random);
 			case OUTPOST -> outpost(island, random);
 			case WILD -> {
 				if (radius >= 9 && random.nextBoolean()) {
@@ -103,8 +119,9 @@ public record SkyIslandFeature() implements Feature {
 				shrine(island, random);
 			}
 		}
+		landmarks(island, random);
 		trees(island, kind, random);
-		if (random.nextInt(3) == 0) {
+		if (theme.hasWaterfalls() && random.nextInt(3) == 0) {
 			waterfall(island, random);
 		}
 		island.hangUnderside(random);
@@ -113,9 +130,98 @@ public record SkyIslandFeature() implements Feature {
 		return true;
 	}
 
+	// ---- Themes ---------------------------------------------------------------------------------------------
+
+	/** What an island is made of and what grows on it. Roosts take on their dragon's element. */
+	private enum Theme {
+		MEADOW, EMBER, FROST, STORM, VERDANT;
+
+		static Theme of(DragonElement element) {
+			return switch (element) {
+				case EMBER -> EMBER;
+				case FROST -> FROST;
+				case STORM -> STORM;
+				case VERDANT -> VERDANT;
+				default -> MEADOW;
+			};
+		}
+
+		boolean hasWaterfalls() {
+			return this == MEADOW || this == STORM || this == VERDANT;
+		}
+
+		/** The top block of the ground. */
+		BlockState top(RandomSource random) {
+			float r = random.nextFloat();
+			return (switch (this) {
+				case MEADOW -> Blocks.GRASS_BLOCK;
+				case EMBER -> r < 0.55F ? Blocks.BLACKSTONE : r < 0.8F ? Blocks.BASALT : r < 0.92F ? Blocks.SMOOTH_BASALT : Blocks.MAGMA_BLOCK;
+				case FROST -> r < 0.85F ? Blocks.SNOW_BLOCK : Blocks.PACKED_ICE;
+				case STORM -> r < 0.45F ? Blocks.GRASS_BLOCK : r < 0.7F ? Blocks.STONE : r < 0.85F ? Blocks.GRAVEL : Blocks.COARSE_DIRT;
+				case VERDANT -> r < 0.6F ? Blocks.MOSS_BLOCK : Blocks.GRASS_BLOCK;
+			}).defaultBlockState();
+		}
+
+		/** The layer or two under the top. */
+		BlockState soil(RandomSource random) {
+			float r = random.nextFloat();
+			return (switch (this) {
+				case MEADOW -> Blocks.DIRT;
+				case EMBER -> r < 0.6F ? Blocks.BLACKSTONE : Blocks.BASALT;
+				case FROST -> r < 0.7F ? Blocks.SNOW_BLOCK : Blocks.PACKED_ICE;
+				case STORM -> r < 0.5F ? Blocks.DIRT : Blocks.STONE;
+				case VERDANT -> r < 0.3F ? Blocks.ROOTED_DIRT : Blocks.DIRT;
+			}).defaultBlockState();
+		}
+
+		/** Whether this is the island's own natural ground, where things may grow or be built. */
+		boolean isGround(BlockState state) {
+			return switch (this) {
+				case MEADOW -> state.is(Blocks.GRASS_BLOCK);
+				case EMBER -> state.is(Blocks.BLACKSTONE) || state.is(Blocks.BASALT) || state.is(Blocks.SMOOTH_BASALT) || state.is(Blocks.MAGMA_BLOCK);
+				case FROST -> state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.PACKED_ICE);
+				case STORM -> state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.STONE) || state.is(Blocks.GRAVEL) || state.is(Blocks.COARSE_DIRT);
+				case VERDANT -> state.is(Blocks.MOSS_BLOCK) || state.is(Blocks.GRASS_BLOCK);
+			};
+		}
+
+		/** Stone for the underside, richer toward the tip where it's hardest to reach. */
+		BlockState rock(RandomSource random, float height) {
+			float roll = random.nextFloat();
+			boolean deep = height < 0.35F;
+			Block block;
+			switch (this) {
+				case EMBER -> block = roll < 0.04F ? Blocks.GILDED_BLACKSTONE : roll < 0.06F ? Blocks.GOLD_ORE : roll < 0.09F ? Blocks.IRON_ORE
+					: deep && roll < 0.1F ? Blocks.DIAMOND_ORE : roll < 0.15F ? Blocks.MAGMA_BLOCK : roll < 0.6F ? Blocks.BLACKSTONE : Blocks.BASALT;
+				case FROST -> block = roll < 0.04F ? Blocks.COAL_ORE : roll < 0.07F ? Blocks.IRON_ORE : roll < 0.08F ? Blocks.EMERALD_ORE
+					: deep && roll < 0.09F ? Blocks.DIAMOND_ORE : deep && roll < 0.1F ? Blocks.LAPIS_ORE : roll < 0.18F ? Blocks.PACKED_ICE
+					: roll < 0.21F ? Blocks.BLUE_ICE : roll < 0.28F ? Blocks.CALCITE : Blocks.STONE;
+				case STORM -> block = roll < 0.09F ? Blocks.COPPER_ORE : roll < 0.12F ? Blocks.IRON_ORE : roll < 0.13F ? Blocks.EMERALD_ORE
+					: deep && roll < 0.14F ? Blocks.DIAMOND_ORE : roll < 0.3F ? (deep ? Blocks.TUFF : Blocks.ANDESITE) : Blocks.STONE;
+				default -> block = roll < 0.035F ? Blocks.COAL_ORE : roll < 0.065F ? Blocks.IRON_ORE : roll < 0.085F ? Blocks.COPPER_ORE
+					: roll < 0.097F ? Blocks.GOLD_ORE : roll < 0.105F ? Blocks.EMERALD_ORE : deep && roll < 0.115F ? Blocks.DIAMOND_ORE
+					: deep && roll < 0.123F ? Blocks.LAPIS_ORE : roll < 0.23F ? (deep ? Blocks.TUFF : Blocks.ANDESITE) : Blocks.STONE;
+			}
+			return block.defaultBlockState();
+		}
+
+		/** Building stone for ruins: weathered, in keeping with the island. */
+		BlockState ruinStone(RandomSource random) {
+			int pick = random.nextInt(4);
+			return (switch (this) {
+				case EMBER -> pick == 0 ? Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS : pick == 1 ? Blocks.BLACKSTONE
+					: random.nextInt(8) == 0 ? Blocks.GILDED_BLACKSTONE : Blocks.POLISHED_BLACKSTONE_BRICKS;
+				case FROST -> pick == 0 ? Blocks.PACKED_ICE : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
+				case STORM -> pick == 0 ? Blocks.CUT_COPPER.weathering().oxidized() : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
+				default -> pick == 0 ? Blocks.MOSSY_STONE_BRICKS : pick == 1 ? Blocks.CRACKED_STONE_BRICKS
+					: pick == 2 ? Blocks.STONE_BRICKS : Blocks.MOSSY_COBBLESTONE;
+			}).defaultBlockState();
+		}
+	}
+
 	// ---- Shape ----------------------------------------------------------------------------------------------
 
-	/** The island being built: its shape, column by column, and the level it goes into. */
+	/** The island being built: its shape, column by column, its theme, and the level it goes into. */
 	private static final class Island {
 		private static final int SIZE = REACH * 2 + 1;
 		private static final int NONE = Integer.MIN_VALUE;
@@ -123,23 +229,26 @@ public record SkyIslandFeature() implements Feature {
 		final WorldGenLevel level;
 		final BlockPos center;
 		final int radius;
+		final Theme theme;
 		private final int[] surface = new int[SIZE * SIZE];
 		private final int[] bottom = new int[SIZE * SIZE];
 		private final float[] inner = new float[SIZE * SIZE];
 
-		private Island(WorldGenLevel level, BlockPos center, int radius) {
+		private Island(WorldGenLevel level, BlockPos center, int radius, Theme theme) {
 			this.level = level;
 			this.center = center;
 			this.radius = radius;
+			this.theme = theme;
 			Arrays.fill(this.surface, NONE);
 		}
 
 		/**
-		 * A main mass and two or three lobes around it, each with a ragged edge. The ground rolls gently and rises
-		 * toward the middle; the underside hangs down in a rough cone, deepest under the middle.
+		 * A main mass and two or three lobes around it, with a coastline of broad bays and a finer ragged edge. The
+		 * ground rolls gently and rises toward the middle; the underside hangs down in rough cones, deepest under
+		 * the middle of each lobe.
 		 */
-		static Island shape(WorldGenLevel level, BlockPos center, int radius, RandomSource random) {
-			Island island = new Island(level, center, radius);
+		static Island shape(WorldGenLevel level, BlockPos center, int radius, Theme theme, RandomSource random) {
+			Island island = new Island(level, center, radius, theme);
 			Noise edge = new Noise(random.nextLong());
 			Noise ground = new Noise(random.nextLong());
 			int lobes = 2 + random.nextInt(2);
@@ -153,7 +262,6 @@ public record SkyIslandFeature() implements Feature {
 			}
 			for (int dx = -REACH; dx <= REACH; dx++) {
 				for (int dz = -REACH; dz <= REACH; dz++) {
-					// Coastline wobble: broad bays plus a finer ragged edge.
 					double wobble = 0.75 + 0.35 * edge.at(dx * 0.18, dz * 0.18) + 0.15 * edge.at(dx * 0.6 + 90, dz * 0.6);
 					double inside = 0; // 0 at the edge, 1 at the very middle of a lobe
 					for (double[] blob : blobs) {
@@ -212,6 +320,11 @@ public record SkyIslandFeature() implements Feature {
 			return this.has(dx, dz) && (!this.has(dx + 1, dz) || !this.has(dx - 1, dz) || !this.has(dx, dz + 1) || !this.has(dx, dz - 1));
 		}
 
+		/** A column whose top is still the island's natural ground, open to the sky above it. */
+		boolean isOpenGround(int dx, int dz) {
+			return this.has(dx, dz) && this.theme.isGround(this.get(this.ground(dx, dz))) && this.isAir(this.ground(dx, dz).above());
+		}
+
 		void set(BlockPos pos, BlockState state) {
 			if (inReach(pos.getX() - this.center.getX(), pos.getZ() - this.center.getZ())) {
 				this.level.setBlock(pos, state, Block.UPDATE_CLIENTS);
@@ -226,7 +339,7 @@ public record SkyIslandFeature() implements Feature {
 			return this.level.isEmptyBlock(pos);
 		}
 
-		/** Grass over a couple of layers of dirt, over stone that gets richer toward the tip. */
+		/** The theme's ground over a layer or two of soil, over stone that gets richer toward the tip. */
 		void build(RandomSource random) {
 			for (int dx = -REACH; dx <= REACH; dx++) {
 				for (int dz = -REACH; dz <= REACH; dz++) {
@@ -238,38 +351,82 @@ public record SkyIslandFeature() implements Feature {
 					int soil = this.inner(dx, dz) < 0.25F ? 1 : 2 + random.nextInt(2);
 					for (int y = low; y <= top; y++) {
 						int below = top - y;
-						BlockState state = below == 0 ? Blocks.GRASS_BLOCK.defaultBlockState()
-							: below <= soil ? Blocks.DIRT.defaultBlockState()
-							: rock(random, (float) (y - low) / Math.max(1, top - low));
+						BlockState state = below == 0 ? this.theme.top(random)
+							: below <= soil ? this.theme.soil(random)
+							: this.theme.rock(random, (float) (y - low) / Math.max(1, top - low));
 						this.set(this.column(dx, y, dz), state);
 					}
 				}
 			}
 		}
 
-		/** Glow berries and roots trailing from the underside, mostly out toward the edges. */
+		/** Whatever hangs from the underside, mostly out toward the edges: berries, roots, icicles, chains... */
 		void hangUnderside(RandomSource random) {
+			float chance = this.theme == Theme.VERDANT ? 0.22F : 0.14F;
 			for (int dx = -REACH; dx <= REACH; dx++) {
 				for (int dz = -REACH; dz <= REACH; dz++) {
-					if (!this.has(dx, dz) || this.inner(dx, dz) > 0.6F || random.nextFloat() > 0.14F) {
+					if (!this.has(dx, dz) || this.inner(dx, dz) > 0.6F || random.nextFloat() > chance) {
 						continue;
 					}
 					BlockPos tip = this.column(dx, this.bottom[index(dx, dz)] - 1, dz);
 					if (!this.isAir(tip)) {
 						continue;
 					}
-					if (random.nextInt(3) == 0) {
-						this.set(tip, Blocks.HANGING_ROOTS.defaultBlockState());
-						continue;
-					}
-					int length = 1 + random.nextInt(4);
-					for (int i = 0; i < length; i++) {
-						BlockState vine = i == length - 1
-							? Blocks.CAVE_VINES.defaultBlockState().setValue(GrowingPlantHeadBlock.AGE, GrowingPlantHeadBlock.MAX_AGE)
-							: Blocks.CAVE_VINES_PLANT.defaultBlockState();
-						this.set(tip.below(i), vine.setValue(CaveVines.BERRIES, random.nextInt(4) == 0));
+					switch (this.theme) {
+						case FROST -> {
+							int length = 1 + random.nextInt(3);
+							for (int i = 0; i < length; i++) {
+								this.set(tip.below(i), Blocks.PACKED_ICE.defaultBlockState()); // icicles
+							}
+						}
+						case EMBER -> {
+							int length = 1 + random.nextInt(2);
+							for (int i = 0; i < length; i++) {
+								this.set(tip.below(i), (random.nextInt(4) == 0 ? Blocks.MAGMA_BLOCK : Blocks.BASALT).defaultBlockState());
+							}
+						}
+						case STORM -> {
+							if (random.nextBoolean()) {
+								this.set(tip, Blocks.LIGHTNING_ROD.weathering().oxidized().defaultBlockState()
+									.setValue(BlockStateProperties.FACING, Direction.DOWN));
+							} else {
+								int length = 1 + random.nextInt(3);
+								for (int i = 0; i < length; i++) {
+									this.set(tip.below(i), Blocks.IRON_CHAIN.defaultBlockState());
+								}
+								if (random.nextInt(3) == 0) {
+									this.set(tip.below(length), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+								}
+							}
+						}
+						case VERDANT -> {
+							float pick = random.nextFloat();
+							if (pick < 0.15F) {
+								this.set(tip, Blocks.SPORE_BLOSSOM.defaultBlockState());
+							} else if (pick < 0.35F) {
+								this.set(tip, Blocks.HANGING_ROOTS.defaultBlockState());
+							} else {
+								this.glowBerries(tip, 1 + random.nextInt(5), 0.4F, random);
+							}
+						}
+						default -> {
+							if (random.nextInt(3) == 0) {
+								this.set(tip, Blocks.HANGING_ROOTS.defaultBlockState());
+							} else {
+								this.glowBerries(tip, 1 + random.nextInt(4), 0.25F, random);
+							}
+						}
 					}
 				}
+			}
+		}
+
+		private void glowBerries(BlockPos tip, int length, float berryChance, RandomSource random) {
+			for (int i = 0; i < length; i++) {
+				BlockState vine = i == length - 1
+					? Blocks.CAVE_VINES.defaultBlockState().setValue(GrowingPlantHeadBlock.AGE, GrowingPlantHeadBlock.MAX_AGE)
+					: Blocks.CAVE_VINES_PLANT.defaultBlockState();
+				this.set(tip.below(i), vine.setValue(CaveVines.BERRIES, random.nextFloat() < berryChance));
 			}
 		}
 	}
@@ -294,35 +451,99 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	/** Stone for the underside, richer toward the tip where it's hardest to reach. */
-	private static BlockState rock(RandomSource random, float height) {
-		float roll = random.nextFloat();
-		boolean deep = height < 0.35F;
-		if (roll < 0.035F) {
-			return Blocks.COAL_ORE.defaultBlockState();
-		} else if (roll < 0.065F) {
-			return Blocks.IRON_ORE.defaultBlockState();
-		} else if (roll < 0.085F) {
-			return Blocks.COPPER_ORE.defaultBlockState();
-		} else if (roll < 0.097F) {
-			return Blocks.GOLD_ORE.defaultBlockState();
-		} else if (roll < 0.105F) {
-			return Blocks.EMERALD_ORE.defaultBlockState();
-		} else if (deep && roll < 0.115F) {
-			return Blocks.DIAMOND_ORE.defaultBlockState();
-		} else if (deep && roll < 0.123F) {
-			return Blocks.LAPIS_ORE.defaultBlockState();
-		} else if (roll < 0.23F) {
-			return deep ? Blocks.TUFF.defaultBlockState() : Blocks.ANDESITE.defaultBlockState();
+	// ---- Landmarks ------------------------------------------------------------------------------------------
+
+	/** Each theme's own features: storm spires, ice spikes, or smoking vents and basalt columns. */
+	private static void landmarks(Island island, RandomSource random) {
+		int count = switch (island.theme) {
+			case STORM, FROST -> 2 + random.nextInt(3);
+			case EMBER -> 3 + random.nextInt(3);
+			default -> 0;
+		};
+		for (int attempt = 0; attempt < 40 && count > 0; attempt++) {
+			int dx = random.nextInt(island.radius * 2 + 1) - island.radius;
+			int dz = random.nextInt(island.radius * 2 + 1) - island.radius;
+			if (island.inner(dx, dz) < 0.2F || dx * dx + dz * dz < 30 || !island.isOpenGround(dx, dz)) {
+				continue;
+			}
+			BlockPos ground = island.ground(dx, dz);
+			switch (island.theme) {
+				case STORM -> spire(island, ground, random);
+				case FROST -> iceSpike(island, ground, random);
+				case EMBER -> {
+					if (count % 2 == 0) {
+						vent(island, ground, random);
+					} else {
+						basaltColumn(island, ground, random);
+					}
+				}
+				default -> {
+				}
+			}
+			count--;
 		}
-		return Blocks.STONE.defaultBlockState();
 	}
 
-	// ---- Nature ---------------------------------------------------------------------------------------------
+	/** A needle of weathered stone banded with copper, crowned with a lightning rod that draws the storm's strikes. */
+	private static void spire(Island island, BlockPos ground, RandomSource random) {
+		int height = 4 + random.nextInt(7);
+		Block[] stones = {Blocks.STONE, Blocks.ANDESITE, Blocks.TUFF, Blocks.COBBLESTONE};
+		int band = 1 + random.nextInt(Math.max(1, height - 2));
+		for (int y = 1; y <= height; y++) {
+			BlockState block = y == band ? Blocks.CUT_COPPER.weathering().oxidized().defaultBlockState() : stones[random.nextInt(stones.length)].defaultBlockState();
+			island.set(ground.above(y), block);
+		}
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (random.nextBoolean() && island.isAir(ground.above().relative(side))) {
+				island.set(ground.above().relative(side), stones[random.nextInt(stones.length)].defaultBlockState()); // a rough footing
+			}
+		}
+		island.set(ground.above(height + 1), Blocks.LIGHTNING_ROD.weathering().weathered().defaultBlockState());
+	}
+
+	/** A pillar of packed ice, broad at the foot and tipped with blue ice. */
+	private static void iceSpike(Island island, BlockPos ground, RandomSource random) {
+		int height = 3 + random.nextInt(5);
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), (y == height ? Blocks.BLUE_ICE : Blocks.PACKED_ICE).defaultBlockState());
+		}
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			BlockPos foot = ground.above().relative(side);
+			if (island.isAir(foot)) {
+				island.set(foot, Blocks.PACKED_ICE.defaultBlockState());
+				if (height > 4 && random.nextBoolean() && island.isAir(foot.above())) {
+					island.set(foot.above(), Blocks.PACKED_ICE.defaultBlockState());
+				}
+			}
+		}
+	}
+
+	/** A fumarole: a smouldering vent ringed with magma, sending up a column of smoke you can see for miles. */
+	private static void vent(Island island, BlockPos ground, RandomSource random) {
+		island.set(ground, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true).setValue(CampfireBlock.SIGNAL_FIRE, true));
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (random.nextInt(3) > 0 && island.theme.isGround(island.get(ground.relative(side)))) {
+				island.set(ground.relative(side), Blocks.MAGMA_BLOCK.defaultBlockState());
+			}
+		}
+	}
+
+	private static void basaltColumn(Island island, BlockPos ground, RandomSource random) {
+		int height = 1 + random.nextInt(5);
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), Blocks.BASALT.defaultBlockState());
+		}
+	}
+
+	// ---- Trees and plants -----------------------------------------------------------------------------------
 
 	private static void trees(Island island, Kind kind, RandomSource random) {
 		int wanted = switch (kind) {
-			case WILD -> 2 + random.nextInt(island.radius > 9 ? 3 : 2);
+			case WILD -> switch (island.theme) {
+				case STORM -> random.nextInt(2);
+				case VERDANT -> 3 + random.nextInt(3);
+				default -> 2 + random.nextInt(island.radius > 9 ? 3 : 2);
+			};
 			case ROOST -> 1 + random.nextInt(2);
 			case OUTPOST -> random.nextInt(2);
 		};
@@ -331,15 +552,15 @@ public record SkyIslandFeature() implements Feature {
 		for (int attempt = 0; attempt < 40 && planted.size() < wanted; attempt++) {
 			int dx = random.nextInt(island.radius * 2 + 1) - island.radius;
 			int dz = random.nextInt(island.radius * 2 + 1) - island.radius;
-			if (island.inner(dx, dz) < 0.25F || dx * dx + dz * dz < clearing * clearing) {
+			if (island.inner(dx, dz) < 0.25F || dx * dx + dz * dz < clearing * clearing || !island.isOpenGround(dx, dz)) {
 				continue;
 			}
 			BlockPos ground = island.ground(dx, dz);
-			if (!island.get(ground).is(Blocks.GRASS_BLOCK) || planted.stream().anyMatch(other -> other.distSqr(ground) < 25)) {
+			if (planted.stream().anyMatch(other -> other.distSqr(ground) < 25)) {
 				continue;
 			}
 			boolean clear = true;
-			for (int y = 1; y <= 8 && clear; y++) {
+			for (int y = 1; y <= 10 && clear; y++) {
 				clear = island.isAir(ground.above(y));
 			}
 			if (clear) {
@@ -349,36 +570,114 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	/** An oak with a round crown, a slim birch, or an azalea leaning under a wide flowering crown. */
+	/** A tree in keeping with the island: oak, birch, azalea, snowy spruce, or a charred, leafless trunk. */
 	private static void tree(Island island, BlockPos base, RandomSource random) {
 		List<BlockPos> logs = new ArrayList<>();
 		Map<BlockPos, BlockState> leaves = new HashMap<>();
 		BlockState log = Blocks.OAK_LOG.defaultBlockState();
 		int kind = random.nextInt(10);
-		if (kind < 6) {
-			int height = 4 + random.nextInt(3);
-			for (int y = 0; y < height; y++) {
-				logs.add(base.above(y));
+		switch (island.theme) {
+			case FROST -> {
+				log = Blocks.SPRUCE_LOG.defaultBlockState();
+				spruce(base, random, logs, leaves);
 			}
-			crown(leaves, base.above(height - 1), 2.6, 0.75, Blocks.OAK_LEAVES.defaultBlockState(), null, random);
-		} else if (kind < 8) {
-			log = Blocks.BIRCH_LOG.defaultBlockState();
-			int height = 5 + random.nextInt(3);
-			for (int y = 0; y < height; y++) {
-				logs.add(base.above(y));
+			case EMBER -> {
+				charredTree(island, base, random);
+				return;
 			}
-			crown(leaves, base.above(height - 1), 1.9, 1.1, Blocks.BIRCH_LEAVES.defaultBlockState(), null, random);
-		} else {
-			Direction lean = Direction.Plane.HORIZONTAL.getRandomDirection(random);
-			BlockPos pos = base;
-			for (int y = 0; y < 4; y++) {
-				logs.add(pos);
-				pos = y == 1 ? pos.above().relative(lean) : pos.above();
+			case STORM -> {
+				log = Blocks.BIRCH_LOG.defaultBlockState();
+				column(logs, base, 4 + random.nextInt(2));
+				crown(leaves, base.above(logs.size() - 1), 1.6, 1.0, Blocks.BIRCH_LEAVES.defaultBlockState(), null, random);
 			}
-			crown(leaves, pos, 2.8, 0.55, Blocks.AZALEA_LEAVES.defaultBlockState(), Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState(), random);
-			island.set(base.below(), Blocks.ROOTED_DIRT.defaultBlockState());
+			case VERDANT -> {
+				if (kind < 7) {
+					azalea(base, random, logs, leaves, 2.8 + random.nextDouble() * 0.8);
+					island.set(base.below(), Blocks.ROOTED_DIRT.defaultBlockState());
+				} else {
+					column(logs, base, 4 + random.nextInt(3));
+					crown(leaves, base.above(logs.size() - 1), 2.6, 0.75, Blocks.OAK_LEAVES.defaultBlockState(), null, random);
+				}
+			}
+			default -> {
+				if (kind < 6) {
+					column(logs, base, 4 + random.nextInt(3));
+					crown(leaves, base.above(logs.size() - 1), 2.6, 0.75, Blocks.OAK_LEAVES.defaultBlockState(), null, random);
+				} else if (kind < 8) {
+					log = Blocks.BIRCH_LOG.defaultBlockState();
+					column(logs, base, 5 + random.nextInt(3));
+					crown(leaves, base.above(logs.size() - 1), 1.9, 1.1, Blocks.BIRCH_LEAVES.defaultBlockState(), null, random);
+				} else {
+					azalea(base, random, logs, leaves, 2.8);
+					island.set(base.below(), Blocks.ROOTED_DIRT.defaultBlockState());
+				}
+			}
 		}
 		growTree(island, logs, log, leaves);
+		if (island.theme == Theme.FROST) {
+			// Snow settles on the upper boughs.
+			leaves.keySet().forEach(pos -> {
+				if (island.get(pos).is(Blocks.SPRUCE_LEAVES) && island.isAir(pos.above()) && random.nextInt(3) > 0) {
+					island.set(pos.above(), Blocks.SNOW.defaultBlockState());
+				}
+			});
+		}
+	}
+
+	private static void column(List<BlockPos> logs, BlockPos base, int height) {
+		for (int y = 0; y < height; y++) {
+			logs.add(base.above(y));
+		}
+	}
+
+	/** A short trunk that leans once, under a wide flowering crown. */
+	private static void azalea(BlockPos base, RandomSource random, List<BlockPos> logs, Map<BlockPos, BlockState> leaves, double size) {
+		Direction lean = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+		BlockPos pos = base;
+		for (int y = 0; y < 4; y++) {
+			logs.add(pos);
+			pos = y == 1 ? pos.above().relative(lean) : pos.above();
+		}
+		crown(leaves, pos, size, 0.55, Blocks.AZALEA_LEAVES.defaultBlockState(), Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState(), random);
+	}
+
+	/** A spruce: tiers of boughs narrowing to a point. */
+	private static void spruce(BlockPos base, RandomSource random, List<BlockPos> logs, Map<BlockPos, BlockState> leaves) {
+		int height = 7 + random.nextInt(3);
+		column(logs, base, height);
+		BlockState leaf = Blocks.SPRUCE_LEAVES.defaultBlockState();
+		for (int y = 2; y <= height; y++) {
+			int fromTop = height - y;
+			int r = fromTop == 0 ? 0 : fromTop % 2 == 1 ? 1 : Math.min(2, 1 + fromTop / 3);
+			for (int dx = -r; dx <= r; dx++) {
+				for (int dz = -r; dz <= r; dz++) {
+					if (Math.abs(dx) + Math.abs(dz) <= r + (r == 2 ? 1 : 0) && (dx != 0 || dz != 0 || y >= height)) {
+						leaves.put(base.offset(dx, y, dz), leaf);
+					}
+				}
+			}
+		}
+		leaves.put(base.above(height + 1), leaf);
+	}
+
+	/** A dead tree burnt black by the island's heat: a bare trunk and a branch or two, no leaves. */
+	private static void charredTree(Island island, BlockPos base, RandomSource random) {
+		int height = 3 + random.nextInt(3);
+		for (int y = 0; y < height; y++) {
+			island.set(base.above(y), Blocks.DARK_OAK_LOG.defaultBlockState());
+		}
+		int branches = 1 + random.nextInt(2);
+		for (int i = 0; i < branches; i++) {
+			Direction side = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+			BlockPos start = base.above(height - 1 - random.nextInt(2));
+			int length = 1 + random.nextInt(2);
+			for (int j = 1; j <= length; j++) {
+				island.set(start.relative(side, j), Blocks.DARK_OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, side.getAxis()));
+			}
+			if (random.nextBoolean()) {
+				island.set(start.relative(side, length).above(), Blocks.DARK_OAK_LOG.defaultBlockState());
+			}
+		}
 	}
 
 	/** A squashed ball of leaves with a ragged edge; some flowering, if the tree flowers. */
@@ -425,41 +724,86 @@ public record SkyIslandFeature() implements Feature {
 		});
 	}
 
-	/** Grass, ferns and flowers over the open meadow, and here and there a bush the fireflies like. */
+	/** Whatever grows on each theme's open ground. */
 	private static void plants(Island island, RandomSource random) {
 		Block[] flowers = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY, Blocks.ALLIUM, Blocks.LILY_OF_THE_VALLEY};
 		for (int dx = -REACH; dx <= REACH; dx++) {
 			for (int dz = -REACH; dz <= REACH; dz++) {
-				if (!island.has(dx, dz)) {
+				if (!island.isOpenGround(dx, dz)) {
 					continue;
 				}
 				BlockPos ground = island.ground(dx, dz);
 				BlockPos above = ground.above();
-				if (!island.get(ground).is(Blocks.GRASS_BLOCK) || !island.isAir(above)) {
-					continue;
-				}
+				BlockState soil = island.get(ground);
 				float roll = random.nextFloat();
-				if (roll < 0.3F) {
-					island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
-				} else if (roll < 0.34F) {
-					island.set(above, Blocks.FERN.defaultBlockState());
-				} else if (roll < 0.38F && island.isAir(above.above())) {
-					DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
-				} else if (roll < 0.45F) {
-					island.set(above, flowers[random.nextInt(flowers.length)].defaultBlockState());
-				} else if (roll < 0.49F) {
-					island.set(above, Blocks.WILDFLOWERS.defaultBlockState()
-						.setValue(FlowerBedBlock.AMOUNT, 1 + random.nextInt(4))
-						.setValue(FlowerBedBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random)));
-				} else if (roll < 0.5F) {
-					island.set(above, Blocks.FIREFLY_BUSH.defaultBlockState());
+				switch (island.theme) {
+					case MEADOW -> {
+						if (roll < 0.3F) {
+							island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+						} else if (roll < 0.34F) {
+							island.set(above, Blocks.FERN.defaultBlockState());
+						} else if (roll < 0.38F && island.isAir(above.above())) {
+							DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+						} else if (roll < 0.45F) {
+							island.set(above, flowers[random.nextInt(flowers.length)].defaultBlockState());
+						} else if (roll < 0.49F) {
+							island.set(above, petals(Blocks.WILDFLOWERS, random));
+						} else if (roll < 0.5F) {
+							island.set(above, Blocks.FIREFLY_BUSH.defaultBlockState());
+						}
+					}
+					case VERDANT -> {
+						if (roll < 0.25F) {
+							island.set(above, Blocks.MOSS_CARPET.defaultBlockState());
+						} else if (roll < 0.37F) {
+							island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+						} else if (roll < 0.41F) {
+							island.set(above, Blocks.FERN.defaultBlockState());
+						} else if (roll < 0.45F) {
+							island.set(above, Blocks.AZALEA.defaultBlockState());
+						} else if (roll < 0.49F) {
+							island.set(above, Blocks.FLOWERING_AZALEA.defaultBlockState());
+						} else if (roll < 0.56F) {
+							island.set(above, petals(Blocks.PINK_PETALS, random));
+						} else if (roll < 0.58F && island.isAir(above.above())) {
+							DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+						} else if (roll < 0.59F) {
+							island.set(above, Blocks.FIREFLY_BUSH.defaultBlockState());
+						}
+					}
+					case FROST -> {
+						if (soil.is(Blocks.SNOW_BLOCK) && roll < 0.7F) {
+							island.set(above, Blocks.SNOW.defaultBlockState().setValue(SnowLayerBlock.LAYERS, 1 + random.nextInt(2)));
+						}
+					}
+					case STORM -> {
+						if (soil.is(Blocks.GRASS_BLOCK)) {
+							if (roll < 0.3F) {
+								island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+							} else if (roll < 0.34F && island.isAir(above.above())) {
+								DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+							}
+						}
+					}
+					default -> {
+					}
 				}
 			}
 		}
 	}
 
-	/** A little pond in the meadow, two deep in the middle, on clay and sand, with lily pads and reeds. */
+	private static BlockState petals(Block block, RandomSource random) {
+		return block.defaultBlockState()
+			.setValue(FlowerBedBlock.AMOUNT, 1 + random.nextInt(4))
+			.setValue(FlowerBedBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random));
+	}
+
+	/**
+	 * A little pool in the meadow, two deep in the middle: water with lily pads and reeds, a frozen pond on a
+	 * Frost island, or a pool of lava on an Ember one.
+	 */
 	private static void pond(Island island, RandomSource random) {
+		Theme theme = island.theme;
 		for (int attempt = 0; attempt < 10; attempt++) {
 			int cx = random.nextInt(7) - 3;
 			int cz = random.nextInt(7) - 3;
@@ -467,7 +811,7 @@ public record SkyIslandFeature() implements Feature {
 				continue;
 			}
 			int r = 2 + random.nextInt(2);
-			int water = island.surface(cx, cz);
+			int level = island.surface(cx, cz);
 			List<int[]> cells = new ArrayList<>();
 			for (int dx = -r; dx <= r; dx++) {
 				for (int dz = -r; dz <= r; dz++) {
@@ -476,40 +820,47 @@ public record SkyIslandFeature() implements Feature {
 					}
 				}
 			}
-			// The ring around the water has to be solid island at least as high as the water, or it'd spill.
+			// The ring around it has to be solid island at least as high as the surface, or it'd spill.
 			boolean fits = true;
 			for (int dx = -r - 1; dx <= r + 1 && fits; dx++) {
 				for (int dz = -r - 1; dz <= r + 1 && fits; dz++) {
-					fits = island.inner(cx + dx, cz + dz) >= 0.2F && (island.surface(cx + dx, cz + dz) >= water || isCell(cells, cx + dx, cz + dz));
+					fits = island.inner(cx + dx, cz + dz) >= 0.2F && (island.surface(cx + dx, cz + dz) >= level || isCell(cells, cx + dx, cz + dz));
 				}
 			}
 			if (!fits) {
 				continue;
 			}
+			BlockState liquid = (theme == Theme.EMBER ? Blocks.LAVA : Blocks.WATER).defaultBlockState();
 			for (int[] cell : cells) {
 				int x = cell[0];
 				int z = cell[1];
-				int floor = water - cell[2];
+				int floor = level - cell[2];
 				for (int y = Math.min(island.surface(x, z), floor - 1) + 1; y < floor; y++) {
-					island.set(island.column(x, y, z), Blocks.DIRT.defaultBlockState());
+					island.set(island.column(x, y, z), theme.soil(random));
 				}
-				island.set(island.column(x, floor, z), (random.nextInt(3) == 0 ? Blocks.CLAY : Blocks.SAND).defaultBlockState());
-				for (int y = floor + 1; y <= water; y++) {
-					island.set(island.column(x, y, z), Blocks.WATER.defaultBlockState());
+				BlockState bed = theme == Theme.EMBER ? Blocks.BASALT.defaultBlockState()
+					: (random.nextInt(3) == 0 ? Blocks.CLAY : theme == Theme.FROST ? Blocks.GRAVEL : Blocks.SAND).defaultBlockState();
+				island.set(island.column(x, floor, z), bed);
+				for (int y = floor + 1; y <= level; y++) {
+					boolean frozen = theme == Theme.FROST && y == level;
+					island.set(island.column(x, y, z), frozen ? Blocks.ICE.defaultBlockState() : liquid);
 				}
-				for (int y = water + 1; y <= island.surface(x, z); y++) {
+				for (int y = level + 1; y <= island.surface(x, z); y++) {
 					island.set(island.column(x, y, z), Blocks.AIR.defaultBlockState());
 				}
-				island.setSurface(x, z, water);
-				if (random.nextInt(6) == 0) {
-					island.set(island.column(x, water + 1, z), Blocks.LILY_PAD.defaultBlockState());
+				island.setSurface(x, z, level);
+				if (theme != Theme.EMBER && theme != Theme.FROST && random.nextInt(theme == Theme.VERDANT ? 3 : 6) == 0) {
+					island.set(island.column(x, level + 1, z), Blocks.LILY_PAD.defaultBlockState());
 				}
+			}
+			if (theme == Theme.EMBER || theme == Theme.FROST) {
+				return;
 			}
 			for (int[] cell : cells) {
 				for (Direction side : Direction.Plane.HORIZONTAL) {
 					int x = cell[0] + side.getStepX();
 					int z = cell[1] + side.getStepZ();
-					if (!isCell(cells, x, z) && island.surface(x, z) == water && random.nextInt(4) == 0
+					if (!isCell(cells, x, z) && island.surface(x, z) == level && random.nextInt(4) == 0
 							&& island.get(island.ground(x, z)).is(Blocks.GRASS_BLOCK) && island.isAir(island.ground(x, z).above())) {
 						int height = 1 + random.nextInt(3);
 						for (int y = 1; y <= height; y++) {
@@ -536,7 +887,7 @@ public record SkyIslandFeature() implements Feature {
 		List<int[]> rim = new ArrayList<>();
 		for (int dx = -REACH; dx <= REACH; dx++) {
 			for (int dz = -REACH; dz <= REACH; dz++) {
-				if (island.isRim(dx, dz) && island.get(island.ground(dx, dz)).is(Blocks.GRASS_BLOCK)) {
+				if (island.isRim(dx, dz) && island.theme.isGround(island.get(island.ground(dx, dz)))) {
 					rim.add(new int[] {dx, dz});
 				}
 			}
@@ -562,7 +913,7 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	/** A few small rocks drifting near the island, some with a tuft of grass. */
+	/** A few small rocks drifting near the island. */
 	private static void islets(Island island, RandomSource random) {
 		int count = random.nextInt(4);
 		for (int i = 0; i < count; i++) {
@@ -585,11 +936,8 @@ public record SkyIslandFeature() implements Feature {
 					for (int dy = 0; dy <= depth; dy++) {
 						BlockPos pos = middle.offset(dx, -dy, dz);
 						if (island.isAir(pos)) {
-							island.set(pos, dy == 0 ? Blocks.GRASS_BLOCK.defaultBlockState() : dy == 1 ? Blocks.DIRT.defaultBlockState() : rock(random, 0.5F));
+							island.set(pos, dy == 0 ? island.theme.top(random) : dy == 1 ? island.theme.soil(random) : island.theme.rock(random, 0.5F));
 						}
-					}
-					if (random.nextInt(3) == 0 && island.isAir(middle.offset(dx, 1, dz))) {
-						island.set(middle.offset(dx, 1, dz), Blocks.SHORT_GRASS.defaultBlockState());
 					}
 				}
 			}
@@ -598,7 +946,7 @@ public record SkyIslandFeature() implements Feature {
 
 	// ---- Wild islands ---------------------------------------------------------------------------------------
 
-	/** A ruined shrine of mossy stone in the meadow, its chest still waiting in the middle. */
+	/** A ruined shrine of weathered stone, its chest still waiting in the middle. */
 	private static void shrine(Island island, RandomSource random) {
 		for (int attempt = 0; attempt < 12; attempt++) {
 			int cx = random.nextInt(7) - 3;
@@ -611,28 +959,26 @@ public record SkyIslandFeature() implements Feature {
 			for (int dx = -2; dx <= 2 && flat; dx++) {
 				for (int dz = -2; dz <= 2 && flat; dz++) {
 					flat = island.inner(cx + dx, cz + dz) >= 0.3F && Math.abs(island.surface(cx + dx, cz + dz) - y) <= 1
-						&& island.get(island.ground(cx + dx, cz + dz)).is(Blocks.GRASS_BLOCK);
+						&& island.theme.isGround(island.get(island.ground(cx + dx, cz + dz)));
 				}
 			}
 			if (!flat) {
 				continue;
 			}
-			BlockState[] stones = {Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.CRACKED_STONE_BRICKS.defaultBlockState(),
-				Blocks.STONE_BRICKS.defaultBlockState(), Blocks.MOSSY_COBBLESTONE.defaultBlockState()};
+			boolean mossy = island.theme == Theme.MEADOW || island.theme == Theme.VERDANT;
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dz = -2; dz <= 2; dz++) {
 					BlockPos ground = island.ground(cx + dx, cz + dz);
-					boolean corner = Math.abs(dx) == 2 && Math.abs(dz) == 2;
-					if (corner) {
+					if (Math.abs(dx) == 2 && Math.abs(dz) == 2) {
 						int height = 1 + random.nextInt(3);
 						for (int h = 1; h <= height; h++) {
-							island.set(ground.above(h), stones[random.nextInt(stones.length)]);
+							island.set(ground.above(h), island.theme.ruinStone(random));
 						}
 						if (random.nextBoolean()) {
 							island.set(ground.above(height + 1), Blocks.STONE_BRICK_SLAB.defaultBlockState());
 						}
 					} else if (random.nextInt(5) > 0) {
-						island.set(ground, random.nextInt(4) == 0 ? Blocks.MOSS_BLOCK.defaultBlockState() : stones[random.nextInt(stones.length)]);
+						island.set(ground, mossy && random.nextInt(4) == 0 ? Blocks.MOSS_BLOCK.defaultBlockState() : island.theme.ruinStone(random));
 					}
 				}
 			}
@@ -651,8 +997,8 @@ public record SkyIslandFeature() implements Feature {
 
 	// ---- Dragon roosts --------------------------------------------------------------------------------------
 
-	/** A dragon's nest: a ring of hay strewn with bones round a hoard of treasure, and the wild dragon guarding it. */
-	private static void roost(Island island, RandomSource random) {
+	/** A dragon's nest round a hoard of treasure, built from what's to hand on its island, and the dragon guarding it. */
+	private static void roost(Island island, DragonElement element, RandomSource random) {
 		for (int dx = -4; dx <= 4; dx++) {
 			for (int dz = -4; dz <= 4; dz++) {
 				double d = Math.sqrt(dx * dx + dz * dz);
@@ -661,24 +1007,43 @@ public record SkyIslandFeature() implements Feature {
 				}
 				BlockPos ground = island.ground(dx, dz);
 				if (d > 2.4) {
-					island.set(ground.above(), random.nextInt(7) == 0 ? pillar(Blocks.BONE_BLOCK, random) : pillar(Blocks.HAY_BLOCK, random));
+					island.set(ground.above(), nestRing(island.theme, random));
 					if (d > 2.9 && random.nextInt(3) > 0) {
-						island.set(ground.above(2), pillar(Blocks.HAY_BLOCK, random));
+						island.set(ground.above(2), nestRing(island.theme, random));
 					}
 				} else {
-					island.set(ground, (random.nextBoolean() ? Blocks.COARSE_DIRT : Blocks.ROOTED_DIRT).defaultBlockState());
+					island.set(ground, nestFloor(island.theme, random));
 				}
 			}
 		}
 		chest(island, island.ground(0, 0).above(), HOARD_LOOT, random);
-		DragonElement[] wild = {DragonElement.EMBER, DragonElement.FROST, DragonElement.STORM};
-		DragonEntity guard = Dragons.TYPES.get(wild[random.nextInt(wild.length)]).create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
+		DragonEntity guard = Dragons.TYPES.get(element).create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
 		if (guard != null) {
 			BlockPos at = island.ground(1, 1).above();
 			guard.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
 			guard.setIslandHome(island.ground(0, 0).above(), false);
 			island.level.addFreshEntity(guard);
 		}
+	}
+
+	private static BlockState nestRing(Theme theme, RandomSource random) {
+		float r = random.nextFloat();
+		return switch (theme) {
+			case EMBER -> r < 0.4F ? pillar(Blocks.BONE_BLOCK, random) : r < 0.7F ? Blocks.BLACKSTONE.defaultBlockState() : pillar(Blocks.HAY_BLOCK, random);
+			case FROST -> r < 0.6F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.SNOW_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			case VERDANT -> r < 0.5F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.MOSS_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			default -> r < 0.85F ? pillar(Blocks.HAY_BLOCK, random) : pillar(Blocks.BONE_BLOCK, random);
+		};
+	}
+
+	private static BlockState nestFloor(Theme theme, RandomSource random) {
+		boolean first = random.nextBoolean();
+		return (switch (theme) {
+			case EMBER -> first ? Blocks.BLACKSTONE : Blocks.COARSE_DIRT;
+			case FROST -> first ? Blocks.SNOW_BLOCK : Blocks.COARSE_DIRT;
+			case VERDANT -> first ? Blocks.MOSS_BLOCK : Blocks.ROOTED_DIRT;
+			default -> first ? Blocks.COARSE_DIRT : Blocks.ROOTED_DIRT;
+		}).defaultBlockState();
 	}
 
 	private static BlockState pillar(Block block, RandomSource random) {

@@ -17,9 +17,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * pixels dug out; the block entity remembers which ones are left and a renderer draws them.
  */
 public class PixelatedBlock extends Block implements EntityBlock {
-	/** Chipping one pixel is this many times quicker than breaking the whole original block. */
-	private static final float PIXEL_SPEEDUP = 8F;
-
 	public PixelatedBlock(Properties properties) {
 		super(properties);
 	}
@@ -53,7 +50,7 @@ public class PixelatedBlock extends Block implements EntityBlock {
 	protected float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
 		if (level.getBlockEntity(pos) instanceof PixelatedBlockEntity pixels) {
 			float whole = pixels.source().getDestroyProgress(player, level, pos);
-			return com.wonderrealms.TinyWorlds.isTiny(player) ? Math.min(1F, whole * PIXEL_SPEEDUP) : whole;
+			return PixelMining.pixelProgress(player, whole);
 		}
 		return super.getDestroyProgress(state, player, level, pos);
 	}

@@ -134,6 +134,20 @@
               "max": 6
             }
           }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:iron_dragon_armor",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:golden_dragon_armor",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:diamond_dragon_armor"
         }
       ]
     },

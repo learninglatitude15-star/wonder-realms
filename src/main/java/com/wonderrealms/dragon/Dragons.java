@@ -4,6 +4,7 @@ import com.wonderrealms.WonderAdvancements;
 import com.wonderrealms.WonderRealms;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Function;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -43,8 +44,8 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 
 /**
- * Registers the dragons: one creature type per element, eggs for ember, frost and storm, and the breath key's
- * network message. Wild dragons live only on sky islands, guarding roosts or carrying pillagers (see
+ * Registers the dragons: one creature type per element, eggs for the wild kinds, dragon armor, the whistle, and
+ * the breath key's network message. Wild dragons live only on sky islands, guarding roosts or carrying pillagers (see
  * {@code SkyIslandFeature}). Eggs only come from dragons: kill a wild adult for its egg, or tame one and it lays
  * eggs. The End's Dragon Egg hatches an Ender Dragon when fed chorus fruit.
  */
@@ -54,6 +55,10 @@ public final class Dragons {
 	public static final Map<DragonElement, Item> EGG_ITEMS = new EnumMap<>(DragonElement.class);
 	/** Creative-mode spawn eggs: a wild, grown dragon of each kind. */
 	public static final Map<DragonElement, Item> SPAWN_EGGS = new EnumMap<>(DragonElement.class);
+	/** Dragon armor, one item per material. */
+	public static final Map<DragonArmor, Item> ARMOR_ITEMS = new EnumMap<>(DragonArmor.class);
+	/** Calls your dragons to you (sneak to make them sit). */
+	public static final Item WHISTLE = item("dragon_whistle", properties -> new DragonWhistleItem(properties.stacksTo(1)));
 
 	/** Chance each chorus fruit fed to the End's Dragon Egg hatches it. */
 	private static final float CHORUS_HATCH_CHANCE = 0.25F;
@@ -80,7 +85,8 @@ public final class Dragons {
 			ResourceKey<Block> eggKey = ResourceKey.create(Registries.BLOCK, WonderRealms.id(element.id + "_egg"));
 			DragonEggBlock egg = Registry.register(BuiltInRegistries.BLOCK, eggKey, new DragonEggBlock(element, BlockBehaviour.Properties.of()
 				.setId(eggKey)
-				.mapColor(element == DragonElement.EMBER ? MapColor.COLOR_RED : element == DragonElement.FROST ? MapColor.ICE : MapColor.COLOR_PURPLE)
+				.mapColor(element == DragonElement.EMBER ? MapColor.COLOR_RED : element == DragonElement.FROST ? MapColor.ICE
+					: element == DragonElement.VERDANT ? MapColor.PLANT : MapColor.COLOR_PURPLE)
 				.strength(3F, 9F)
 				.lightLevel(state -> element.eggLight)
 				.noOcclusion()
@@ -91,9 +97,18 @@ public final class Dragons {
 			EGG_ITEMS.put(element, Registry.register(BuiltInRegistries.ITEM, itemKey,
 				new BlockItem(egg, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix().stacksTo(1))));
 		}
+		for (DragonArmor armor : DragonArmor.values()) {
+			ARMOR_ITEMS.put(armor, item(armor.id + "_dragon_armor", properties -> new Item(armor == DragonArmor.NETHERITE
+				? properties.stacksTo(1).fireResistant() : properties.stacksTo(1))));
+		}
 	}
 
 	private Dragons() {
+	}
+
+	private static <T extends Item> T item(String name, Function<Item.Properties, T> factory) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, WonderRealms.id(name));
+		return Registry.register(BuiltInRegistries.ITEM, key, factory.apply(new Item.Properties().setId(key)));
 	}
 
 	/** The egg a dragon of this element drops or lays: its own, or for an ender dragon, the End's Dragon Egg. */
@@ -113,6 +128,8 @@ public final class Dragons {
 	public static void init() {
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.NATURAL_BLOCKS).register(output -> EGG_ITEMS.values().forEach(output::accept));
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.SPAWN_EGGS).register(output -> SPAWN_EGGS.values().forEach(output::accept));
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> ARMOR_ITEMS.values().forEach(output::accept));
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> output.accept(WHISTLE));
 
 		PayloadTypeRegistry.serverboundPlay().register(BreathPayload.TYPE, BreathPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(BreathPayload.TYPE, (payload, context) -> {

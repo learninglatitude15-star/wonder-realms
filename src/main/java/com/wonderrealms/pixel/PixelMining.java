@@ -52,13 +52,35 @@ public final class PixelMining {
 	/** Pixels chipped per point of tool durability used. */
 	private static final int PIXELS_PER_DURABILITY = 32;
 
+	/** At full size, a Pixel Chisel carves at least this fast (a pixel every few ticks), whatever the block. */
+	private static final float CHISEL_MIN_PROGRESS = 0.25F;
+	/** Pixels carve this many times faster than the whole block would break. */
+	private static final float PIXEL_SPEEDUP = 8F;
+
 	private PixelMining() {
 	}
 
+	/** Tiny players carve pixels with anything (even their fists); at full size you need a Pixel Chisel in hand. */
+	public static boolean canCarve(Player player) {
+		return TinyWorlds.isTiny(player) || player.getMainHandItem().is(TinyWorlds.PIXEL_CHISEL);
+	}
+
+	/** How fast a carver chips one pixel out of a block that would break whole at {@code wholeProgress} per tick. */
+	public static float pixelProgress(Player player, float wholeProgress) {
+		if (!canCarve(player)) {
+			return wholeProgress;
+		}
+		float progress = wholeProgress * PIXEL_SPEEDUP;
+		if (!TinyWorlds.isTiny(player)) {
+			progress = Math.max(progress, CHISEL_MIN_PROGRESS);
+		}
+		return Math.min(1F, progress);
+	}
+
 	public static void init() {
-		// Tiny players turn a whole block into pixels the moment they start swinging at it.
+		// Tiny players (and anyone holding a Pixel Chisel) turn a whole block into pixels the moment they start swinging at it.
 		AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
-			if (level instanceof ServerLevel server && TinyWorlds.isTiny(player) && !player.isSpectator()) {
+			if (level instanceof ServerLevel server && canCarve(player) && !player.isSpectator()) {
 				BlockState state = server.getBlockState(pos);
 				if (canPixelate(server, pos, state)) {
 					pixelate(server, pos, state);
@@ -73,7 +95,7 @@ public final class PixelMining {
 				return true;
 			}
 			if (blockEntity instanceof PixelatedBlockEntity pixels) {
-				if (TinyWorlds.isTiny(player)) {
+				if (canCarve(player)) {
 					chip(server, player, pos, pixels);
 				} else {
 					// Full-size players just break the whole carved block, with its drops if not already given.
@@ -85,7 +107,7 @@ public final class PixelMining {
 				return false;
 			}
 			// A tiny player who somehow breaks a whole block (say, a block that was placed mid-swing) carves it too.
-			if (TinyWorlds.isTiny(player) && canPixelate(server, pos, state)) {
+			if (canCarve(player) && canPixelate(server, pos, state)) {
 				PixelatedBlockEntity pixels = pixelate(server, pos, state);
 				if (pixels != null) {
 					chip(server, player, pos, pixels);
@@ -122,7 +144,8 @@ public final class PixelMining {
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle();
 		int n = PixelatedBlockEntity.N;
-		for (double d = 0; d <= REACH + 1.5; d += STEP) {
+		double reach = (TinyWorlds.isTiny(player) ? REACH : player.blockInteractionRange()) + 1.5;
+		for (double d = 0; d <= reach; d += STEP) {
 			Vec3 p = eye.add(look.scale(d));
 			double lx = p.x - pos.getX(), ly = p.y - pos.getY(), lz = p.z - pos.getZ();
 			if (lx < 0 || ly < 0 || lz < 0 || lx >= 1 || ly >= 1 || lz >= 1) {
@@ -158,7 +181,7 @@ public final class PixelMining {
 		level.playSound(null, pos, sound.getHitSound(), SoundSource.BLOCKS, 0.4F, sound.getPitch() * 1.6F);
 
 		if (player instanceof ServerPlayer serverPlayer) {
-			WonderAdvancements.award(serverPlayer, "carve_pixel");
+			WonderAdvancements.award(serverPlayer, TinyWorlds.isTiny(player) ? "carve_pixel" : "sculptor");
 		}
 		if (!player.isCreative() && pixels.removed() % PIXELS_PER_DURABILITY == 0) {
 			player.getMainHandItem().hurtAndBreak(1, player, EquipmentSlot.MAINHAND);

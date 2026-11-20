@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "minecraft:bone",
+    "minecraft:iron_nugget",
+    "minecraft:string"
+  ],
+  "result": {
+    "id": "wonderrealms:dragon_whistle",
+    "count": 1
+  }
+}

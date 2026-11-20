@@ -7,7 +7,9 @@ import com.geckolib.animation.AnimationController;
 import com.geckolib.animation.RawAnimation;
 import com.geckolib.animation.object.PlayState;
 import com.geckolib.util.GeckoLibUtil;
+import com.wonderrealms.TinyWorlds;
 import com.wonderrealms.WonderAdvancements;
+import com.wonderrealms.WonderRealms;
 import com.wonderrealms.airship.AirshipEntity;
 import java.util.List;
 import net.minecraft.ChatFormatting;
@@ -17,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -39,6 +42,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -61,6 +66,8 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BonemealSource;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.CandleBlock;
@@ -92,6 +99,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 	private static final EntityDataAccessor<Float> GROWTH = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Boolean> SADDLED = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> FLYING = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
+	/** The armor worn: 0 for none, otherwise {@link DragonArmor#index()}. */
+	private static final EntityDataAccessor<Integer> ARMOR = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 
 	// Growth
 	/** Ticks from hatchling to full size without feeding (two in-game days). */
@@ -134,8 +143,11 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 	private static final double FOLLOW_RING = 5, FOLLOW_HEIGHT = 2.5;
 	/** Players at least this high on a dragon earn "Touch the Sky". */
 	private static final int SKY_HIGH_Y = 256;
-	/** The saddle: on the middle of the back (full size), just ahead of the back spikes. */
-	private static final double SEAT_HEIGHT = 1.4, SEAT_BACK = 0.06;
+	/** The saddle sits on the middle of the back (full size); a second rider sits just behind it. */
+	private static final double SEAT_HEIGHT = 1.4, SEAT_BACK = 0.06, PILLION_BACK = 0.62;
+	/** A whistle's call lasts this long; the dragon counts as arrived this close to its owner. */
+	private static final int CALL_TICKS = 20 * 30;
+	private static final double CALL_ARRIVE = 6;
 
 	private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("misc.idle");
 	private static final RawAnimation WALK = RawAnimation.begin().thenLoop("move.walk");
@@ -156,6 +168,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 	private boolean captive;
 	private boolean conquered;
 	private long conqueredCheckedAt = Long.MIN_VALUE;
+	/** Ticks left on a whistle's call to come. */
+	private int callTicks;
 
 	public DragonEntity(EntityType<? extends DragonEntity> type, Level level, DragonElement element) {
 		super(type, level);
@@ -185,6 +199,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		builder.define(GROWTH, 1F);
 		builder.define(SADDLED, false);
 		builder.define(FLYING, false);
+		builder.define(ARMOR, 0);
 	}
 
 	public float growth() {
@@ -218,6 +233,62 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		return this.entityData.get(SADDLED);
 	}
 
+	/** The armor this dragon wears, or null. */
+	public DragonArmor armor() {
+		return DragonArmor.byIndex(this.entityData.get(ARMOR));
+	}
+
+	private void setArmor(DragonArmor armor) {
+		this.entityData.set(ARMOR, armor == null ? 0 : armor.index());
+		this.applyArmor();
+	}
+
+	/** Worn armor counts toward the dragon's own armor, toughness and knockback resistance. */
+	private void applyArmor() {
+		if (this.level().isClientSide()) {
+			return;
+		}
+		DragonArmor armor = this.armor();
+		Identifier id = WonderRealms.id("dragon_armor");
+		AttributeInstance protection = this.getAttribute(Attributes.ARMOR);
+		AttributeInstance toughness = this.getAttribute(Attributes.ARMOR_TOUGHNESS);
+		AttributeInstance knockback = this.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
+		for (AttributeInstance attribute : new AttributeInstance[] {protection, toughness, knockback}) {
+			if (attribute != null) {
+				attribute.removeModifier(id);
+			}
+		}
+		if (armor == null) {
+			return;
+		}
+		if (protection != null) {
+			protection.addTransientModifier(new AttributeModifier(id, armor.armor, AttributeModifier.Operation.ADD_VALUE));
+		}
+		if (toughness != null && armor.toughness > 0) {
+			toughness.addTransientModifier(new AttributeModifier(id, armor.toughness, AttributeModifier.Operation.ADD_VALUE));
+		}
+		if (knockback != null && armor.knockbackResistance > 0) {
+			knockback.addTransientModifier(new AttributeModifier(id, armor.knockbackResistance, AttributeModifier.Operation.ADD_VALUE));
+		}
+	}
+
+	/** A whistle's call: stop sitting and come, flying if need be. */
+	public void callTo() {
+		this.setOrderedToSit(false);
+		this.setInSittingPose(false);
+		this.setTarget(null);
+		this.callTicks = CALL_TICKS;
+	}
+
+	/** A whistle's order to sit and wait (landing first if it's flying). */
+	public void orderToSit() {
+		this.callTicks = 0;
+		this.setOrderedToSit(true);
+		this.setInSittingPose(true);
+		this.setTarget(null);
+		this.getNavigation().stop();
+	}
+
 	public boolean isFlying() {
 		return this.entityData.get(FLYING);
 	}
@@ -249,6 +320,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		output.putBoolean("saddled", this.isSaddled());
 		output.putInt("egg_timer", this.eggTimer);
 		output.putBoolean("captive", this.captive);
+		if (this.armor() != null) {
+			output.putString("armor", this.armor().id);
+		}
 		if (this.home != null) {
 			output.putLong("island_home", this.home.asLong());
 		}
@@ -262,6 +336,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		this.entityData.set(SADDLED, input.getBooleanOr("saddled", false));
 		this.eggTimer = input.getIntOr("egg_timer", EGG_INTERVAL);
 		this.captive = input.getBooleanOr("captive", false);
+		this.setArmor(DragonArmor.byId(input.getStringOr("armor", "")));
 		long home = input.getLongOr("island_home", input.getLongOr("home", Long.MIN_VALUE));
 		this.home = home == Long.MIN_VALUE ? null : BlockPos.of(home);
 		if (this.home != null && !this.captive && !this.isTame()) {
@@ -301,6 +376,12 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		}
 		if (this.breathTicks > 0) {
 			this.tickBreath(level);
+		}
+		if (this.callTicks > 0) {
+			this.callTicks--;
+		}
+		if (this.isVehicle() && TinyWorlds.isTiny(this)) {
+			this.ejectPassengers(); // shrunk by a Shrink Ray: far too small to carry anyone
 		}
 		if (!this.isGrown() && this.tickCount % 20 == 0) {
 			this.setGrowth(this.growth() + 20F / GROW_TICKS);
@@ -376,6 +457,19 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 			return InteractionResult.SUCCESS;
 		}
 		if (!this.isOwnedBy(player)) {
+			// A friend can climb on behind the owner once the owner is in the saddle.
+			if (stack.isEmpty() && this.getControllingPassenger() instanceof Player pilot && this.getPassengers().size() < 2) {
+				if (server) {
+					player.startRiding(this);
+					if (pilot instanceof ServerPlayer serverPilot) {
+						WonderAdvancements.award(serverPilot, "two_riders");
+					}
+					if (player instanceof ServerPlayer serverPlayer) {
+						WonderAdvancements.award(serverPlayer, "two_riders");
+					}
+				}
+				return InteractionResult.SUCCESS;
+			}
 			return InteractionResult.PASS;
 		}
 
@@ -401,6 +495,41 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 			}
 			return InteractionResult.SUCCESS;
 		}
+		DragonArmor armor = DragonArmor.of(stack);
+		if (armor != null) {
+			if (server) {
+				ServerLevel level = (ServerLevel) this.level();
+				if (this.armor() != null) {
+					this.spawnAtLocation(level, new ItemStack(Dragons.ARMOR_ITEMS.get(this.armor())));
+				}
+				this.setArmor(armor);
+				stack.consume(1, player);
+				this.playSound(SoundEvents.HORSE_ARMOR.value(), 1F, 0.8F);
+				if (player instanceof ServerPlayer serverPlayer) {
+					WonderAdvancements.award(serverPlayer, "dragon_armor");
+					if (armor == DragonArmor.NETHERITE) {
+						WonderAdvancements.award(serverPlayer, "netherite_dragon");
+					}
+				}
+			}
+			return InteractionResult.SUCCESS;
+		}
+		// Shears take the armor off, and then the saddle.
+		if (stack.is(Items.SHEARS) && (this.armor() != null || this.isSaddled())) {
+			if (server) {
+				ServerLevel level = (ServerLevel) this.level();
+				if (this.armor() != null) {
+					this.spawnAtLocation(level, new ItemStack(Dragons.ARMOR_ITEMS.get(this.armor())));
+					this.setArmor(null);
+				} else {
+					this.ejectPassengers();
+					this.entityData.set(SADDLED, false);
+					this.spawnAtLocation(level, new ItemStack(Items.SADDLE));
+				}
+				this.playSound(SoundEvents.SHEEP_SHEAR, 1F, 0.9F);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (player.isSecondaryUseActive()) {
 			if (server) {
 				boolean sit = !this.isOrderedToSit();
@@ -412,8 +541,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 			}
 			return InteractionResult.SUCCESS;
 		}
-		if (stack.isEmpty() && this.isSaddled() && this.isGrown() && !this.isVehicle()) {
+		if (stack.isEmpty() && this.isSaddled() && this.isGrown() && this.getControllingPassenger() == null && !TinyWorlds.isTiny(this)) {
 			if (server) {
+				this.ejectPassengers(); // the owner always takes the front seat
 				this.setOrderedToSit(false);
 				this.setInSittingPose(false);
 				player.startRiding(this);
@@ -432,6 +562,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		}
 		if (this.isSaddled()) {
 			this.spawnAtLocation(level, new ItemStack(Items.SADDLE));
+		}
+		if (this.armor() != null) {
+			this.spawnAtLocation(level, new ItemStack(Dragons.ARMOR_ITEMS.get(this.armor())));
 		}
 	}
 
@@ -457,7 +590,24 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 
 	@Override
 	protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
-		return new Vec3(0, SEAT_HEIGHT * scale, -SEAT_BACK * scale).yRot(-this.yBodyRot * Mth.DEG_TO_RAD);
+		double back = this.getPassengers().indexOf(passenger) > 0 ? PILLION_BACK : SEAT_BACK;
+		return new Vec3(0, SEAT_HEIGHT * scale, -back * scale).yRot(-this.yBodyRot * Mth.DEG_TO_RAD);
+	}
+
+	/** The pilot in the saddle, and one friend behind. */
+	@Override
+	protected boolean canAddPassenger(Entity passenger) {
+		return this.getPassengers().size() < 2;
+	}
+
+	/** When the pilot climbs off, whoever rode behind them has to get down too. */
+	@Override
+	protected void removePassenger(Entity passenger) {
+		boolean pilot = passenger instanceof Player && passenger == this.getFirstPassenger();
+		super.removePassenger(passenger);
+		if (pilot && !this.level().isClientSide()) {
+			this.ejectPassengers();
+		}
 	}
 
 	@Override
@@ -541,6 +691,13 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 		}
 		double angle = this.tickCount * 0.02 + this.getId();
 		Vec3 ring = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+		// Called by a whistle: fly to the owner, then land beside them.
+		if (this.callTicks > 0 && this.getOwner() instanceof LivingEntity caller && caller.level() == this.level()) {
+			if (this.distanceToSqr(caller) > CALL_ARRIVE * CALL_ARRIVE) {
+				return caller.position().add(ring.scale(3)).add(0, 3, 0);
+			}
+			this.callTicks = 0;
+		}
 		LivingEntity target = this.getTarget();
 		boolean hasTarget = target != null && target.isAlive() && target.level() == this.level();
 
@@ -653,7 +810,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 	 */
 	public static DragonEntity spawnRaiderMount(ServerLevelAccessor level, BlockPos spawn, BlockPos outpost) {
 		ServerLevel server = level.getLevel();
-		DragonElement[] wild = {DragonElement.EMBER, DragonElement.FROST, DragonElement.STORM};
+		DragonElement[] wild = DragonElement.WILD;
 		DragonEntity dragon = Dragons.TYPES.get(wild[server.getRandom().nextInt(wild.length)]).create(server, EntitySpawnReason.STRUCTURE);
 		if (dragon == null) {
 			return null;
@@ -762,6 +919,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 					target.setTicksFrozen(Math.min(target.getTicksFrozen() + 40, target.getTicksRequiredToFreeze() + 40));
 				}
 				case ENDER -> target.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 40, 0), this);
+				case VERDANT -> target.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 1), this);
 				case STORM -> {
 					if (this.random.nextFloat() < 0.12F) {
 						LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
@@ -803,9 +961,31 @@ public class DragonEntity extends TamableAnimal implements GeoEntity {
 						level.setBlock(pos, state.setValue(CampfireBlock.LIT, true), Block.UPDATE_ALL_IMMEDIATE);
 					}
 				}
+				case VERDANT -> {
+					// Plants it touches burst into growth, and bare dirt sprouts grass.
+					if (state.getBlock() instanceof BonemealableBlock plant && this.random.nextFloat() < 0.12F
+							&& plant.isValidBonemealTarget(level, pos, state, BonemealSource.MOB)) {
+						if (plant.isBonemealSuccess(level, this.random, pos, state, BonemealSource.MOB)) {
+							plant.performBonemeal(level, this.random, pos.immutable(), state, BonemealSource.MOB);
+						}
+						level.levelEvent(1505, pos, 15); // bone meal sparkles
+						this.awardGreenThumb();
+					} else if (state.is(Blocks.DIRT) && level.getBlockState(pos.above()).isAir() && this.random.nextFloat() < 0.1F) {
+						level.setBlockAndUpdate(pos, Blocks.GRASS_BLOCK.defaultBlockState());
+					}
+				}
 				default -> {
 				}
 			}
+		}
+	}
+
+	/** Whoever's riding (or else the owner) made something grow with a Verdant dragon's breath. */
+	private void awardGreenThumb() {
+		if (this.getControllingPassenger() instanceof ServerPlayer rider) {
+			WonderAdvancements.award(rider, "green_thumb");
+		} else if (this.getOwner() instanceof ServerPlayer owner) {
+			WonderAdvancements.award(owner, "green_thumb");
 		}
 	}
 
