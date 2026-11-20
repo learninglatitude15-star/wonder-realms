@@ -85,8 +85,15 @@ public final class Dragons {
 			ResourceKey<Block> eggKey = ResourceKey.create(Registries.BLOCK, WonderRealms.id(element.id + "_egg"));
 			DragonEggBlock egg = Registry.register(BuiltInRegistries.BLOCK, eggKey, new DragonEggBlock(element, BlockBehaviour.Properties.of()
 				.setId(eggKey)
-				.mapColor(element == DragonElement.EMBER ? MapColor.COLOR_RED : element == DragonElement.FROST ? MapColor.ICE
-					: element == DragonElement.VERDANT ? MapColor.PLANT : MapColor.COLOR_PURPLE)
+				.mapColor(switch (element) {
+					case EMBER -> MapColor.COLOR_RED;
+					case FROST -> MapColor.ICE;
+					case VERDANT -> MapColor.PLANT;
+					case TIDE -> MapColor.WATER;
+					case CRYSTAL -> MapColor.COLOR_MAGENTA;
+					case SHADOW -> MapColor.COLOR_BLACK;
+					default -> MapColor.COLOR_PURPLE;
+				})
 				.strength(3F, 9F)
 				.lightLevel(state -> element.eggLight)
 				.noOcclusion()

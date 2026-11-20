@@ -30,13 +30,24 @@ PALETTES = {
                   membrane=(0x52, 0x46, 0x86), horn=(0xe8, 0xd8, 0x50), eye=(0xff, 0xf2, 0x60)),
     "verdant": dict(dark=(0x1a, 0x44, 0x20), base=(0x3a, 0x86, 0x3a), light=(0x8c, 0xcc, 0x58), belly=(0xdc, 0xe8, 0xa0),
                     membrane=(0xd0, 0x7c, 0xb8), horn=(0x6a, 0x48, 0x28), eye=(0xff, 0xc8, 0x40)),
+    "tide": dict(dark=(0x0e, 0x4a, 0x6a), base=(0x1e, 0x86, 0xa8), light=(0x6a, 0xd4, 0xe0), belly=(0xc8, 0xf0, 0xe4),
+                 membrane=(0x3a, 0xb4, 0xb0), horn=(0xf0, 0xe6, 0xcc), eye=(0x80, 0xff, 0xf0)),
+    "crystal": dict(dark=(0x5a, 0x3a, 0x8a), base=(0x9a, 0x72, 0xd0), light=(0xe0, 0xc8, 0xff), belly=(0xf4, 0xec, 0xff),
+                    membrane=(0xc8, 0xa8, 0xf0), horn=(0xf8, 0xf4, 0xff), eye=(0xff, 0x9a, 0xf0)),
+    "shadow": dict(dark=(0x08, 0x08, 0x0e), base=(0x1a, 0x1a, 0x26), light=(0x34, 0x34, 0x4a), belly=(0x4a, 0x48, 0x5e),
+                   membrane=(0x22, 0x1a, 0x30), horn=(0x6a, 0x6a, 0x78), eye=(0x4a, 0xff, 0xe0)),
 }
 
 # --- Model: bone -> (parent, pivot, [(name, origin, size, kind, mirror)]) ---------------------------------------
 # Units are pixels (1/16 block). The dragon faces -Z (its head is at negative Z).
 BONES = [
     ("root", None, [0, 0, 0], []),
-    ("body", "root", [0, 14, 0], [("body", [-7, 10, -10], [14, 12, 22], "scales", False)]),
+    ("body", "root", [0, 14, 0], [
+        ("body", [-7, 10, -10], [14, 12, 22], "scales", False),
+        # Saddlebags hang on both flanks behind the saddle. Only the "bags" skins paint them; elsewhere they're clear.
+        ("saddlebag", [7, 13, 3], [3, 6, 8], "bag", False),
+        ("saddlebag", [-10, 13, 3], [3, 6, 8], "bag", True),
+    ]),
     # The back is left clear for the saddle and a second rider; spikes run along the neck and the tail.
     ("neck", "body", [0, 18, -10], [
         ("neck", [-3, 16, -20], [6, 6, 10], "scales", False),
@@ -127,6 +138,8 @@ def paint_skin(pal, placed):
         img[y][x] = (*c, 255)
 
     for name, (u, v, size, kind) in placed.items():
+        if kind == "bag":
+            continue  # left clear: the saddlebags only show once they're painted on
         for face, (fx, fy, fw, fh) in faces(u, v, size).items():
             for yy in range(fh):
                 for xx in range(fw):
@@ -207,6 +220,25 @@ def paint_saddle(img, placed):
     for z in range(d // 2 - 2, d // 2 + 2):
         for x in range(w):
             put(fx + x, fy + z, LEATHER["dark"])
+    return img
+
+
+def paint_bags(img, placed):
+    """Paints the saddlebags onto a copy of a saddled skin: leather bags with a buckled flap over the top."""
+    img = [row[:] for row in img]
+    u, v, size, _ = placed["saddlebag"]
+    for face, (fx, fy, fw, fh) in faces(u, v, size).items():
+        for yy in range(fh):
+            for xx in range(fw):
+                if face in ("top", "bottom"):
+                    c = LEATHER["dark"] if xx in (0, fw - 1) or yy in (0, fh - 1) else LEATHER["base"]
+                elif yy == 0 or yy == 3 or xx in (0, fw - 1):
+                    c = LEATHER["dark"]  # the rim, the flap's edge and the seams
+                elif yy < 3:
+                    c = LEATHER["iron"] if yy == 2 and xx == fw // 2 else LEATHER["light"]  # the flap and its buckle
+                else:
+                    c = LEATHER["stitch"] if yy == fh - 2 and xx % 2 == 1 else shade(LEATHER["base"], 0.9 + 0.2 * noise(fx + xx, fy + yy, 5))
+                img[fy + yy][fx + xx] = (*c, 255)
     return img
 
 
@@ -371,8 +403,12 @@ SPAWN_EGGS = {
     "frost_dragon": ((0x8c, 0xc4, 0xe4), (0xf2, 0xfb, 0xff), "Frost Dragon Spawn Egg"),
     "storm_dragon": ((0x3a, 0x36, 0x5c), (0xe8, 0xd8, 0x50), "Storm Dragon Spawn Egg"),
     "verdant_dragon": ((0x3a, 0x86, 0x3a), (0xd8, 0x7c, 0xc0), "Verdant Dragon Spawn Egg"),
+    "tide_dragon": ((0x1e, 0x86, 0xa8), (0x9a, 0xf0, 0xe0), "Tide Dragon Spawn Egg"),
+    "crystal_dragon": ((0x9a, 0x72, 0xd0), (0xf4, 0xec, 0xff), "Crystal Dragon Spawn Egg"),
+    "shadow_dragon": ((0x1a, 0x1a, 0x26), (0x4a, 0xff, 0xe0), "Shadow Dragon Spawn Egg"),
     "ender_dragon": ((0x1c, 0x16, 0x26), (0xd8, 0x6a, 0xff), "Ender Dragon Spawn Egg"),
     "pixel_miner": ((0x7a, 0x5a, 0x3a), (0xf0, 0xc0, 0x40), "Pixel Miner Spawn Egg"),
+    "rhino_beetle": ((0x3a, 0x22, 0x12), (0xa8, 0x80, 0x58), "Rhino Beetle Spawn Egg"),
 }
 
 
@@ -414,7 +450,8 @@ def main():
     lang_path = ASSETS / "lang" / "en_us.json"
     lang = json.loads(lang_path.read_text())
     names = {"ember": ("Ember Dragon", "Ember Egg"), "frost": ("Frost Dragon", "Frost Egg"), "storm": ("Storm Dragon", "Storm Egg"),
-             "verdant": ("Verdant Dragon", "Verdant Egg"), "ender": ("Ender Dragon", None)}
+             "verdant": ("Verdant Dragon", "Verdant Egg"), "tide": ("Tide Dragon", "Tide Egg"),
+             "crystal": ("Crystal Dragon", "Crystal Egg"), "shadow": ("Shadow Dragon", "Shadow Egg"), "ender": ("Ender Dragon", None)}
     for element, pal in PALETTES.items():
         skin = paint_skin(pal, placed)
         # Every combination of armor (or none) and saddle (or none) gets its own skin.
@@ -422,7 +459,9 @@ def main():
             armored = skin if metal is None else paint_armor(skin, placed, metal)
             name = f"{element}_dragon" + ("" if metal is None else f"_{metal}")
             write_png(ASSETS / "textures" / "entity" / f"{name}.png", armored)
-            write_png(ASSETS / "textures" / "entity" / f"{name}_saddled.png", paint_saddle(armored, placed))
+            saddled = paint_saddle(armored, placed)
+            write_png(ASSETS / "textures" / "entity" / f"{name}_saddled.png", saddled)
+            write_png(ASSETS / "textures" / "entity" / f"{name}_saddled_bags.png", paint_bags(saddled, placed))
         lang[f"entity.{NS}.{element}_dragon"] = names[element][0]
         if names[element][1] is None:
             continue  # the ender dragon hatches from the End's own Dragon Egg
@@ -450,7 +489,7 @@ def main():
         lang[f"item.{NS}.{egg}"] = name
     lang["key.wonderrealms.dragon_breath"] = "Dragon Breath / Airship Cannon"
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
-    print("Packed", len(placed), "cube textures; wrote model, animations,", len(PALETTES), "dragons x 5 armors x 2 saddles,",
+    print("Packed", len(placed), "cube textures; wrote model, animations,", len(PALETTES), "dragons x 5 armors x 3 tack,",
           len(PALETTES) - 1, "eggs x 4 stages,",
           len(SPAWN_EGGS), "spawn eggs")
 

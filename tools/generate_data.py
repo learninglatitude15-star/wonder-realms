@@ -16,13 +16,15 @@ ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
-DRAGONS = [f"{NS}:{element}_dragon" for element in ("ember", "frost", "storm", "verdant", "ender")]
+DRAGON_KINDS = ("ember", "frost", "storm", "verdant", "tide", "crystal", "shadow", "ender")
+DRAGONS = [f"{NS}:{element}_dragon" for element in DRAGON_KINDS]
 
 # --- Text ------------------------------------------------------------------------------------------------------
 
 TEXT = {
     "block.wonderrealms.pixelated_block": "Carved Block",
     "container.wonderrealms.airship": "Airship Hold",
+    "container.wonderrealms.saddlebags": "Saddlebags",
     "message.wonderrealms.airship_fuel": "Fuel: %sm %ss",
     "message.wonderrealms.airship_no_fuel": "Out of fuel! Use coal on the airship.",
     "message.wonderrealms.outpost_held": "The pillagers still hold this outpost. Drive them out first!",
@@ -33,6 +35,8 @@ TEXT = {
     "message.wonderrealms.whistle_sit": "Your dragons settle down to wait. (%s)",
     "message.wonderrealms.whistle_unheard": "No dragon of yours is close enough to hear.",
     "message.wonderrealms.cannon_no_fuel": "The cannon needs fuel: each shot burns ten seconds of it.",
+    "message.wonderrealms.saddle_first": "Saddle your dragon first: the saddlebags hang from the saddle.",
+    "message.wonderrealms.beetle_too_big": "You're far too big to ride a beetle. Shrink first!",
 }
 
 TOOLTIPS = {
@@ -89,7 +93,7 @@ ADVANCEMENTS = {
     # Dragons
     "find_egg": ("root", f"{NS}:ember_egg", "Here Be Dragons", "Win a dragon egg from a sky island dragon", "task",
                  {"egg": {"trigger": "minecraft:inventory_changed",
-                          "conditions": {"items": [{"items": [f"{NS}:ember_egg", f"{NS}:frost_egg", f"{NS}:storm_egg", f"{NS}:verdant_egg"]}]}}}),
+                          "conditions": {"items": [{"items": [f"{NS}:{kind}_egg" for kind in DRAGON_KINDS if kind != "ender"]}]}}}),
     "hatch_dragon": ("find_egg", f"{NS}:frost_egg", "Hatchling", "Hatch a dragon egg", "task", None),
     "hatch_ender_dragon": ("hatch_dragon", "minecraft:dragon_egg", "The Dragon Reborn",
                            "Hatch an Ender Dragon by feeding the End's Dragon Egg chorus fruit", "challenge", None),
@@ -115,16 +119,23 @@ ADVANCEMENTS = {
     "whistle": ("tame_dragon", f"{NS}:dragon_whistle", "Here, Dragon!", "Call your dragons with a Dragon Whistle", "task", None),
     "green_thumb": ("tame_dragon", "minecraft:bone_meal", "Green Thumb", "Make plants grow with a Verdant dragon's breath", "task", None),
     "two_riders": ("ride_dragon", "minecraft:cake", "Room for Two", "Ride a dragon with a friend", "task", None),
-    "all_dragons": ("tame_dragon", "minecraft:dragon_head", "Dragon Collector", "Tame every kind of dragon: Ember, Frost, Storm, Verdant and Ender",
+    "all_dragons": ("tame_dragon", "minecraft:dragon_head", "Dragon Collector",
+                    "Tame every kind of dragon: Ember, Frost, Storm, Verdant, Tide, Crystal, Shadow and Ender",
                     "challenge", {element: {"trigger": "minecraft:tame_animal",
                                             "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{element}_dragon"})}}
-                    for element in ("ember", "frost", "storm", "verdant", "ender")}),
+                    for element in DRAGON_KINDS}),
     "shrink_mob": ("shrink", f"{NS}:shrink_ray", "Honey, I Shrunk the Mobs", "Shrink a mob with a Shrink Ray", "task", None),
     "tiny_terror": ("shrink_mob", "minecraft:creeper_head", "Tiny Terror", "Shrink a creeper", "goal", None),
     "sculptor": ("carve_pixel", f"{NS}:pixel_chisel", "Sculptor", "Carve a pixel at full size with a Pixel Chisel", "task", None),
     "paint_the_sky": ("airship", "minecraft:light_blue_dye", "Paint the Sky", "Dye an airship's balloon", "task", None),
     "broadside": ("airship", f"{NS}:airship_cannon", "Broadside!", "Fire an airship's cannon", "task", None),
     "shot_down": ("broadside", "minecraft:fire_charge", "Shot Down", "Sink a pillager airship with cannon fire", "challenge", None),
+
+    # 1.3: new dragons, saddlebags and beetles
+    "saddlebags": ("ride_dragon", "minecraft:chest", "Packed for the Journey", "Give your dragon saddlebags", "task", None),
+    "deep_dive": ("ride_dragon", "minecraft:heart_of_the_sea", "Deep Dive", "Ride a Tide dragon underwater", "goal", None),
+    "crystal_glow": ("tame_dragon", "minecraft:amethyst_shard", "Shine Bright", "Make a mob glow with a Crystal dragon's breath", "task", None),
+    "beetle_rider": ("shrink", "minecraft:saddle", "Beetle Rider", "Ride a rhino beetle while you're tiny", "goal", None),
 }
 
 # Advancements whose criteria must all be met, rather than any one of them.

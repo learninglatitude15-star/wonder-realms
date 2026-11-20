@@ -1,5 +1,6 @@
 package com.wonderrealms.mixin.client;
 
+import com.wonderrealms.dragon.DragonEntity;
 import com.wonderrealms.pixel.PixelMining;
 import com.wonderrealms.pixel.PixelatedBlockEntity;
 import net.minecraft.client.Minecraft;
@@ -18,6 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Pixel mining on the player's own screen: instead of removing the whole block and waiting for the server to put
  * the carved block back (a visible flicker on every chip), predict the chip locally. The server still decides; its
  * update follows a moment later.
+ * <p>
+ * Also: riding a dragon, the inventory key opens its saddlebags if it has some, and your own inventory if not.
  */
 @Mixin(MultiPlayerGameMode.class)
 public abstract class MultiPlayerGameModeMixin {
@@ -40,6 +43,14 @@ public abstract class MultiPlayerGameModeMixin {
 			cir.setReturnValue(true);
 		} else if (PixelMining.canPixelate(level, pos, level.getBlockState(pos))) {
 			cir.setReturnValue(true); // the server turns it into pixels and chips the first one
+		}
+	}
+
+	@Inject(method = "isServerControlledInventory", at = @At("HEAD"), cancellable = true)
+	private void wonderrealms$saddlebagsOnly(CallbackInfoReturnable<Boolean> cir) {
+		Player player = this.minecraft.player;
+		if (player != null && player.getVehicle() instanceof DragonEntity dragon && !dragon.hasSaddlebags()) {
+			cir.setReturnValue(false);
 		}
 	}
 }

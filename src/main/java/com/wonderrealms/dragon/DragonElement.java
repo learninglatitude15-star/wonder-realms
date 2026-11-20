@@ -1,5 +1,6 @@
 package com.wonderrealms.dragon;
 
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.PowerParticleOption;
@@ -9,21 +10,27 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/** The five kinds of dragon, each with its own breath, favourite food and egg. */
+/** The eight kinds of dragon, each with its own breath, favourite food, egg and gift to its rider. */
 public enum DragonElement {
-	/** Fire breath that sets targets alight. Eats meat. */
+	/** Fire breath that sets targets alight. Its rider can't be burnt. Eats meat. */
 	EMBER("ember", "Ember Dragon", "Ember Egg", ParticleTypes.FLAME, SoundEvents.BLAZE_SHOOT, 3),
-	/** Frost breath that slows and freezes. Eats fish, or meat. */
+	/** Frost breath that slows and freezes. Freezes water underfoot as it walks. Eats fish, or meat. */
 	FROST("frost", "Frost Dragon", "Frost Egg", ParticleTypes.SNOWFLAKE, SoundEvents.PLAYER_HURT_FREEZE, 0),
-	/** Crackling breath that sometimes calls down lightning. Eats meat. */
+	/** Crackling breath that sometimes calls down lightning. The fastest flier. Eats meat. */
 	STORM("storm", "Storm Dragon", "Storm Egg", ParticleTypes.ELECTRIC_SPARK, SoundEvents.TRIDENT_THUNDER.value(), 0),
-	/** Spore-laden breath that poisons foes and makes plants burst into growth. Eats berries, apples or meat. */
+	/** Spore-laden breath that poisons foes and makes plants burst into growth. Heals its rider. Eats berries, apples or meat. */
 	VERDANT("verdant", "Verdant Dragon", "Verdant Egg", ParticleTypes.SPORE_BLOSSOM_AIR, SoundEvents.BREEZE_SHOOT, 0),
+	/** A jet of water that bowls foes over and puts out fires. Swims as well as it flies. Eats fish, dried kelp or meat. */
+	TIDE("tide", "Tide Dragon", "Tide Egg", ParticleTypes.SPLASH, SoundEvents.PLAYER_SPLASH_HIGH_SPEED, 0),
+	/** A spray of crystal shards that makes foes glow. Its crystal scales are as good as armor. Eats amethyst shards or meat. */
+	CRYSTAL("crystal", "Crystal Dragon", "Crystal Egg", new DustParticleOptions(0xC08CFF, 1.4F), SoundEvents.AMETHYST_BLOCK_CHIME, 7),
+	/** Breath of shadow that withers and weakens. Its rider sees in the dark. Eats spider eyes or meat. */
+	SHADOW("shadow", "Shadow Dragon", "Shadow Egg", ParticleTypes.SQUID_INK, SoundEvents.WITHER_SHOOT, 0),
 	/** Hatched from the End's Dragon Egg with chorus fruit. Its breath hurts and sets targets floating. Eats chorus fruit or meat. */
 	ENDER("ender", "Ender Dragon", "Dragon Egg", PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1F), SoundEvents.ENDER_DRAGON_SHOOT, 0);
 
 	/** The kinds that live wild on the sky islands. */
-	public static final DragonElement[] WILD = {EMBER, FROST, STORM, VERDANT};
+	public static final DragonElement[] WILD = {EMBER, FROST, STORM, VERDANT, TIDE, CRYSTAL, SHADOW};
 
 	public final String id;
 	public final String dragonName;
@@ -44,8 +51,11 @@ public enum DragonElement {
 
 	public boolean isFood(ItemStack stack) {
 		return stack.is(ItemTags.MEAT)
-			|| (this == FROST && stack.is(ItemTags.FISHES))
+			|| ((this == FROST || this == TIDE) && stack.is(ItemTags.FISHES))
+			|| (this == TIDE && stack.is(Items.DRIED_KELP))
 			|| (this == VERDANT && (stack.is(Items.SWEET_BERRIES) || stack.is(Items.GLOW_BERRIES) || stack.is(Items.APPLE)))
+			|| (this == CRYSTAL && stack.is(Items.AMETHYST_SHARD))
+			|| (this == SHADOW && stack.is(Items.SPIDER_EYE))
 			|| (this == ENDER && stack.is(Items.CHORUS_FRUIT));
 	}
 

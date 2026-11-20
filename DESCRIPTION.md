@@ -4,6 +4,15 @@ Shrink to the size of a bug, raise and ride elemental dragons, and raid pillager
 
 **Three adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
 
+## ✨ New in 1.3
+
+- **Three new dragons:** the **Tide Dragon**, whose water jet bowls foes over and puts out fires, and who swims as fast as it flies; the **Crystal Dragon**, whose shards make foes glow through walls, armored in crystal scales; and the **Shadow Dragon**, whose breath withers and weakens, and whose rider sees in the dark.
+- **Three new kinds of sky island:** sandy **Lagoon** islands with palms, glowing sea pickles and waterfalls; **Crystal** islands of calcite and giant amethyst crystals under cherry blossom; and eerie **Gloom** islands of pale oaks, sculk and soul-lit obelisks.
+- **Dragon gifts:** every dragon now shares a gift with its rider. Ride an Ember dragon through lava, or a Frost dragon across a lake.
+- **Saddlebags:** hang a chest on your dragon's saddle for 27 slots of storage on the wing.
+- **Rhino beetles:** big bugs you meet when you're tiny. Saddle one and ride it straight up a wall.
+- **4 new advancements.**
+
 ## ✨ New in 1.2
 
 - **Elemental sky islands:** volcanic Ember islands, snowy Frost islands, Storm islands crowned with lightning rods, and lush Verdant islands. Each roost's dragon matches its island.
@@ -54,6 +63,10 @@ Shrink down and you'll start meeting the **Pixel Miners**, tiny folk who live in
 
 Nine **Diamond Pixels** craft into a whole diamond, and nine **Emerald Pixels** into an emerald.
 
+### Ride a rhino beetle
+
+Shrink down and you'll find **rhino beetles** trundling through the grass: big, gentle bugs as large as a horse to you. **Saddle one** and, while you're tiny, use it with an empty hand to climb on. It carries you at a good clip and **walks straight up walls**. Beetles love **sugar**: feed two and they'll make a grub that grows into a new beetle. Grow back to full size and you'll tumble off: you're far too big.
+
 ### Bugs are bosses now
 
 At your size, spiders, cave spiders, silverfish, bees and endermites are giants, and they hit **twice as hard**. Beat one while you're tiny and it's a boss victory. It drops a hoard: string, spider eyes and cobwebs, with a chance of emeralds or a fresh Shrinking Draught.
@@ -70,15 +83,18 @@ Love carving but don't want to shrink? Hold a **Pixel Chisel** and you can carve
 
 ## 🐉 Dragons
 
-### The five dragons
+### The eight dragons
 
-| Dragon | Breath | Favourite food |
-| --- | --- | --- |
-| 🔥 **Ember** | Fire: sets targets alight, melts snow and ice, and lights campfires and candles | Meat |
-| ❄️ **Frost** | Ice: slows and freezes targets, turns water into ice you can walk on, and cools lava into obsidian | Meat or fish |
-| ⚡ **Storm** | Lightning: crackling hits that sometimes call down a lightning bolt | Meat |
-| 🌿 **Verdant** | Spores: poisons foes, makes plants and crops burst into growth, and turns bare dirt to grass | Meat, berries or apples |
-| 🟣 **Ender** | Ender fire: lifts targets off their feet | Meat or chorus fruit |
+| Dragon | Breath | Gift | Favourite food |
+| --- | --- | --- | --- |
+| 🔥 **Ember** | Fire: sets targets alight, melts snow and ice, and lights campfires and candles | Its rider can't burn | Meat |
+| ❄️ **Frost** | Ice: slows and freezes targets, turns water into ice you can walk on, and cools lava into obsidian | Freezes a path across water as it walks | Meat or fish |
+| ⚡ **Storm** | Lightning: crackling hits that sometimes call down a lightning bolt | The fastest flier | Meat |
+| 🌿 **Verdant** | Spores: poisons foes, makes plants and crops burst into growth, and turns bare dirt to grass | Slowly heals its rider | Meat, berries or apples |
+| 🌊 **Tide** | Water: bowls foes over and puts them out, hurts endermen and blazes, douses fires, wets farmland, sets concrete powder, fills cauldrons and cools lava | Swims as fast as it flies, and its rider breathes underwater | Meat, fish or dried kelp |
+| 💎 **Crystal** | Shards: make foes glow so you can see them through walls, and make budding amethyst grow | Crystal scales, as good as armor | Meat or amethyst shards |
+| 🌑 **Shadow** | Shadow: withers and weakens foes | Its rider sees in the dark | Meat or spider eyes |
+| 🟣 **Ender** | Ender fire: lifts targets off their feet | | Meat or chorus fruit |
 
 Fire breath never sets your blocks on fire, and storm lightning won't burn your house down.
 
@@ -124,6 +140,8 @@ Put a **saddle** on your fully grown dragon (it shows on the dragon), then use i
 
 **Bring a friend.** Once you're in the saddle, a friend can climb on behind you.
 
+**Saddlebags.** Use a **chest** on a saddled dragon to hang saddlebags from the saddle, then press your **inventory key (E)** while riding to open 27 slots of storage. Shears take the bags off (spilling what's in them) before the saddle.
+
 ### Dragon armor
 
 Craft armor from iron, gold or diamonds wrapped around leather, or upgrade diamond armor to **netherite** at a smithing table. Use it on your dragon and it **shows on the dragon**. Use another piece to swap it, or shears to take it off.
@@ -151,7 +169,7 @@ Bring the End's **Dragon Egg** home and feed it **chorus fruit**. Every fruit is
 
 Floating islands drift **between y 180 and 230** above every overworld biome, about a hundred blocks apart. Look up as you explore: some islands have a spring that spills a **waterfall all the way down to the ground**, Ember islands send up **columns of smoke**, and at night glow berries give them away.
 
-### Five kinds of island
+### Eight kinds of island
 
 Every island is different: a few ragged lobes of land with rocky spikes hanging down into the sky, packed with ore, with **diamonds toward the tips**. Each has a theme:
 
@@ -162,6 +180,9 @@ Every island is different: a few ragged lobes of land with rocky spikes hanging 
 | 🧊 **Frost** | Snowfields, ice spikes, frozen ponds, snow-laden spruce, icicles beneath |
 | ⚡ **Storm** | Windswept rock, stone spires crowned with lightning rods that draw the storm's strikes, chains and lanterns beneath |
 | 🌿 **Verdant** | Moss, flowering azalea, pink petals, spore blossoms and glow berries thick beneath |
+| 🏝️ **Lagoon** | Sandy shores round a lagoon of seagrass and glowing sea pickles, palm trees, sea lantern pillars, waterfalls, prismarine and glow lichen beneath |
+| 💎 **Crystal** | Calcite and giant amethyst crystals (some with budding amethyst at their heart), cherry trees in blossom, amethyst buds, crystals hanging beneath |
+| 🌑 **Gloom** | Pale moss and pale oaks trailing moss, eyeblossoms that open at night, sculk, soul-lit obelisks and soul fire vents, deepslate beneath |
 
 There are three kinds of island:
 
@@ -236,8 +257,8 @@ The pillagers have airships too. A pillager outpost on the ground sends one up n
 
 The **Wonder Realms** advancement tab tracks your adventures:
 
-- **Tiny Worlds:** Honey, I Shrunk Myself · Morning Dew · Small Business · Nine Pixels Make a Gem · Pixel Perfect · Giant Slayer · Honey, I Shrunk the Mobs · Tiny Terror · Sculptor
-- **Dragons:** Here Be Dragons · Hatchling · Dragon Tamer · Dragon Rider · Touch the Sky · Liberator · The Dragon Reborn · Knight of the Sky · Unbreakable · Here, Dragon! · Green Thumb · Room for Two · Dragon Collector
+- **Tiny Worlds:** Honey, I Shrunk Myself · Morning Dew · Small Business · Nine Pixels Make a Gem · Pixel Perfect · Giant Slayer · Honey, I Shrunk the Mobs · Tiny Terror · Sculptor · Beetle Rider
+- **Dragons:** Here Be Dragons · Hatchling · Dragon Tamer · Dragon Rider · Touch the Sky · Liberator · The Dragon Reborn · Knight of the Sky · Unbreakable · Here, Dragon! · Green Thumb · Room for Two · Dragon Collector · Packed for the Journey · Deep Dive · Shine Bright
 - **Sky:** Up, Up and Away · Sky Pirate · Paint the Sky · Broadside! · Shot Down
 
 ---
@@ -280,4 +301,4 @@ It's built for it: install it on the server and on every player's game.
 - **Fabric API**
 - **GeckoLib** 5.5.6 or newer
 
-Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all five dragons and the Pixel Miner.
+Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all eight dragons, the Pixel Miner and the rhino beetle.

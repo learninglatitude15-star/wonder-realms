@@ -8,6 +8,7 @@ import com.wonderrealms.WonderRealms;
 import com.wonderrealms.airship.AirshipEntity;
 import com.wonderrealms.airship.Airships;
 import com.wonderrealms.airship.CannonPayload;
+import com.wonderrealms.beetle.Beetles;
 import com.wonderrealms.dragon.BreathPayload;
 import com.wonderrealms.dragon.DragonElement;
 import com.wonderrealms.dragon.DragonEntity;
@@ -46,6 +47,7 @@ public class WonderRealmsClient implements ClientModInitializer {
 		}
 		EntityRendererRegistry.register(PixelMiners.TYPE, context -> new GeoEntityRenderer<PixelMinerEntity, LivingEntityRenderState>(context,
 			new DefaultedEntityGeoModel<PixelMinerEntity>(WonderRealms.id("pixel_miner"))));
+		EntityRendererRegistry.register(Beetles.TYPE, BeetleRenderer::new);
 		EntityRendererRegistry.register(Airships.TYPE, AirshipRenderer::new);
 		EntityRendererRegistry.register(Airships.CANNONBALL, ThrownItemRenderer::new);
 		BlockEntityRenderers.register(PixelMining.BLOCK_ENTITY, context -> new PixelatedBlockRenderer());

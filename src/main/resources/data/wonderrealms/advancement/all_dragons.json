@@ -48,6 +48,42 @@
         }
       }
     },
+    "tide": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:tide_dragon"
+          }
+        }
+      }
+    },
+    "crystal": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:crystal_dragon"
+          }
+        }
+      }
+    },
+    "shadow": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:shadow_dragon"
+          }
+        }
+      }
+    },
     "ender": {
       "trigger": "minecraft:tame_animal",
       "conditions": {
@@ -85,6 +121,15 @@
     ],
     [
       "verdant"
+    ],
+    [
+      "tide"
+    ],
+    [
+      "crystal"
+    ],
+    [
+      "shadow"
     ],
     [
       "ender"

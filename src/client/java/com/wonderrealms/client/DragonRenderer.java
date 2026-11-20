@@ -13,11 +13,12 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
 
 /**
- * Draws a dragon. All five kinds share one model and set of animations. Each kind has a skin for every
- * combination of armor (none, iron, gold, diamond, netherite) and saddle (on or off).
+ * Draws a dragon. All eight kinds share one model and set of animations. Each kind has a skin for every
+ * combination of armor (none, iron, gold, diamond, netherite) and tack (none, a saddle, or a saddle with
+ * saddlebags). The saddlebags are cubes in the model that only the "bags" skins paint; the rest leave them clear.
  */
 public class DragonRenderer extends GeoEntityRenderer<DragonEntity, LivingEntityRenderState> {
-	static final DataTicket<Boolean> SADDLED = DataTicket.create("wonderrealms_saddled", Boolean.class);
+	static final DataTicket<Integer> TACK = DataTicket.create("wonderrealms_tack", Integer.class);
 	static final DataTicket<Integer> ARMOR = DataTicket.create("wonderrealms_armor", Integer.class);
 
 	public DragonRenderer(EntityRendererProvider.Context context, DragonElement element) {
@@ -27,28 +28,30 @@ public class DragonRenderer extends GeoEntityRenderer<DragonEntity, LivingEntity
 	@Override
 	public void addRenderData(DragonEntity dragon, Void relatedObject, LivingEntityRenderState state, float partialTick) {
 		super.addRenderData(dragon, relatedObject, state, partialTick);
-		((GeoRenderState) state).addGeckolibData(SADDLED, dragon.isSaddled());
+		((GeoRenderState) state).addGeckolibData(TACK, dragon.hasSaddlebags() ? 2 : dragon.isSaddled() ? 1 : 0);
 		((GeoRenderState) state).addGeckolibData(ARMOR, dragon.armor() == null ? 0 : dragon.armor().index());
 	}
 
 	static class Model extends DefaultedEntityGeoModel<DragonEntity> {
-		/** [armor index (0 = none)][saddled ? 1 : 0] */
-		private final Identifier[][] skins = new Identifier[DragonArmor.values().length + 1][2];
+		private static final String[] TACK_SUFFIXES = {"", "_saddled", "_saddled_bags"};
+		/** [armor index (0 = none)][tack: 0 none, 1 saddle, 2 saddle and bags] */
+		private final Identifier[][] skins = new Identifier[DragonArmor.values().length + 1][TACK_SUFFIXES.length];
 
 		Model(DragonElement element) {
 			super(WonderRealms.id("dragon"));
 			for (int armor = 0; armor < this.skins.length; armor++) {
 				String name = element.id + "_dragon" + (armor == 0 ? "" : "_" + DragonArmor.byIndex(armor).id);
-				this.skins[armor][0] = this.buildFormattedTexturePath(WonderRealms.id(name));
-				this.skins[armor][1] = this.buildFormattedTexturePath(WonderRealms.id(name + "_saddled"));
+				for (int tack = 0; tack < TACK_SUFFIXES.length; tack++) {
+					this.skins[armor][tack] = this.buildFormattedTexturePath(WonderRealms.id(name + TACK_SUFFIXES[tack]));
+				}
 			}
 		}
 
 		@Override
 		public Identifier getTextureResource(GeoRenderState state) {
 			int armor = state.getOrDefaultGeckolibData(ARMOR, 0);
-			boolean saddled = state.getOrDefaultGeckolibData(SADDLED, false);
-			return this.skins[armor >= 0 && armor < this.skins.length ? armor : 0][saddled ? 1 : 0];
+			int tack = state.getOrDefaultGeckolibData(TACK, 0);
+			return this.skins[armor >= 0 && armor < this.skins.length ? armor : 0][tack >= 0 && tack < TACK_SUFFIXES.length ? tack : 0];
 		}
 	}
 }

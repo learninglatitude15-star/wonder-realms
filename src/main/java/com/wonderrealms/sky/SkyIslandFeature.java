@@ -25,6 +25,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
@@ -33,11 +34,14 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.FlowerBedBlock;
 import net.minecraft.world.level.block.GrowingPlantHeadBlock;
+import net.minecraft.world.level.block.HangingMossBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.SeaPickleBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -50,13 +54,19 @@ import net.minecraft.world.level.storage.loot.LootTable;
 
 /**
  * A floating island high in the overworld sky. Each is a few overlapping, ragged lobes with a rocky underside that
- * hangs down to a point, studded with ore, and a few small rocks drifting nearby. Islands come in five themes:
+ * hangs down to a point, studded with ore, and a few small rocks drifting nearby. Islands come in eight themes:
  * <ul>
  *   <li><b>Meadow</b>: rolling grass, oak and birch, ponds, and waterfalls you can see from the ground.</li>
  *   <li><b>Ember</b>: blackstone and basalt, magma, smoking vents, lava pools and charred trees.</li>
  *   <li><b>Frost</b>: snowfields, ice spikes, frozen ponds and snow-laden spruce, with icicles beneath.</li>
  *   <li><b>Storm</b>: windswept rock and grass, stone spires crowned with lightning rods, chains and copper beneath.</li>
  *   <li><b>Verdant</b>: moss, flowering azalea and petals, spore blossoms and glow berries beneath.</li>
+ *   <li><b>Lagoon</b>: sandy shores round a lagoon of seagrass and sea pickles, palms, sea lantern pillars, and
+ *       waterfalls; prismarine and glow lichen beneath.</li>
+ *   <li><b>Crystal</b>: calcite and great amethyst crystals (some still growing), cherry trees in blossom, and
+ *       crystals hanging beneath.</li>
+ *   <li><b>Gloom</b>: pale moss and pale oaks trailing moss, eyeblossoms, sculk, soul-lit obelisks and soul fire
+ *       vents, over deepslate.</li>
  * </ul>
  * Wild islands hide a chest in a ruined shrine. About one island in five is a dragon roost (a nest round a hoard,
  * guarded by a wild dragon whose element matches its island), and about one in five a pillager sky outpost (a
@@ -100,10 +110,8 @@ public record SkyIslandFeature() implements Feature {
 		Theme theme = switch (kind) {
 			case ROOST -> Theme.of(guardian);
 			case OUTPOST -> random.nextBoolean() ? Theme.MEADOW : Theme.STORM;
-			case WILD -> {
-				int pick = random.nextInt(20);
-				yield pick < 8 ? Theme.MEADOW : pick < 11 ? Theme.EMBER : pick < 14 ? Theme.FROST : pick < 17 ? Theme.STORM : Theme.VERDANT;
-			}
+			// Meadows are the commonest wild islands (three in ten); every other theme is one in ten.
+			case WILD -> random.nextInt(10) < 3 ? Theme.MEADOW : Theme.ELEMENTAL[random.nextInt(Theme.ELEMENTAL.length)];
 		};
 		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : 7 + random.nextInt(5);
 
@@ -113,7 +121,8 @@ public record SkyIslandFeature() implements Feature {
 			case ROOST -> roost(island, guardian, random);
 			case OUTPOST -> outpost(island, random);
 			case WILD -> {
-				if (radius >= 9 && random.nextBoolean()) {
+				// Every lagoon island that's big enough has its lagoon.
+				if (radius >= 9 && random.nextBoolean() || theme == Theme.LAGOON && radius >= 8) {
 					pond(island, random);
 				}
 				shrine(island, random);
@@ -121,7 +130,8 @@ public record SkyIslandFeature() implements Feature {
 		}
 		landmarks(island, random);
 		trees(island, kind, random);
-		if (theme.hasWaterfalls() && random.nextInt(3) == 0) {
+		int waterfalls = theme == Theme.LAGOON ? 1 + random.nextInt(2) : theme.hasWaterfalls() && random.nextInt(3) == 0 ? 1 : 0;
+		for (int i = 0; i < waterfalls; i++) {
 			waterfall(island, random);
 		}
 		island.hangUnderside(random);
@@ -134,7 +144,10 @@ public record SkyIslandFeature() implements Feature {
 
 	/** What an island is made of and what grows on it. Roosts take on their dragon's element. */
 	private enum Theme {
-		MEADOW, EMBER, FROST, STORM, VERDANT;
+		MEADOW, EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM;
+
+		/** The themes besides the plain meadow, one for each wild dragon. */
+		static final Theme[] ELEMENTAL = {EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM};
 
 		static Theme of(DragonElement element) {
 			return switch (element) {
@@ -142,16 +155,23 @@ public record SkyIslandFeature() implements Feature {
 				case FROST -> FROST;
 				case STORM -> STORM;
 				case VERDANT -> VERDANT;
+				case TIDE -> LAGOON;
+				case CRYSTAL -> CRYSTAL;
+				case SHADOW -> GLOOM;
 				default -> MEADOW;
 			};
 		}
 
 		boolean hasWaterfalls() {
-			return this == MEADOW || this == STORM || this == VERDANT;
+			return this == MEADOW || this == STORM || this == VERDANT || this == LAGOON;
 		}
 
-		/** The top block of the ground. */
 		BlockState top(RandomSource random) {
+			return this.top(random, 0.5F);
+		}
+
+		/** The top block of the ground, given how far inside the island it is (lagoon islands have sandy shores). */
+		BlockState top(RandomSource random, float inner) {
 			float r = random.nextFloat();
 			return (switch (this) {
 				case MEADOW -> Blocks.GRASS_BLOCK;
@@ -159,6 +179,9 @@ public record SkyIslandFeature() implements Feature {
 				case FROST -> r < 0.85F ? Blocks.SNOW_BLOCK : Blocks.PACKED_ICE;
 				case STORM -> r < 0.45F ? Blocks.GRASS_BLOCK : r < 0.7F ? Blocks.STONE : r < 0.85F ? Blocks.GRAVEL : Blocks.COARSE_DIRT;
 				case VERDANT -> r < 0.6F ? Blocks.MOSS_BLOCK : Blocks.GRASS_BLOCK;
+				case LAGOON -> inner < 0.4F || r < 0.12F ? Blocks.SAND : Blocks.GRASS_BLOCK;
+				case CRYSTAL -> r < 0.6F ? Blocks.GRASS_BLOCK : r < 0.93F ? Blocks.CALCITE : Blocks.AMETHYST_BLOCK;
+				case GLOOM -> r < 0.45F ? Blocks.PALE_MOSS_BLOCK : r < 0.75F ? Blocks.PODZOL : r < 0.92F ? Blocks.COARSE_DIRT : Blocks.SCULK;
 			}).defaultBlockState();
 		}
 
@@ -171,6 +194,9 @@ public record SkyIslandFeature() implements Feature {
 				case FROST -> r < 0.7F ? Blocks.SNOW_BLOCK : Blocks.PACKED_ICE;
 				case STORM -> r < 0.5F ? Blocks.DIRT : Blocks.STONE;
 				case VERDANT -> r < 0.3F ? Blocks.ROOTED_DIRT : Blocks.DIRT;
+				case LAGOON -> Blocks.SANDSTONE; // holds the sand up
+				case CRYSTAL -> r < 0.7F ? Blocks.CALCITE : Blocks.DIRT;
+				case GLOOM -> r < 0.6F ? Blocks.DIRT : Blocks.COARSE_DIRT;
 			}).defaultBlockState();
 		}
 
@@ -182,6 +208,9 @@ public record SkyIslandFeature() implements Feature {
 				case FROST -> state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.PACKED_ICE);
 				case STORM -> state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.STONE) || state.is(Blocks.GRAVEL) || state.is(Blocks.COARSE_DIRT);
 				case VERDANT -> state.is(Blocks.MOSS_BLOCK) || state.is(Blocks.GRASS_BLOCK);
+				case LAGOON -> state.is(Blocks.SAND) || state.is(Blocks.GRASS_BLOCK);
+				case CRYSTAL -> state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.CALCITE) || state.is(Blocks.AMETHYST_BLOCK);
+				case GLOOM -> state.is(Blocks.PALE_MOSS_BLOCK) || state.is(Blocks.PODZOL) || state.is(Blocks.COARSE_DIRT) || state.is(Blocks.SCULK);
 			};
 		}
 
@@ -198,6 +227,20 @@ public record SkyIslandFeature() implements Feature {
 					: roll < 0.21F ? Blocks.BLUE_ICE : roll < 0.28F ? Blocks.CALCITE : Blocks.STONE;
 				case STORM -> block = roll < 0.09F ? Blocks.COPPER_ORE : roll < 0.12F ? Blocks.IRON_ORE : roll < 0.13F ? Blocks.EMERALD_ORE
 					: deep && roll < 0.14F ? Blocks.DIAMOND_ORE : roll < 0.3F ? (deep ? Blocks.TUFF : Blocks.ANDESITE) : Blocks.STONE;
+				// Sea-floor stone, rich in lapis and copper.
+				case LAGOON -> block = roll < 0.04F ? Blocks.LAPIS_ORE : roll < 0.08F ? Blocks.COPPER_ORE : roll < 0.11F ? Blocks.IRON_ORE
+					: roll < 0.12F ? Blocks.GOLD_ORE : deep && roll < 0.13F ? Blocks.DIAMOND_ORE : roll < 0.3F ? Blocks.PRISMARINE
+					: roll < 0.45F ? Blocks.SANDSTONE : Blocks.STONE;
+				// A geode turned inside out: calcite and smooth basalt, amethyst, and the most diamonds of any island.
+				case CRYSTAL -> block = roll < 0.025F ? Blocks.AMETHYST_BLOCK : deep && roll < 0.03F ? Blocks.BUDDING_AMETHYST
+					: roll < 0.06F ? Blocks.IRON_ORE : roll < 0.075F ? Blocks.EMERALD_ORE : deep && roll < 0.095F ? Blocks.DIAMOND_ORE
+					: roll < 0.105F ? Blocks.LAPIS_ORE : roll < 0.25F ? Blocks.CALCITE : roll < 0.4F ? Blocks.SMOOTH_BASALT
+					: roll < 0.55F ? Blocks.TUFF : Blocks.STONE;
+				// Deepslate from the bottom of the world, veined with sculk.
+				case GLOOM -> block = roll < 0.04F ? Blocks.DEEPSLATE_COAL_ORE : roll < 0.07F ? Blocks.DEEPSLATE_IRON_ORE
+					: roll < 0.09F ? Blocks.DEEPSLATE_REDSTONE_ORE : roll < 0.1F ? Blocks.DEEPSLATE_GOLD_ORE
+					: deep && roll < 0.115F ? Blocks.DEEPSLATE_DIAMOND_ORE : roll < 0.18F ? Blocks.SCULK : roll < 0.3F ? Blocks.TUFF
+					: roll < 0.42F ? Blocks.COBBLED_DEEPSLATE : Blocks.DEEPSLATE;
 				default -> block = roll < 0.035F ? Blocks.COAL_ORE : roll < 0.065F ? Blocks.IRON_ORE : roll < 0.085F ? Blocks.COPPER_ORE
 					: roll < 0.097F ? Blocks.GOLD_ORE : roll < 0.105F ? Blocks.EMERALD_ORE : deep && roll < 0.115F ? Blocks.DIAMOND_ORE
 					: deep && roll < 0.123F ? Blocks.LAPIS_ORE : roll < 0.23F ? (deep ? Blocks.TUFF : Blocks.ANDESITE) : Blocks.STONE;
@@ -213,6 +256,10 @@ public record SkyIslandFeature() implements Feature {
 					: random.nextInt(8) == 0 ? Blocks.GILDED_BLACKSTONE : Blocks.POLISHED_BLACKSTONE_BRICKS;
 				case FROST -> pick == 0 ? Blocks.PACKED_ICE : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
 				case STORM -> pick == 0 ? Blocks.CUT_COPPER.weathering().oxidized() : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
+				case LAGOON -> pick == 0 ? Blocks.PRISMARINE : pick == 1 ? Blocks.DARK_PRISMARINE : Blocks.PRISMARINE_BRICKS;
+				case CRYSTAL -> pick == 0 ? Blocks.CALCITE : pick == 1 ? Blocks.POLISHED_TUFF : Blocks.TUFF_BRICKS;
+				case GLOOM -> pick == 0 ? Blocks.CRACKED_DEEPSLATE_BRICKS : pick == 1 ? Blocks.DEEPSLATE_TILES
+					: pick == 2 ? Blocks.CRACKED_DEEPSLATE_TILES : Blocks.DEEPSLATE_BRICKS;
 				default -> pick == 0 ? Blocks.MOSSY_STONE_BRICKS : pick == 1 ? Blocks.CRACKED_STONE_BRICKS
 					: pick == 2 ? Blocks.STONE_BRICKS : Blocks.MOSSY_COBBLESTONE;
 			}).defaultBlockState();
@@ -351,9 +398,12 @@ public record SkyIslandFeature() implements Feature {
 					int soil = this.inner(dx, dz) < 0.25F ? 1 : 2 + random.nextInt(2);
 					for (int y = low; y <= top; y++) {
 						int below = top - y;
-						BlockState state = below == 0 ? this.theme.top(random)
+						BlockState state = below == 0 ? this.theme.top(random, this.inner(dx, dz))
 							: below <= soil ? this.theme.soil(random)
 							: this.theme.rock(random, (float) (y - low) / Math.max(1, top - low));
+						if (y == low && state.is(Blocks.SAND)) {
+							state = Blocks.SANDSTONE.defaultBlockState(); // nothing under it to hold sand up
+						}
 						this.set(this.column(dx, y, dz), state);
 					}
 				}
@@ -362,7 +412,7 @@ public record SkyIslandFeature() implements Feature {
 
 		/** Whatever hangs from the underside, mostly out toward the edges: berries, roots, icicles, chains... */
 		void hangUnderside(RandomSource random) {
-			float chance = this.theme == Theme.VERDANT ? 0.22F : 0.14F;
+			float chance = this.theme == Theme.VERDANT || this.theme == Theme.GLOOM ? 0.22F : 0.14F;
 			for (int dx = -REACH; dx <= REACH; dx++) {
 				for (int dz = -REACH; dz <= REACH; dz++) {
 					if (!this.has(dx, dz) || this.inner(dx, dz) > 0.6F || random.nextFloat() > chance) {
@@ -409,6 +459,41 @@ public record SkyIslandFeature() implements Feature {
 								this.glowBerries(tip, 1 + random.nextInt(5), 0.4F, random);
 							}
 						}
+						case LAGOON -> {
+							if (random.nextInt(3) == 0) {
+								this.set(tip, Blocks.GLOW_LICHEN.defaultBlockState().setValue(MultifaceBlock.getFaceProperty(Direction.UP), true));
+							} else {
+								int length = 1 + random.nextInt(2);
+								for (int i = 0; i < length; i++) {
+									this.set(tip.below(i), Blocks.PRISMARINE_WALL.defaultBlockState());
+								}
+								if (random.nextInt(3) == 0) {
+									this.set(tip.below(length), Blocks.SEA_LANTERN.defaultBlockState());
+								}
+							}
+						}
+						case CRYSTAL -> {
+							// Crystals hang point-down, some from a stub of amethyst.
+							int length = random.nextInt(3);
+							for (int i = 0; i < length; i++) {
+								this.set(tip.below(i), Blocks.AMETHYST_BLOCK.defaultBlockState());
+							}
+							Block crystal = random.nextInt(3) == 0 ? Blocks.LARGE_AMETHYST_BUD : Blocks.AMETHYST_CLUSTER;
+							this.set(tip.below(length), crystal.defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.DOWN));
+						}
+						case GLOOM -> {
+							int length = 1 + random.nextInt(3);
+							if (random.nextInt(4) == 0) {
+								for (int i = 0; i < length; i++) {
+									this.set(tip.below(i), Blocks.IRON_CHAIN.defaultBlockState());
+								}
+								this.set(tip.below(length), Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+							} else {
+								for (int i = 0; i < length; i++) {
+									this.set(tip.below(i), Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, i == length - 1));
+								}
+							}
+						}
 						default -> {
 							if (random.nextInt(3) == 0) {
 								this.set(tip, Blocks.HANGING_ROOTS.defaultBlockState());
@@ -453,11 +538,15 @@ public record SkyIslandFeature() implements Feature {
 
 	// ---- Landmarks ------------------------------------------------------------------------------------------
 
-	/** Each theme's own features: storm spires, ice spikes, or smoking vents and basalt columns. */
+	/**
+	 * Each theme's own features: storm spires, ice spikes, smoking vents and basalt columns, sea lantern pillars,
+	 * amethyst crystals, or soul-lit obelisks and soul fire vents.
+	 */
 	private static void landmarks(Island island, RandomSource random) {
 		int count = switch (island.theme) {
-			case STORM, FROST -> 2 + random.nextInt(3);
-			case EMBER -> 3 + random.nextInt(3);
+			case STORM, FROST, GLOOM -> 2 + random.nextInt(3);
+			case EMBER, CRYSTAL -> 3 + random.nextInt(3);
+			case LAGOON -> 1 + random.nextInt(2);
 			default -> 0;
 		};
 		for (int attempt = 0; attempt < 40 && count > 0; attempt++) {
@@ -477,10 +566,82 @@ public record SkyIslandFeature() implements Feature {
 						basaltColumn(island, ground, random);
 					}
 				}
+				case LAGOON -> seaLanternPillar(island, ground, random);
+				case CRYSTAL -> crystal(island, ground, random);
+				case GLOOM -> {
+					if (count % 2 == 0) {
+						soulVent(island, ground, random);
+					} else {
+						obelisk(island, ground, random);
+					}
+				}
 				default -> {
 				}
 			}
 			count--;
+		}
+	}
+
+	/** A weathered prismarine pillar crowned with a sea lantern, like a lighthouse for dragons. */
+	private static void seaLanternPillar(Island island, BlockPos ground, RandomSource random) {
+		int height = 2 + random.nextInt(3);
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), island.theme.ruinStone(random));
+		}
+		island.set(ground.above(height + 1), Blocks.SEA_LANTERN.defaultBlockState());
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (random.nextBoolean() && island.isAir(ground.above().relative(side))) {
+				island.set(ground.above().relative(side), Blocks.DARK_PRISMARINE.defaultBlockState());
+			}
+		}
+	}
+
+	/**
+	 * A great amethyst crystal: a column of amethyst with clusters growing from its sides and its tip, and often a
+	 * budding amethyst at its heart, so the crystals there grow back.
+	 */
+	private static void crystal(Island island, BlockPos ground, RandomSource random) {
+		int height = 2 + random.nextInt(5);
+		int heart = random.nextBoolean() ? 1 + random.nextInt(height) : -1;
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), (y == heart ? Blocks.BUDDING_AMETHYST : Blocks.AMETHYST_BLOCK).defaultBlockState());
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				BlockPos face = ground.above(y).relative(side);
+				if (random.nextInt(4) == 0 && island.isAir(face)) {
+					Block bud = random.nextBoolean() ? Blocks.AMETHYST_CLUSTER : Blocks.LARGE_AMETHYST_BUD;
+					island.set(face, bud.defaultBlockState().setValue(AmethystClusterBlock.FACING, side));
+				}
+			}
+		}
+		island.set(ground.above(height + 1), Blocks.AMETHYST_CLUSTER.defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP));
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (random.nextBoolean() && island.theme.isGround(island.get(ground.relative(side)))) {
+				island.set(ground.relative(side), Blocks.CALCITE.defaultBlockState());
+			}
+		}
+	}
+
+	/** A deepslate obelisk with a soul lantern on top and sculk creeping round its foot. */
+	private static void obelisk(Island island, BlockPos ground, RandomSource random) {
+		int height = 3 + random.nextInt(3);
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), y == 1 ? Blocks.POLISHED_DEEPSLATE.defaultBlockState() : island.theme.ruinStone(random));
+		}
+		island.set(ground.above(height + 1), Blocks.SOUL_LANTERN.defaultBlockState());
+		sculkPatch(island, ground, random);
+	}
+
+	/** A soul fire smouldering in the ground, sending up a column of pale smoke you can see from far off. */
+	private static void soulVent(Island island, BlockPos ground, RandomSource random) {
+		island.set(ground, Blocks.SOUL_CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true).setValue(CampfireBlock.SIGNAL_FIRE, true));
+		sculkPatch(island, ground, random);
+	}
+
+	private static void sculkPatch(Island island, BlockPos ground, RandomSource random) {
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (random.nextInt(3) > 0 && island.theme.isGround(island.get(ground.relative(side)))) {
+				island.set(ground.relative(side), Blocks.SCULK.defaultBlockState());
+			}
 		}
 	}
 
@@ -570,7 +731,10 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	/** A tree in keeping with the island: oak, birch, azalea, snowy spruce, or a charred, leafless trunk. */
+	/**
+	 * A tree in keeping with the island: oak, birch, azalea, snowy spruce, a charred, leafless trunk, a palm, a
+	 * cherry in blossom, or a pale oak hung with moss.
+	 */
 	private static void tree(Island island, BlockPos base, RandomSource random) {
 		List<BlockPos> logs = new ArrayList<>();
 		Map<BlockPos, BlockState> leaves = new HashMap<>();
@@ -599,6 +763,20 @@ public record SkyIslandFeature() implements Feature {
 					crown(leaves, base.above(logs.size() - 1), 2.6, 0.75, Blocks.OAK_LEAVES.defaultBlockState(), null, random);
 				}
 			}
+			case LAGOON -> {
+				log = Blocks.JUNGLE_LOG.defaultBlockState();
+				palm(base, random, logs, leaves);
+			}
+			case CRYSTAL -> {
+				log = Blocks.CHERRY_LOG.defaultBlockState();
+				column(logs, base, 4 + random.nextInt(2));
+				crown(leaves, base.above(logs.size() - 1), 2.8 + random.nextDouble() * 0.5, 0.55, Blocks.CHERRY_LEAVES.defaultBlockState(), null, random);
+			}
+			case GLOOM -> {
+				log = Blocks.PALE_OAK_LOG.defaultBlockState();
+				column(logs, base, 5 + random.nextInt(2));
+				crown(leaves, base.above(logs.size() - 1), 2.4, 0.8, Blocks.PALE_OAK_LEAVES.defaultBlockState(), null, random);
+			}
 			default -> {
 				if (kind < 6) {
 					column(logs, base, 4 + random.nextInt(3));
@@ -621,6 +799,42 @@ public record SkyIslandFeature() implements Feature {
 					island.set(pos.above(), Blocks.SNOW.defaultBlockState());
 				}
 			});
+		} else if (island.theme == Theme.GLOOM) {
+			// Pale moss trails from the lowest leaves.
+			leaves.keySet().forEach(pos -> {
+				if (island.get(pos).is(Blocks.PALE_OAK_LEAVES) && island.isAir(pos.below()) && island.isAir(pos.below(2)) && random.nextInt(3) == 0) {
+					int length = 1 + random.nextInt(2);
+					for (int i = 1; i <= length; i++) {
+						island.set(pos.below(i), Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, i == length));
+					}
+				}
+			});
+		}
+	}
+
+	/** A palm: a slim trunk that bends away from the wind, under a crown of fronds that droop at the tips. */
+	private static void palm(BlockPos base, RandomSource random, List<BlockPos> logs, Map<BlockPos, BlockState> leaves) {
+		Direction lean = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+		int height = 5 + random.nextInt(3);
+		BlockPos pos = base;
+		for (int y = 0; y < height; y++) {
+			logs.add(pos);
+			pos = y == 2 || y == height - 3 ? pos.above().relative(lean) : pos.above();
+		}
+		BlockPos top = logs.get(logs.size() - 1);
+		BlockState leaf = Blocks.JUNGLE_LEAVES.defaultBlockState();
+		leaves.put(top.above(), leaf);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				if (dx != 0 || dz != 0) {
+					leaves.put(top.offset(dx, 0, dz), leaf);
+				}
+			}
+		}
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			leaves.put(top.relative(side, 2), leaf);
+			leaves.put(top.relative(side, 3), leaf);
+			leaves.put(top.relative(side, 3).below(), leaf);
 		}
 	}
 
@@ -785,6 +999,60 @@ public record SkyIslandFeature() implements Feature {
 							}
 						}
 					}
+					case LAGOON -> {
+						if (soil.is(Blocks.SAND)) {
+							if (roll < 0.06F) {
+								island.set(above, Blocks.SHORT_DRY_GRASS.defaultBlockState());
+							} else if (roll < 0.08F) {
+								island.set(above, Blocks.DEAD_BUSH.defaultBlockState());
+							}
+						} else if (roll < 0.3F) {
+							island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+						} else if (roll < 0.36F) {
+							island.set(above, Blocks.FERN.defaultBlockState());
+						} else if (roll < 0.4F) {
+							island.set(above, Blocks.BUSH.defaultBlockState());
+						} else if (roll < 0.43F) {
+							island.set(above, Blocks.BLUE_ORCHID.defaultBlockState());
+						}
+					}
+					case CRYSTAL -> {
+						if (soil.is(Blocks.CALCITE)) {
+							// Amethyst buds sprout from the bare calcite.
+							Block bud = roll < 0.06F ? Blocks.SMALL_AMETHYST_BUD : roll < 0.09F ? Blocks.MEDIUM_AMETHYST_BUD
+								: roll < 0.1F ? Blocks.LARGE_AMETHYST_BUD : null;
+							if (bud != null) {
+								island.set(above, bud.defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP));
+							}
+						} else if (soil.is(Blocks.GRASS_BLOCK)) {
+							if (roll < 0.25F) {
+								island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+							} else if (roll < 0.31F) {
+								island.set(above, Blocks.ALLIUM.defaultBlockState());
+							} else if (roll < 0.38F) {
+								island.set(above, petals(Blocks.PINK_PETALS, random));
+							} else if (roll < 0.41F && island.isAir(above.above())) {
+								DoublePlantBlock.placeAt(island.level, Blocks.LILAC.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+							}
+						}
+					}
+					case GLOOM -> {
+						if (soil.is(Blocks.PALE_MOSS_BLOCK)) {
+							if (roll < 0.35F) {
+								island.set(above, Blocks.PALE_MOSS_CARPET.defaultBlockState());
+							} else if (roll < 0.42F) {
+								island.set(above, Blocks.CLOSED_EYEBLOSSOM.defaultBlockState()); // they open at night
+							}
+						} else if (!soil.is(Blocks.SCULK)) {
+							if (roll < 0.05F) {
+								island.set(above, Blocks.DEAD_BUSH.defaultBlockState());
+							} else if (roll < 0.12F) {
+								island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
+							} else if (roll < 0.128F) {
+								island.set(above, Blocks.WITHER_ROSE.defaultBlockState());
+							}
+						}
+					}
 					default -> {
 					}
 				}
@@ -852,6 +1120,16 @@ public record SkyIslandFeature() implements Feature {
 				if (theme != Theme.EMBER && theme != Theme.FROST && random.nextInt(theme == Theme.VERDANT ? 3 : 6) == 0) {
 					island.set(island.column(x, level + 1, z), Blocks.LILY_PAD.defaultBlockState());
 				}
+				// A lagoon's deep water is full of seagrass, and sea pickles that glow after dark.
+				if (theme == Theme.LAGOON && cell[2] == 2) {
+					float roll = random.nextFloat();
+					if (roll < 0.45F) {
+						island.set(island.column(x, floor + 1, z), Blocks.SEAGRASS.defaultBlockState());
+					} else if (roll < 0.6F) {
+						island.set(island.column(x, floor + 1, z), Blocks.SEA_PICKLE.defaultBlockState()
+							.setValue(SeaPickleBlock.PICKLES, 1 + random.nextInt(SeaPickleBlock.MAX_PICKLES)).setValue(SeaPickleBlock.WATERLOGGED, true));
+					}
+				}
 			}
 			if (theme == Theme.EMBER || theme == Theme.FROST) {
 				return;
@@ -860,8 +1138,9 @@ public record SkyIslandFeature() implements Feature {
 				for (Direction side : Direction.Plane.HORIZONTAL) {
 					int x = cell[0] + side.getStepX();
 					int z = cell[1] + side.getStepZ();
+					BlockState bank = island.get(island.ground(x, z));
 					if (!isCell(cells, x, z) && island.surface(x, z) == level && random.nextInt(4) == 0
-							&& island.get(island.ground(x, z)).is(Blocks.GRASS_BLOCK) && island.isAir(island.ground(x, z).above())) {
+							&& (bank.is(Blocks.GRASS_BLOCK) || bank.is(Blocks.SAND)) && island.isAir(island.ground(x, z).above())) {
 						int height = 1 + random.nextInt(3);
 						for (int y = 1; y <= height; y++) {
 							island.set(island.ground(x, z).above(y), Blocks.SUGAR_CANE.defaultBlockState());
@@ -1032,6 +1311,10 @@ public record SkyIslandFeature() implements Feature {
 			case EMBER -> r < 0.4F ? pillar(Blocks.BONE_BLOCK, random) : r < 0.7F ? Blocks.BLACKSTONE.defaultBlockState() : pillar(Blocks.HAY_BLOCK, random);
 			case FROST -> r < 0.6F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.SNOW_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
 			case VERDANT -> r < 0.5F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.MOSS_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			// Driftwood and dried kelp.
+			case LAGOON -> r < 0.45F ? pillar(Blocks.STRIPPED_OAK_LOG, random) : r < 0.85F ? Blocks.DRIED_KELP_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			case CRYSTAL -> r < 0.4F ? Blocks.AMETHYST_BLOCK.defaultBlockState() : r < 0.8F ? Blocks.CALCITE.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			case GLOOM -> r < 0.5F ? pillar(Blocks.BONE_BLOCK, random) : r < 0.8F ? Blocks.COBBLED_DEEPSLATE.defaultBlockState() : Blocks.PALE_MOSS_BLOCK.defaultBlockState();
 			default -> r < 0.85F ? pillar(Blocks.HAY_BLOCK, random) : pillar(Blocks.BONE_BLOCK, random);
 		};
 	}
@@ -1042,6 +1325,9 @@ public record SkyIslandFeature() implements Feature {
 			case EMBER -> first ? Blocks.BLACKSTONE : Blocks.COARSE_DIRT;
 			case FROST -> first ? Blocks.SNOW_BLOCK : Blocks.COARSE_DIRT;
 			case VERDANT -> first ? Blocks.MOSS_BLOCK : Blocks.ROOTED_DIRT;
+			case LAGOON -> first ? Blocks.SAND : Blocks.CLAY;
+			case CRYSTAL -> first ? Blocks.CALCITE : Blocks.AMETHYST_BLOCK;
+			case GLOOM -> first ? Blocks.SCULK : Blocks.PODZOL;
 			default -> first ? Blocks.COARSE_DIRT : Blocks.ROOTED_DIRT;
 		}).defaultBlockState();
 	}
