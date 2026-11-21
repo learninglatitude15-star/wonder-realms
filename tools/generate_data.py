@@ -16,7 +16,7 @@ ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
-DRAGON_KINDS = ("ember", "frost", "storm", "verdant", "tide", "crystal", "shadow", "ender")
+DRAGON_KINDS = ("ember", "frost", "storm", "verdant", "tide", "crystal", "shadow", "earth", "honey", "rainbow", "air", "ender")
 DRAGONS = [f"{NS}:{element}_dragon" for element in DRAGON_KINDS]
 
 # --- Text ------------------------------------------------------------------------------------------------------
@@ -37,6 +37,25 @@ TEXT = {
     "message.wonderrealms.cannon_no_fuel": "The cannon needs fuel: each shot burns ten seconds of it.",
     "message.wonderrealms.saddle_first": "Saddle your dragon first: the saddlebags hang from the saddle.",
     "message.wonderrealms.beetle_too_big": "You're far too big to ride a beetle. Shrink first!",
+    "message.wonderrealms.dragonfly_too_big": "You're far too big to ride a dragonfly. Shrink first!",
+    "message.wonderrealms.grasshopper_too_big": "You're far too big to ride a grasshopper. Shrink first!",
+    "message.wonderrealms.power_recharging": "Your dragon's power is recharging (%ss)",
+    "message.wonderrealms.became_elder": "Your dragon has become an Elder!",
+    "message.wonderrealms.already_elder": "Your dragon is already an Elder.",
+    "message.wonderrealms.heart_too_young": "Your dragon must be fully grown to take a Dragon Heart.",
+    "key.wonderrealms.dragon_power": "Dragon Power",
+    "power.wonderrealms.ember": "Inferno!",
+    "power.wonderrealms.frost": "Blizzard!",
+    "power.wonderrealms.storm": "Thunderstorm!",
+    "power.wonderrealms.verdant": "Bloom!",
+    "power.wonderrealms.tide": "Tidal Wave!",
+    "power.wonderrealms.crystal": "Crystal Shield!",
+    "power.wonderrealms.shadow": "Shadow Cloak!",
+    "power.wonderrealms.earth": "Earthquake!",
+    "power.wonderrealms.honey": "Swarm!",
+    "power.wonderrealms.rainbow": "Rainbow Burst!",
+    "power.wonderrealms.air": "Tornado!",
+    "power.wonderrealms.ender": "Void Rift!",
 }
 
 TOOLTIPS = {
@@ -64,6 +83,20 @@ TOOLTIPS = {
     "dragon_egg": ["Set it down and wait: it hatches into a dragon",
                    "that bonds with whoever is closest."],
     "ender_egg": ["Something stirs inside... perhaps it's hungry for chorus fruit?"],
+    "dragon_scale": ["Shed now and then by a grown, tamed dragon,",
+                     "and dropped by wild ones. Craft it into dragonscale armor."],
+    "elder_scale": ["Only the Elder Dragon of a Sky Citadel has these.",
+                    "Eight around netherite dragon armor make Elder Dragon Armor."],
+    "dragon_heart": ["Give it to your grown dragon to make it an Elder:",
+                     "bigger, tougher, with stronger breath and a faster power."],
+    "dragonscale_armor": ["Wear the full set: falls can't hurt you,",
+                          "and neither can fire."],
+    "elder_blade": ["Every blow lets loose one of the Elder Dragon's breaths:",
+                    "fire, frost, lightning or shadow."],
+    "firefly_jar": ["A jar of fireflies: a soft light that needs no fuel.",
+                    "Catch fireflies on warm nights with a glass bottle."],
+    "dragon_wings": ["Wear them like an elytra and glide.",
+                     "Mend them with dragon scales."],
 }
 
 # --- Advancements ----------------------------------------------------------------------------------------------
@@ -120,7 +153,7 @@ ADVANCEMENTS = {
     "green_thumb": ("tame_dragon", "minecraft:bone_meal", "Green Thumb", "Make plants grow with a Verdant dragon's breath", "task", None),
     "two_riders": ("ride_dragon", "minecraft:cake", "Room for Two", "Ride a dragon with a friend", "task", None),
     "all_dragons": ("tame_dragon", "minecraft:dragon_head", "Dragon Collector",
-                    "Tame every kind of dragon: Ember, Frost, Storm, Verdant, Tide, Crystal, Shadow and Ender",
+                    "Tame every kind of dragon: Ember, Frost, Storm, Verdant, Tide, Crystal, Shadow, Earth, Honey, Rainbow, Air and Ender",
                     "challenge", {element: {"trigger": "minecraft:tame_animal",
                                             "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{element}_dragon"})}}
                     for element in DRAGON_KINDS}),
@@ -136,6 +169,37 @@ ADVANCEMENTS = {
     "deep_dive": ("ride_dragon", "minecraft:heart_of_the_sea", "Deep Dive", "Ride a Tide dragon underwater", "goal", None),
     "crystal_glow": ("tame_dragon", "minecraft:amethyst_shard", "Shine Bright", "Make a mob glow with a Crystal dragon's breath", "task", None),
     "beetle_rider": ("shrink", "minecraft:saddle", "Beetle Rider", "Ride a rhino beetle while you're tiny", "goal", None),
+
+    # 1.4: the Elder Dragon, dragon powers, scales and dragonflies
+    "dragon_power": ("ride_dragon", "minecraft:blaze_powder", "Unleashed", "Use your dragon's special power", "task", None),
+    "dragon_scale": ("tame_dragon", f"{NS}:dragon_scale", "Scale Collector", "Pick up a dragon scale", "task",
+                     {"scale": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": f"{NS}:dragon_scale"}]}}}),
+    "dragonscale_armor": ("dragon_scale", f"{NS}:dragonscale_chestplate", "Scaled Up", "Wear a full set of dragonscale armor", "goal", None),
+    "elder_awakens": ("root", f"{NS}:elder_scale", "The Elder Awakens", "Find a Sky Citadel and wake its Elder Dragon", "task", None),
+    "elder_slayer": ("elder_awakens", f"{NS}:dragon_heart", "Dragonslayer", "Defeat the Elder Dragon", "challenge", None),
+    "dragon_heart": ("elder_slayer", "minecraft:totem_of_undying", "Heart of a Dragon", "Give your dragon a Dragon Heart to make it an Elder",
+                     "challenge", None),
+    "elder_armor": ("elder_slayer", f"{NS}:elder_dragon_armor", "Ancient Armor", "Give your dragon Elder Dragon Armor", "goal", None),
+    "dragonfly_rider": ("shrink", "minecraft:phantom_membrane", "Dragonfly Rider", "Fly a dragonfly while you're tiny", "goal", None),
+
+    # 1.4, part two: Earth and Honey dragons, grasshoppers, fireflies, sky whales and the Elder Blade
+    "tunnel_vision": ("tame_dragon", "minecraft:iron_pickaxe", "Tunnel Vision", "Dig through stone with an Earth dragon's breath", "task", None),
+    "liquid_gold": ("tame_dragon", "minecraft:honey_bottle", "Liquid Gold", "Fill a beehive with a Honey dragon's breath", "task", None),
+    "grasshopper_rider": ("shrink", "minecraft:wheat", "Leap of Faith", "Take a flying leap on a grasshopper while you're tiny", "goal", None),
+    "firefly_jar": ("root", f"{NS}:firefly_jar", "Jar of Stars", "Catch fireflies in a glass bottle", "task", None),
+    "sky_whale": ("root", "minecraft:cod", "Whale of a Time", "Ride on the back of a sky whale", "task", None),
+    "whale_captain": ("sky_whale", "minecraft:saddle", "Captain of the Clouds", "Steer a saddled sky whale", "goal", None),
+    # 1.4, part three: Rainbow and Air dragons, Dragon Wings, sky villages, whale calves and the Storm Leviathan
+    "rainbow_sheep": ("tame_dragon", "minecraft:pink_wool", "Every Colour", "Turn a sheep a new colour with a Rainbow dragon's breath", "task", None),
+    "gone_with_the_wind": ("dragon_power", "minecraft:wind_charge", "Gone with the Wind", "Fling foes sky-high with an Air dragon's Tornado",
+                           "goal", None),
+    "dragon_wings": ("dragon_scale", f"{NS}:dragon_wings", "Wings of a Dragon", "Glide on Dragon Wings", "goal", None),
+    "sky_village": ("root", "minecraft:bell", "Village in the Clouds", "Find a sky village", "task", None),
+    "whale_calf": ("sky_whale", "minecraft:salmon", "Little Whale", "Feed a fish to a sky whale calf", "task", None),
+    "leviathan_sighted": ("sky_whale", "minecraft:lightning_rod", "Here Comes the Storm", "Meet the Storm Leviathan in a thunderstorm", "task", None),
+    "storm_leviathan": ("leviathan_sighted", "minecraft:trident", "Leviathan Slayer", "Defeat the Storm Leviathan", "challenge", None),
+    "elder_blade": ("elder_slayer", f"{NS}:elder_blade", "Elemental Edge", "Forge the Elder Blade from Elder Scales", "challenge",
+                    {"blade": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": f"{NS}:elder_blade"}]}}}),
 }
 
 # Advancements whose criteria must all be met, rather than any one of them.
@@ -232,6 +296,16 @@ LOOT = {
         pool(1, item(f"{NS}:airship"), empty(4)),
         pool(1, item(f"{NS}:airship_cannon"), empty(5)),
         pool(1, item("book", enchant=True), empty(3))),
+    # The Elder Dragon's hoard in a Sky Citadel: the richest treasure in the sky.
+    "sky_citadel": chest("sky_citadel",
+        pool((5, 8),
+             item("gold_ingot", 15, (4, 10)), item("diamond", 10, (2, 5)), item("emerald", 10, (3, 8)),
+             item("golden_apple", 8, (1, 3)), item("netherite_scrap", 4, (1, 2)), item("experience_bottle", 8, (3, 8)),
+             item("book", 8, enchant=True), item("diamond_sword", 3, enchant=True), item("diamond_chestplate", 3, enchant=True),
+             item(f"{NS}:dragon_scale", 10, (2, 5)), item(f"{NS}:diamond_dragon_armor", 3), item(f"{NS}:netherite_dragon_armor", 1),
+             item(f"{NS}:dragon_whistle", 3), item("saddle", 4)),
+        pool(1, item("enchanted_golden_apple"), empty(4)),
+        pool(1, item("elytra"), empty(9))),
 }
 
 
@@ -256,6 +330,12 @@ def main():
 
     for name, table in LOOT.items():
         dump(DATA / "loot_table" / "chests" / f"{name}.json", table)
+    # Blocks that drop themselves: every dragon egg (mined with a pickaxe, carefully) and the Firefly Jar.
+    for block in [f"{kind}_egg" for kind in DRAGON_KINDS if kind != "ender"] + ["firefly_jar"]:
+        pool = {"rolls": 1, "entries": [{"type": "minecraft:item", "name": f"{NS}:{block}"}]}
+        if block == "firefly_jar":
+            pool["conditions"] = [{"condition": "minecraft:survives_explosion"}]
+        dump(DATA / "loot_table" / "blocks" / f"{block}.json", {"type": "minecraft:block", "pools": [pool], "random_sequence": f"{NS}:blocks/{block}"})
     dump(DATA / "tags" / "entity_type" / "dragons.json", {"values": DRAGONS})
 
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")

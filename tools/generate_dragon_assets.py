@@ -36,6 +36,21 @@ PALETTES = {
                     membrane=(0xc8, 0xa8, 0xf0), horn=(0xf8, 0xf4, 0xff), eye=(0xff, 0x9a, 0xf0)),
     "shadow": dict(dark=(0x08, 0x08, 0x0e), base=(0x1a, 0x1a, 0x26), light=(0x34, 0x34, 0x4a), belly=(0x4a, 0x48, 0x5e),
                    membrane=(0x22, 0x1a, 0x30), horn=(0x6a, 0x6a, 0x78), eye=(0x4a, 0xff, 0xe0)),
+    # Earth: sandstone and clay, flecked with stone, with grey stone horns. "fleck" scatters stone chips over its back.
+    "earth": dict(dark=(0x4a, 0x2a, 0x16), base=(0x9a, 0x5a, 0x2e), light=(0xd0, 0x8a, 0x4a), belly=(0xd8, 0xb8, 0x8a),
+                  membrane=(0x8a, 0x6a, 0x4a), horn=(0x7a, 0x76, 0x72), eye=(0xff, 0xb0, 0x30), fleck=(0x8a, 0x86, 0x80)),
+    # Honey: golden, banded black like a bee ("stripe"), with pale wings like a bee's.
+    "honey": dict(dark=(0x8a, 0x5a, 0x0a), base=(0xf0, 0xa8, 0x20), light=(0xff, 0xd8, 0x60), belly=(0xff, 0xec, 0xb0),
+                  membrane=(0xe8, 0xe0, 0xc8), horn=(0x2a, 0x1a, 0x0a), eye=(0xff, 0x6a, 0x10), stripe=(0x2a, 0x1a, 0x0a)),
+    # Rainbow: scales in bands of every colour ("rainbow"), white belly and horns, pearly wings.
+    "rainbow": dict(dark=(0x6a, 0x3a, 0x8a), base=(0xff, 0x60, 0x60), light=(0xff, 0xff, 0xff), belly=(0xfa, 0xf6, 0xff),
+                    membrane=(0xf0, 0xe8, 0xff), horn=(0xff, 0xf4, 0xd8), eye=(0xff, 0x6a, 0xd0), rainbow=True),
+    # Air: white as a cloud, with sky-blue wings and silver horns.
+    "air": dict(dark=(0x8a, 0x9a, 0xb0), base=(0xe8, 0xee, 0xf6), light=(0xff, 0xff, 0xff), belly=(0xf8, 0xf8, 0xff),
+                membrane=(0xb8, 0xd8, 0xf0), horn=(0xc8, 0xd0, 0xd8), eye=(0x60, 0xc8, 0xff)),
+    # The Elder Dragon of the Sky Citadels: old bronze and gold, ivory horns, blood-red wings and eyes.
+    "elder": dict(dark=(0x3a, 0x22, 0x10), base=(0x8a, 0x5a, 0x22), light=(0xe0, 0xb8, 0x60), belly=(0xf0, 0xe0, 0xc0),
+                  membrane=(0x7a, 0x1a, 0x1a), horn=(0xf4, 0xec, 0xd8), eye=(0xff, 0x40, 0x30)),
 }
 
 # --- Model: bone -> (parent, pivot, [(name, origin, size, kind, mirror)]) ---------------------------------------
@@ -131,6 +146,15 @@ def shade(c, f):
     return tuple(max(0, min(255, int(v * f))) for v in c)
 
 
+STRIPED = ("body", "neck", "tail1", "tail2", "tail3")
+RAINBOW = [(0xff, 0x40, 0x40), (0xff, 0x9a, 0x30), (0xff, 0xe6, 0x40), (0x50, 0xd0, 0x50), (0x40, 0xa8, 0xff), (0x58, 0x58, 0xe8),
+           (0xb0, 0x58, 0xe8)]
+
+
+def rainbow_at(along, n):
+    return shade(RAINBOW[(along // 2) % len(RAINBOW)], 0.85 + 0.25 * n)
+
+
 def paint_skin(pal, placed):
     img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
 
@@ -147,6 +171,9 @@ def paint_skin(pal, placed):
                     n = noise(px, py, 7)
                     if kind == "membrane":
                         c = shade(pal["membrane"], 0.85 + 0.25 * noise(px // 3, py, 3))
+                        if "rainbow" in pal:
+                            r = rainbow_at(xx, n)  # a pearly shimmer of every colour
+                            c = tuple((a + b * 2) // 3 for a, b in zip(r, c))
                         if xx % 5 == 0:  # finger bones through the membrane
                             c = pal["dark"]
                     elif kind == "horn":
@@ -165,6 +192,18 @@ def paint_skin(pal, placed):
                             c = shade(pal["base"], 0.92 + 0.16 * n)
                         if face == "top" and n > 0.6:
                             c = pal["light"]
+                        if "rainbow" in pal:
+                            # Bands of every colour along its length, red through violet, with darker scale edges.
+                            along = yy if face in ("top", "bottom") else xx
+                            edge = (xx + (yy // 2) % 2) % 3 == 0 and yy % 2 == 0
+                            c = shade(rainbow_at(along, n), 0.7 if edge else 1.0)
+                        if "fleck" in pal and face != "bottom" and n > 0.9:
+                            c = shade(pal["fleck"], 0.85 + 0.3 * noise(px, py, 5))  # chips of stone
+                        # Bands round the body, neck and tail, across their length (yy on top, xx on the flanks).
+                        if "stripe" in pal and name in STRIPED and face in ("top", "east", "west"):
+                            along = yy if face == "top" else xx
+                            if (along // 3) % 2 == 1:
+                                c = shade(pal["stripe"], 0.9 + 0.3 * n)
                     put(px, py, c)
         if kind == "head":
             # Glowing eyes near the front-top of both sides of the skull.
@@ -247,6 +286,7 @@ METALS = {
     "golden": dict(light=(0xff, 0xf4, 0x8a), mid=(0xf0, 0xc4, 0x38), dark=(0xb0, 0x7c, 0x14), rivet=(0x7a, 0x50, 0x08)),
     "diamond": dict(light=(0xd0, 0xff, 0xfa), mid=(0x5c, 0xe0, 0xd8), dark=(0x22, 0x9a, 0x96), rivet=(0x14, 0x5e, 0x5c)),
     "netherite": dict(light=(0x7a, 0x70, 0x76), mid=(0x4c, 0x44, 0x4a), dark=(0x30, 0x2a, 0x2e), rivet=(0xd8, 0xa8, 0x5a)),
+    "elder": dict(light=(0xff, 0xf4, 0xd8), mid=(0xd8, 0xb8, 0x70), dark=(0x8a, 0x64, 0x2a), rivet=(0xc8, 0x20, 0x30)),
 }
 
 # Which faces of which cubes get plated, and how many rows down from the top edge (None = the whole face).
@@ -387,6 +427,10 @@ def egg_texture(pal, stage):
                 c = pal["light"]
             elif n < 0.12:
                 c = pal["dark"]
+            if "stripe" in pal and y in (5, 6, 10, 11):
+                c = shade(pal["stripe"], 0.9 + 0.2 * n)  # a honey egg is banded like a bee
+            if "rainbow" in pal:
+                c = rainbow_at(y, n)  # a rainbow egg, red at the top to violet at the bottom
             row.append((*c, 255))
         img.append(row)
     # Cracks spread as the egg gets closer to hatching.
@@ -409,6 +453,16 @@ SPAWN_EGGS = {
     "ender_dragon": ((0x1c, 0x16, 0x26), (0xd8, 0x6a, 0xff), "Ender Dragon Spawn Egg"),
     "pixel_miner": ((0x7a, 0x5a, 0x3a), (0xf0, 0xc0, 0x40), "Pixel Miner Spawn Egg"),
     "rhino_beetle": ((0x3a, 0x22, 0x12), (0xa8, 0x80, 0x58), "Rhino Beetle Spawn Egg"),
+    "dragonfly": ((0x1a, 0x8a, 0xa0), (0x7a, 0xf0, 0x5a), "Dragonfly Spawn Egg"),
+    "elder_dragon": ((0x8a, 0x5a, 0x22), (0xff, 0x40, 0x30), "Elder Dragon Spawn Egg"),
+    "earth_dragon": ((0x9a, 0x5a, 0x2e), (0x8a, 0x86, 0x80), "Earth Dragon Spawn Egg"),
+    "honey_dragon": ((0xf0, 0xa8, 0x20), (0x2a, 0x1a, 0x0a), "Honey Dragon Spawn Egg"),
+    "grasshopper": ((0x5a, 0xa0, 0x3a), (0xc8, 0xd8, 0x7a), "Grasshopper Spawn Egg"),
+    "firefly": ((0x2a, 0x22, 0x1e), (0xe8, 0xff, 0x7a), "Firefly Spawn Egg"),
+    "sky_whale": ((0x3a, 0x4e, 0x8e), (0xf0, 0xf4, 0xff), "Sky Whale Spawn Egg"),
+    "rainbow_dragon": ((0xff, 0x50, 0x50), (0x40, 0xa8, 0xff), "Rainbow Dragon Spawn Egg"),
+    "air_dragon": ((0xe8, 0xee, 0xf6), (0x60, 0xc8, 0xff), "Air Dragon Spawn Egg"),
+    "storm_leviathan": ((0x2a, 0x2e, 0x3a), (0xff, 0xf0, 0x60), "Storm Leviathan Spawn Egg"),
 }
 
 
@@ -451,7 +505,10 @@ def main():
     lang = json.loads(lang_path.read_text())
     names = {"ember": ("Ember Dragon", "Ember Egg"), "frost": ("Frost Dragon", "Frost Egg"), "storm": ("Storm Dragon", "Storm Egg"),
              "verdant": ("Verdant Dragon", "Verdant Egg"), "tide": ("Tide Dragon", "Tide Egg"),
-             "crystal": ("Crystal Dragon", "Crystal Egg"), "shadow": ("Shadow Dragon", "Shadow Egg"), "ender": ("Ender Dragon", None)}
+             "crystal": ("Crystal Dragon", "Crystal Egg"), "shadow": ("Shadow Dragon", "Shadow Egg"), "ender": ("Ender Dragon", None),
+             "earth": ("Earth Dragon", "Earth Egg"), "honey": ("Honey Dragon", "Honey Egg"),
+             "rainbow": ("Rainbow Dragon", "Rainbow Egg"), "air": ("Air Dragon", "Air Egg"),
+             "elder": ("Elder Dragon", None)}
     for element, pal in PALETTES.items():
         skin = paint_skin(pal, placed)
         # Every combination of armor (or none) and saddle (or none) gets its own skin.
@@ -489,8 +546,8 @@ def main():
         lang[f"item.{NS}.{egg}"] = name
     lang["key.wonderrealms.dragon_breath"] = "Dragon Breath / Airship Cannon"
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
-    print("Packed", len(placed), "cube textures; wrote model, animations,", len(PALETTES), "dragons x 5 armors x 3 tack,",
-          len(PALETTES) - 1, "eggs x 4 stages,",
+    print("Packed", len(placed), "cube textures; wrote model, animations,", len(PALETTES), "dragons x", len(METALS) + 1, "armors x 3 tack,",
+          sum(1 for egg in names.values() if egg[1]), "eggs x 4 stages,",
           len(SPAWN_EGGS), "spawn eggs")
 
 

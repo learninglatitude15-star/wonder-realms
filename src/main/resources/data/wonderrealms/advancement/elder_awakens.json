@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:elder_scale"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.elder_awakens.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.elder_awakens.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:root"
+}

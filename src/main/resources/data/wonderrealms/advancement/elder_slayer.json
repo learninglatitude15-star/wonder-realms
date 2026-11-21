@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dragon_heart"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.elder_slayer.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.elder_slayer.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:elder_awakens"
+}

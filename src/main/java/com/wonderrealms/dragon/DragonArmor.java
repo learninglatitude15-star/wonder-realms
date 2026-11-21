@@ -11,7 +11,9 @@ public enum DragonArmor {
 	IRON("iron", 6, 0, 0),
 	GOLD("golden", 8, 0, 0),
 	DIAMOND("diamond", 12, 2, 0),
-	NETHERITE("netherite", 16, 3, 0.15);
+	NETHERITE("netherite", 16, 3, 0.15),
+	/** Forged from the Elder Dragon's scales over netherite armor. */
+	ELDER("elder", 20, 4, 0.25);
 
 	/** Item and texture name prefix: "iron" for iron_dragon_armor. */
 	public final String id;

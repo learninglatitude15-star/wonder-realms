@@ -1,0 +1,31 @@
+{
+  "criteria": {
+    "scale": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "wonderrealms:dragon_scale"
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dragon_scale"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.dragon_scale.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.dragon_scale.description"
+    }
+  },
+  "requirements": [
+    [
+      "scale"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

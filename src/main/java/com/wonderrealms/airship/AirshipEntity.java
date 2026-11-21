@@ -303,6 +303,26 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		return ship;
 	}
 
+	/** Bright balloons for the airships the sky villagers lend to travellers. */
+	private static final DyeColor[] VILLAGE_COLORS = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIGHT_BLUE, DyeColor.LIME, DyeColor.ORANGE, DyeColor.MAGENTA};
+
+	/**
+	 * A sky village's airship, moored in the village for anyone to borrow: a bright balloon, a few minutes' fuel and
+	 * no cannon. Works during world generation too.
+	 */
+	public static AirshipEntity spawnVillageShip(ServerLevelAccessor level, BlockPos pos) {
+		ServerLevel server = level.getLevel();
+		AirshipEntity ship = Airships.TYPE.create(server, EntitySpawnReason.STRUCTURE);
+		if (ship == null) {
+			return null;
+		}
+		ship.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, server.getRandom().nextFloat() * 360F, 0F);
+		ship.setFuel(LOOT_FUEL);
+		ship.entityData.set(COLOR, VILLAGE_COLORS[server.getRandom().nextInt(VILLAGE_COLORS.length)].getId());
+		level.addFreshEntity(ship);
+		return ship;
+	}
+
 	/** A pillager ship's hold: their spoils, for whoever takes the ship. */
 	private void stockPlunder(RandomSource random) {
 		ItemStack[] spoils = {

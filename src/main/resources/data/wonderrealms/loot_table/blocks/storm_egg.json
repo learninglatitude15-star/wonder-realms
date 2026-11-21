@@ -2,13 +2,13 @@
   "type": "minecraft:block",
   "pools": [
     {
+      "rolls": 1,
       "entries": [
         {
           "type": "minecraft:item",
           "name": "wonderrealms:storm_egg"
         }
-      ],
-      "rolls": 1
+      ]
     }
   ],
   "random_sequence": "wonderrealms:blocks/storm_egg"

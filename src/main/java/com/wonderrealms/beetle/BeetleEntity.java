@@ -140,7 +140,17 @@ public class BeetleEntity extends Animal implements GeoEntity {
 
 	@Override
 	public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob partner) {
-		return Beetles.TYPE.create(level, EntitySpawnReason.BREEDING);
+		BeetleEntity grub = Beetles.TYPE.create(level, EntitySpawnReason.BREEDING);
+		if (grub != null) {
+			grub.setPersistenceRequired(); // bred by a player, so it stays
+		}
+		return grub;
+	}
+
+	/** Wild ones wander off once nobody's near; a saddled, ridden or bred one stays. */
+	@Override
+	public boolean removeWhenFarAway(double distance) {
+		return !this.isSaddled() && !this.isVehicle();
 	}
 
 	@Override

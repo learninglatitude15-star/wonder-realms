@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dragonscale_chestplate"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.dragonscale_armor.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.dragonscale_armor.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:dragon_scale"
+}

@@ -13,6 +13,11 @@ import com.wonderrealms.dragon.BreathPayload;
 import com.wonderrealms.dragon.DragonElement;
 import com.wonderrealms.dragon.DragonEntity;
 import com.wonderrealms.dragon.Dragons;
+import com.wonderrealms.dragon.PowerPayload;
+import com.wonderrealms.dragonfly.Dragonflies;
+import com.wonderrealms.firefly.Fireflies;
+import com.wonderrealms.grasshopper.Grasshoppers;
+import com.wonderrealms.whale.SkyWhales;
 import com.wonderrealms.miner.PixelMinerEntity;
 import com.wonderrealms.miner.PixelMiners;
 import com.wonderrealms.pixel.PixelMining;
@@ -39,12 +44,21 @@ public class WonderRealmsClient implements ClientModInitializer {
 	/** Breathe while riding a dragon; fire the cannon at an airship's helm. */
 	private static final KeyMapping BREATH_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 		"key.wonderrealms.dragon_breath", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, KeyMapping.Category.GAMEPLAY));
+	/** Unleash your dragon's special power while riding it. */
+	private static final KeyMapping POWER_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+		"key.wonderrealms.dragon_power", InputConstants.Type.KEYBOARD, InputConstants.KEY_R, KeyMapping.Category.GAMEPLAY));
 
 	@Override
 	public void onInitializeClient() {
 		for (DragonElement element : DragonElement.values()) {
-			EntityRendererRegistry.register(Dragons.TYPES.get(element), context -> new DragonRenderer(context, element));
+			EntityRendererRegistry.register(Dragons.TYPES.get(element), context -> new DragonRenderer(context, element.id));
 		}
+		EntityRendererRegistry.register(Dragons.ELDER, context -> new DragonRenderer(context, "elder"));
+		EntityRendererRegistry.register(Dragonflies.TYPE, DragonflyRenderer::new);
+		EntityRendererRegistry.register(Grasshoppers.TYPE, GrasshopperRenderer::new);
+		EntityRendererRegistry.register(Fireflies.TYPE, FireflyRenderer::new);
+		EntityRendererRegistry.register(SkyWhales.TYPE, SkyWhaleRenderer::new);
+		EntityRendererRegistry.register(SkyWhales.LEVIATHAN, StormLeviathanRenderer::new);
 		EntityRendererRegistry.register(PixelMiners.TYPE, context -> new GeoEntityRenderer<PixelMinerEntity, LivingEntityRenderState>(context,
 			new DefaultedEntityGeoModel<PixelMinerEntity>(WonderRealms.id("pixel_miner"))));
 		EntityRendererRegistry.register(Beetles.TYPE, BeetleRenderer::new);
@@ -57,6 +71,11 @@ public class WonderRealmsClient implements ClientModInitializer {
 			if (mc.player != null && mc.player.getVehicle() instanceof AirshipEntity ship && ship.getControllingPassenger() == mc.player) {
 				Input keys = mc.player.input.keyPresses;
 				ship.setInput(keys.forward(), keys.backward(), keys.left(), keys.right(), keys.jump(), keys.sprint());
+			}
+			while (POWER_KEY.consumeClick()) {
+				if (mc.player != null && mc.player.getVehicle() instanceof DragonEntity dragon && dragon.getControllingPassenger() == mc.player) {
+					ClientPlayNetworking.send(PowerPayload.INSTANCE);
+				}
 			}
 			while (BREATH_KEY.consumeClick()) {
 				if (mc.player == null) {
@@ -86,6 +105,15 @@ public class WonderRealmsClient implements ClientModInitializer {
 		tips.put(TinyWorlds.SHRINK_RAY, "shrink_ray");
 		tips.put(TinyWorlds.PIXEL_CHISEL, "pixel_chisel");
 		tips.put(Dragons.WHISTLE, "dragon_whistle");
+		tips.put(Dragons.DRAGON_SCALE, "dragon_scale");
+		tips.put(Dragons.ELDER_SCALE, "elder_scale");
+		tips.put(Dragons.DRAGON_HEART, "dragon_heart");
+		tips.put(Dragons.ELDER_BLADE, "elder_blade");
+		tips.put(Fireflies.JAR_ITEM, "firefly_jar");
+		tips.put(Dragons.DRAGON_WINGS, "dragon_wings");
+		for (Item piece : List.of(Dragons.DRAGONSCALE_HELMET, Dragons.DRAGONSCALE_CHESTPLATE, Dragons.DRAGONSCALE_LEGGINGS, Dragons.DRAGONSCALE_BOOTS)) {
+			tips.put(piece, "dragonscale_armor");
+		}
 		Dragons.ARMOR_ITEMS.values().forEach(armor -> tips.put(armor, "dragon_armor"));
 		Dragons.EGG_ITEMS.values().forEach(egg -> tips.put(egg, "dragon_egg"));
 		tips.put(Items.DRAGON_EGG, "ender_egg"); // a hint: it hatches on chorus fruit

@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:dragon_wings"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.dragon_wings.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.dragon_wings.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:dragon_scale"
+}

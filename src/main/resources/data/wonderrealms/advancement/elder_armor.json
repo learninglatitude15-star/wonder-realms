@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:elder_dragon_armor"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.elder_armor.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.elder_armor.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:elder_slayer"
+}

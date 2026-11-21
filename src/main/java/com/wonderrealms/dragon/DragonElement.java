@@ -1,16 +1,22 @@
 package com.wonderrealms.dragon;
 
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.PowerParticleOption;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 
-/** The eight kinds of dragon, each with its own breath, favourite food, egg and gift to its rider. */
+/** The twelve kinds of dragon, each with its own breath, favourite food, egg and gift to its rider. */
 public enum DragonElement {
 	/** Fire breath that sets targets alight. Its rider can't be burnt. Eats meat. */
 	EMBER("ember", "Ember Dragon", "Ember Egg", ParticleTypes.FLAME, SoundEvents.BLAZE_SHOOT, 3),
@@ -26,11 +32,22 @@ public enum DragonElement {
 	CRYSTAL("crystal", "Crystal Dragon", "Crystal Egg", new DustParticleOptions(0xC08CFF, 1.4F), SoundEvents.AMETHYST_BLOCK_CHIME, 7),
 	/** Breath of shadow that withers and weakens. Its rider sees in the dark. Eats spider eyes or meat. */
 	SHADOW("shadow", "Shadow Dragon", "Shadow Egg", ParticleTypes.SQUID_INK, SoundEvents.WITHER_SHOOT, 0),
+	/** A blast of grit that staggers foes and, when ridden, tunnels through earth and stone. Its rider mines faster. Eats raw ore or meat. */
+	EARTH("earth", "Earth Dragon", "Earth Egg", new BlockParticleOption(ParticleTypes.BLOCK, Blocks.COARSE_DIRT.defaultBlockState()), SoundEvents.GRINDSTONE_USE, 0),
+	/** Sticky honey breath that gums foes up and fills beehives. Its rider never goes hungry. Eats honeycomb or meat. */
+	HONEY("honey", "Honey Dragon", "Honey Egg", new DustParticleOptions(0xFFB020, 1.5F), SoundEvents.HONEY_BLOCK_SLIDE, 4),
+	/** A rainbow that dazzles foes, turns sheep every colour, and, when ridden, repaints wool, glass, concrete and terracotta. Eats flowers or meat. */
+	RAINBOW("rainbow", "Rainbow Dragon", "Rainbow Egg", new DustParticleOptions(0xFF4040, 1.5F), SoundEvents.NOTE_BLOCK_CHIME.value(), 9),
+	/** Gusts of wind that blow foes away and fires out. Its rider turns invisible, and once tamed it's invisible too. Eats feathers or meat. */
+	AIR("air", "Air Dragon", "Air Egg", ParticleTypes.CLOUD, SoundEvents.WIND_CHARGE_BURST.value(), 0),
 	/** Hatched from the End's Dragon Egg with chorus fruit. Its breath hurts and sets targets floating. Eats chorus fruit or meat. */
 	ENDER("ender", "Ender Dragon", "Dragon Egg", PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1F), SoundEvents.ENDER_DRAGON_SHOOT, 0);
 
+	/** Any flower, which is what a Rainbow dragon likes best. */
+	private static final TagKey<Item> FLOWERS = TagKey.create(Registries.ITEM, Identifier.withDefaultNamespace("flowers"));
+
 	/** The kinds that live wild on the sky islands. */
-	public static final DragonElement[] WILD = {EMBER, FROST, STORM, VERDANT, TIDE, CRYSTAL, SHADOW};
+	public static final DragonElement[] WILD = {EMBER, FROST, STORM, VERDANT, TIDE, CRYSTAL, SHADOW, EARTH, HONEY, RAINBOW, AIR};
 
 	public final String id;
 	public final String dragonName;
@@ -56,6 +73,10 @@ public enum DragonElement {
 			|| (this == VERDANT && (stack.is(Items.SWEET_BERRIES) || stack.is(Items.GLOW_BERRIES) || stack.is(Items.APPLE)))
 			|| (this == CRYSTAL && stack.is(Items.AMETHYST_SHARD))
 			|| (this == SHADOW && stack.is(Items.SPIDER_EYE))
+			|| (this == EARTH && (stack.is(Items.RAW_IRON) || stack.is(Items.RAW_COPPER) || stack.is(Items.RAW_GOLD)))
+			|| (this == HONEY && stack.is(Items.HONEYCOMB))
+			|| (this == RAINBOW && stack.is(FLOWERS))
+			|| (this == AIR && stack.is(Items.FEATHER))
 			|| (this == ENDER && stack.is(Items.CHORUS_FRUIT));
 	}
 

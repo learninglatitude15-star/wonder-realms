@@ -6,6 +6,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -18,12 +19,17 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -33,7 +39,17 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAsset;
+import net.minecraft.world.item.equipment.EquipmentAssets;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.util.Unit;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -44,8 +60,9 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 
 /**
- * Registers the dragons: one creature type per element, eggs for the wild kinds, dragon armor, the whistle, and
- * the breath key's network message. Wild dragons live only on sky islands, guarding roosts or carrying pillagers (see
+ * Registers the dragons: one creature type per element and the Elder Dragon, eggs for the wild kinds, dragon armor,
+ * the whistle, dragon scales and dragonscale armor, the Elder Dragon's scales and heart, and the breath and power
+ * keys' network messages. Wild dragons live only on sky islands, guarding roosts or carrying pillagers (see
  * {@code SkyIslandFeature}). Eggs only come from dragons: kill a wild adult for its egg, or tame one and it lays
  * eggs. The End's Dragon Egg hatches an Ender Dragon when fed chorus fruit.
  */
@@ -59,6 +76,50 @@ public final class Dragons {
 	public static final Map<DragonArmor, Item> ARMOR_ITEMS = new EnumMap<>(DragonArmor.class);
 	/** Calls your dragons to you (sneak to make them sit). */
 	public static final Item WHISTLE = item("dragon_whistle", properties -> new DragonWhistleItem(properties.stacksTo(1)));
+	/** Shed by tamed dragons and dropped by wild ones; made into dragonscale armor. */
+	public static final Item DRAGON_SCALE = item("dragon_scale", Item::new);
+	/**
+	 * Dragon Wings: a glider like an elytra, with wings of dragon membrane and scale. Made from dragon scales and phantom
+	 * membranes, and mended with dragon scales.
+	 */
+	public static final ResourceKey<EquipmentAsset> DRAGON_WINGS_ASSET = ResourceKey.create(EquipmentAssets.ROOT_ID, WonderRealms.id("dragon_wings"));
+	public static final Item DRAGON_WINGS = item("dragon_wings", properties -> new Item(properties.durability(640).rarity(Rarity.RARE)
+		.component(DataComponents.GLIDER, Unit.INSTANCE)
+		.component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.CHEST).setEquipSound(SoundEvents.ARMOR_EQUIP_ELYTRA)
+			.setAsset(DRAGON_WINGS_ASSET).setDamageOnHurt(false).build())
+		.repairable(DRAGON_SCALE)));
+	/** Dropped only by the Elder Dragon; made into Elder Dragon Armor. */
+	public static final Item ELDER_SCALE = item("elder_scale", properties -> new Item(properties.fireResistant().rarity(Rarity.RARE)));
+	/** The Elder Dragon's heart: give it to your own grown dragon to make it an Elder. */
+	public static final Item DRAGON_HEART = item("dragon_heart", properties -> new Item(properties.stacksTo(1).fireResistant().rarity(Rarity.EPIC)));
+
+	/** Dragonscale armor for players: as strong as diamond, tougher, and a full set keeps off falls and fire. */
+	public static final TagKey<Item> DRAGONSCALE_REPAIRS = TagKey.create(Registries.ITEM, WonderRealms.id("repairs_dragonscale_armor"));
+	public static final ArmorMaterial DRAGONSCALE = new ArmorMaterial(35,
+		Map.of(ArmorType.HELMET, 3, ArmorType.CHESTPLATE, 8, ArmorType.LEGGINGS, 6, ArmorType.BOOTS, 3, ArmorType.BODY, 11),
+		15, SoundEvents.ARMOR_EQUIP_DIAMOND, 2.5F, 0.05F, DRAGONSCALE_REPAIRS,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, WonderRealms.id("dragonscale")));
+	public static final Item DRAGONSCALE_HELMET = item("dragonscale_helmet", properties -> new Item(properties.humanoidArmor(DRAGONSCALE, ArmorType.HELMET)));
+	public static final Item DRAGONSCALE_CHESTPLATE = item("dragonscale_chestplate", properties -> new Item(properties.humanoidArmor(DRAGONSCALE, ArmorType.CHESTPLATE)));
+	public static final Item DRAGONSCALE_LEGGINGS = item("dragonscale_leggings", properties -> new Item(properties.humanoidArmor(DRAGONSCALE, ArmorType.LEGGINGS)));
+	public static final Item DRAGONSCALE_BOOTS = item("dragonscale_boots", properties -> new Item(properties.humanoidArmor(DRAGONSCALE, ArmorType.BOOTS)));
+
+	/** The Elder Blade: a sword of Elder Scales that lets loose one of the Elder Dragon's breaths with every blow. */
+	public static final TagKey<Item> ELDER_BLADE_REPAIRS = TagKey.create(Registries.ITEM, WonderRealms.id("repairs_elder_blade"));
+	public static final ToolMaterial ELDER_TOOL = new ToolMaterial(BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 2600, 10F, 5F, 20, ELDER_BLADE_REPAIRS);
+	public static final Item ELDER_BLADE = item("elder_blade",
+		properties -> new ElderBladeItem(properties.sword(ELDER_TOOL, 3F, -2.4F).fireResistant().rarity(Rarity.EPIC)));
+
+	/** The boss of the Sky Citadels. */
+	private static final ResourceKey<EntityType<?>> ELDER_KEY = ResourceKey.create(Registries.ENTITY_TYPE, WonderRealms.id("elder_dragon"));
+	public static final EntityType<ElderDragonEntity> ELDER = Registry.register(BuiltInRegistries.ENTITY_TYPE, ELDER_KEY,
+		FabricEntityType.Builder.<ElderDragonEntity>createMob(ElderDragonEntity::new, MobCategory.MONSTER, mob -> mob)
+			.sized(2.2F, 1.9F)
+			.eyeHeight(1.6F)
+			.fireImmune()
+			.clientTrackingRange(16)
+			.build(ELDER_KEY));
+	public static final Item ELDER_SPAWN_EGG = item("elder_dragon_spawn_egg", properties -> new SpawnEggItem(properties.spawnEgg(ELDER)));
 
 	/** Chance each chorus fruit fed to the End's Dragon Egg hatches it. */
 	private static final float CHORUS_HATCH_CHANCE = 0.25F;
@@ -92,6 +153,10 @@ public final class Dragons {
 					case TIDE -> MapColor.WATER;
 					case CRYSTAL -> MapColor.COLOR_MAGENTA;
 					case SHADOW -> MapColor.COLOR_BLACK;
+					case EARTH -> MapColor.TERRACOTTA_ORANGE;
+					case HONEY -> MapColor.COLOR_YELLOW;
+					case RAINBOW -> MapColor.COLOR_PINK;
+					case AIR -> MapColor.SNOW;
 					default -> MapColor.COLOR_PURPLE;
 				})
 				.strength(3F, 9F)
@@ -105,7 +170,7 @@ public final class Dragons {
 				new BlockItem(egg, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix().stacksTo(1))));
 		}
 		for (DragonArmor armor : DragonArmor.values()) {
-			ARMOR_ITEMS.put(armor, item(armor.id + "_dragon_armor", properties -> new Item(armor == DragonArmor.NETHERITE
+			ARMOR_ITEMS.put(armor, item(armor.id + "_dragon_armor", properties -> new Item(armor == DragonArmor.NETHERITE || armor == DragonArmor.ELDER
 				? properties.stacksTo(1).fireResistant() : properties.stacksTo(1))));
 		}
 	}
@@ -134,9 +199,28 @@ public final class Dragons {
 
 	public static void init() {
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.NATURAL_BLOCKS).register(output -> EGG_ITEMS.values().forEach(output::accept));
-		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.SPAWN_EGGS).register(output -> SPAWN_EGGS.values().forEach(output::accept));
-		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> ARMOR_ITEMS.values().forEach(output::accept));
-		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> output.accept(WHISTLE));
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.SPAWN_EGGS).register(output -> {
+			SPAWN_EGGS.values().forEach(output::accept);
+			output.accept(ELDER_SPAWN_EGG);
+		});
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> {
+			ARMOR_ITEMS.values().forEach(output::accept);
+			output.accept(DRAGONSCALE_HELMET);
+			output.accept(DRAGONSCALE_CHESTPLATE);
+			output.accept(DRAGONSCALE_LEGGINGS);
+			output.accept(DRAGONSCALE_BOOTS);
+			output.accept(ELDER_BLADE);
+		});
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> {
+			output.accept(WHISTLE);
+			output.accept(DRAGON_WINGS);
+		});
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(output -> {
+			output.accept(DRAGON_SCALE);
+			output.accept(ELDER_SCALE);
+			output.accept(DRAGON_HEART);
+		});
+		FabricDefaultAttributeRegistry.register(ELDER, ElderDragonEntity.createAttributes());
 
 		PayloadTypeRegistry.serverboundPlay().register(BreathPayload.TYPE, BreathPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(BreathPayload.TYPE, (payload, context) -> {
@@ -144,6 +228,13 @@ public final class Dragons {
 				dragon.breathe(context.player().getLookAngle(), true);
 			}
 		});
+		PayloadTypeRegistry.serverboundPlay().register(PowerPayload.TYPE, PowerPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(PowerPayload.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof DragonEntity dragon && dragon.getControllingPassenger() == context.player()) {
+				dragon.usePower(context.player());
+			}
+		});
+		ServerTickEvents.END_SERVER_TICK.register(Dragons::dragonscaleSets);
 
 		// Feed the End's Dragon Egg chorus fruit to hatch an Ender Dragon. (Using it also stops the egg teleporting.)
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
@@ -162,6 +253,23 @@ public final class Dragons {
 			}
 			return InteractionResult.SUCCESS;
 		});
+	}
+
+	/** A full set of dragonscale armor: falls don't hurt and fire can't burn. (And who's gliding on Dragon Wings.) */
+	private static void dragonscaleSets(MinecraftServer server) {
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (server.getTickCount() % 20 == 0 && player.isFallFlying() && player.getItemBySlot(EquipmentSlot.CHEST).is(DRAGON_WINGS)) {
+				WonderAdvancements.award(player, "dragon_wings");
+			}
+			if (player.getItemBySlot(EquipmentSlot.HEAD).is(DRAGONSCALE_HELMET) && player.getItemBySlot(EquipmentSlot.CHEST).is(DRAGONSCALE_CHESTPLATE)
+					&& player.getItemBySlot(EquipmentSlot.LEGS).is(DRAGONSCALE_LEGGINGS) && player.getItemBySlot(EquipmentSlot.FEET).is(DRAGONSCALE_BOOTS)) {
+				player.resetFallDistance();
+				if (server.getTickCount() % 20 == 0) {
+					player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 60, 0, true, false, true));
+					WonderAdvancements.award(player, "dragonscale_armor");
+				}
+			}
+		}
 	}
 
 	private static void hatchEnder(ServerLevel level, BlockPos pos, net.minecraft.world.entity.player.Player player) {

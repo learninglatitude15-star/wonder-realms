@@ -1,0 +1,32 @@
+{
+  "criteria": {
+    "blade": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "wonderrealms:elder_blade"
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:elder_blade"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.elder_blade.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.elder_blade.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "blade"
+    ]
+  ],
+  "parent": "wonderrealms:elder_slayer"
+}

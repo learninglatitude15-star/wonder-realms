@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:tide_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/tide_egg"
+}

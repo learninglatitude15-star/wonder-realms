@@ -6,23 +6,23 @@ import com.geckolib.renderer.GeoEntityRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.wonderrealms.WonderRealms;
 import com.wonderrealms.dragon.DragonArmor;
-import com.wonderrealms.dragon.DragonElement;
 import com.wonderrealms.dragon.DragonEntity;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
 
 /**
- * Draws a dragon. All eight kinds share one model and set of animations. Each kind has a skin for every
- * combination of armor (none, iron, gold, diamond, netherite) and tack (none, a saddle, or a saddle with
+ * Draws a dragon. All eight kinds, and the Elder Dragon, share one model and set of animations. Each has a skin for
+ * every combination of armor (none, iron, gold, diamond, netherite, elder) and tack (none, a saddle, or a saddle with
  * saddlebags). The saddlebags are cubes in the model that only the "bags" skins paint; the rest leave them clear.
  */
 public class DragonRenderer extends GeoEntityRenderer<DragonEntity, LivingEntityRenderState> {
 	static final DataTicket<Integer> TACK = DataTicket.create("wonderrealms_tack", Integer.class);
 	static final DataTicket<Integer> ARMOR = DataTicket.create("wonderrealms_armor", Integer.class);
 
-	public DragonRenderer(EntityRendererProvider.Context context, DragonElement element) {
-		super(context, new Model(element));
+	/** {@code skin} names the skins: the element's id, or "elder" for the Elder Dragon. */
+	public DragonRenderer(EntityRendererProvider.Context context, String skin) {
+		super(context, new Model(skin));
 	}
 
 	@Override
@@ -37,10 +37,10 @@ public class DragonRenderer extends GeoEntityRenderer<DragonEntity, LivingEntity
 		/** [armor index (0 = none)][tack: 0 none, 1 saddle, 2 saddle and bags] */
 		private final Identifier[][] skins = new Identifier[DragonArmor.values().length + 1][TACK_SUFFIXES.length];
 
-		Model(DragonElement element) {
+		Model(String skin) {
 			super(WonderRealms.id("dragon"));
 			for (int armor = 0; armor < this.skins.length; armor++) {
-				String name = element.id + "_dragon" + (armor == 0 ? "" : "_" + DragonArmor.byIndex(armor).id);
+				String name = skin + "_dragon" + (armor == 0 ? "" : "_" + DragonArmor.byIndex(armor).id);
 				for (int tack = 0; tack < TACK_SUFFIXES.length; tack++) {
 					this.skins[armor][tack] = this.buildFormattedTexturePath(WonderRealms.id(name + TACK_SUFFIXES[tack]));
 				}

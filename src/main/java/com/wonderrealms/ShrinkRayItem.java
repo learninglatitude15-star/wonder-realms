@@ -74,7 +74,8 @@ public class ShrinkRayItem extends Item {
 	}
 
 	private static boolean isBoss(Entity entity) {
-		return entity.getType() == EntityTypes.ENDER_DRAGON || entity.getType() == EntityTypes.WITHER;
+		return entity.getType() == EntityTypes.ENDER_DRAGON || entity.getType() == EntityTypes.WITHER
+			|| entity instanceof com.wonderrealms.dragon.ElderDragonEntity;
 	}
 
 	/** A sparkling purple line from the ray to wherever it struck. */

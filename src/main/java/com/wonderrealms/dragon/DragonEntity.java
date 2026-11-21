@@ -11,11 +11,15 @@ import com.wonderrealms.TinyWorlds;
 import com.wonderrealms.WonderAdvancements;
 import com.wonderrealms.WonderRealms;
 import com.wonderrealms.airship.AirshipEntity;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -66,12 +70,16 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.illager.Pillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.animal.bee.Bee;
 import net.minecraft.world.item.Items;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -81,6 +89,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BonemealSource;
 import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColorCollection;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.CandleBlock;
 import net.minecraft.world.level.block.ConcretePowderBlock;
@@ -122,6 +133,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	/** The armor worn: 0 for none, otherwise {@link DragonArmor#index()}. */
 	private static final EntityDataAccessor<Integer> ARMOR = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> BAGS = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> ELDER = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
 
 	// Growth
 	/** Ticks from hatchling to full size without feeding (two in-game days). */
@@ -173,12 +185,35 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private static final int BAG_SLOTS = 27;
 	/** Crystal scales count as this much armor. */
 	private static final double CRYSTAL_ARMOR = 6;
+	/** An Earth dragon's rocky hide: a little armor, and it's hard to knock about. */
+	private static final double EARTH_ARMOR = 4, EARTH_KNOCKBACK_RESISTANCE = 0.5;
+	/** How many bees a Honey dragon's Swarm calls up, and how long they stay (ticks). */
+	private static final int SWARM_SIZE = 6, SWARM_LIFETIME = 600;
+	/** The colours of a Rainbow dragon's breath, red to violet, one for each stretch of the stream. */
+	private static final ParticleOptions[] RAINBOW_DUST = {new DustParticleOptions(0xFF3030, 1.6F), new DustParticleOptions(0xFF8C1A, 1.6F),
+		new DustParticleOptions(0xFFE030, 1.6F), new DustParticleOptions(0x40D040, 1.6F), new DustParticleOptions(0x30A0FF, 1.6F),
+		new DustParticleOptions(0x5050E0, 1.6F), new DustParticleOptions(0xB050E0, 1.6F)};
+	/** What a Rainbow dragon's breath can repaint, when ridden: each family of coloured blocks. */
+	private static final List<ColorCollection<Block>> PAINTABLE = List.of(Blocks.WOOL, Blocks.CONCRETE, Blocks.DYED_TERRACOTTA,
+		Blocks.STAINED_GLASS, Blocks.STAINED_GLASS_PANE, Blocks.CARPET);
+	/** How much faster an Air dragon climbs while its rider holds jump. */
+	private static final double AIR_CLIMB = 0.55;
+	/** At most this many blocks an Earth dragon's breath grinds away with each blast. */
+	private static final int DIG_PER_BLAST = 4;
 	/** How much faster a Storm dragon flies than the others. */
 	private static final double STORM_SPEED_BONUS = 0.25;
 	/** A wing stroke underwater only gets this share of its speed in the air (except for a Tide dragon). */
 	private static final double WATER_DRAG = 0.4;
 	/** A Verdant dragon heals its rider by half a heart this often. */
 	private static final int VERDANT_HEAL_TICKS = 60;
+	/** A dragon given a Dragon Heart becomes an Elder: this much bigger, with this much health, when grown. */
+	private static final float ELDER_PET_SCALE = 1.35F;
+	private static final double ELDER_PET_HEALTH = 120;
+	/** How long a dragon's power takes to recharge (an Elder's recharges faster), and how far it reaches. */
+	private static final int POWER_COOLDOWN = 20 * 30, ELDER_POWER_COOLDOWN = 20 * 20;
+	private static final double POWER_RADIUS = 10, STORM_POWER_RADIUS = 16;
+	/** A tamed, grown dragon sheds a scale every so often (between this and twice this). */
+	private static final int SHED_INTERVAL = 20 * 60 * 6;
 
 	private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("misc.idle");
 	private static final RawAnimation WALK = RawAnimation.begin().thenLoop("move.walk");
@@ -201,6 +236,10 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private long conqueredCheckedAt = Long.MIN_VALUE;
 	/** Ticks left on a whistle's call to come. */
 	private int callTicks;
+	private int powerCooldown;
+	private int shedTimer = SHED_INTERVAL;
+	/** The bees a Honey dragon's Swarm called up; they buzz off again after half a minute. */
+	private final List<Bee> swarm = new ArrayList<>();
 	private final SimpleContainer saddlebags = new SimpleContainer(BAG_SLOTS) {
 		@Override
 		public boolean stillValid(Player player) {
@@ -239,6 +278,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		builder.define(FLYING, false);
 		builder.define(ARMOR, 0);
 		builder.define(BAGS, false);
+		builder.define(ELDER, false);
 	}
 
 	public float growth() {
@@ -256,9 +296,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			return;
 		}
 		float growth = this.growth();
-		this.getAttribute(Attributes.SCALE).setBaseValue(HATCHLING_SCALE + (1F - HATCHLING_SCALE) * growth);
+		this.getAttribute(Attributes.SCALE).setBaseValue(HATCHLING_SCALE + (this.adultScale() - HATCHLING_SCALE) * growth);
 		double oldMax = this.getMaxHealth();
-		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Mth.lerp(growth, HATCHLING_HEALTH, GROWN_HEALTH));
+		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Mth.lerp(growth, HATCHLING_HEALTH, this.adultHealth()));
 		float max = this.getMaxHealth();
 		float health = keepHealthShare && oldMax > 0 ? (float) (this.getHealth() * max / oldMax) : this.getHealth();
 		this.setHealth(Math.min(health, max));
@@ -266,6 +306,20 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 
 	public boolean isGrown() {
 		return this.growth() >= 1F;
+	}
+
+	/** How big it is when fully grown: 1, or bigger for an Elder. */
+	protected float adultScale() {
+		return this.isElder() ? ELDER_PET_SCALE : 1F;
+	}
+
+	protected double adultHealth() {
+		return this.isElder() ? ELDER_PET_HEALTH : GROWN_HEALTH;
+	}
+
+	/** Given a Dragon Heart: bigger and tougher, with stronger breath and a power that recharges faster. */
+	public boolean isElder() {
+		return this.entityData.get(ELDER);
 	}
 
 	public boolean isSaddled() {
@@ -324,6 +378,31 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			flying.removeModifier(id);
 			flying.addTransientModifier(new AttributeModifier(id, STORM_SPEED_BONUS, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
 		}
+		AttributeInstance steady = this.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
+		if (this.element == DragonElement.EARTH && protection != null && steady != null) {
+			protection.removeModifier(id);
+			protection.addTransientModifier(new AttributeModifier(id, EARTH_ARMOR, AttributeModifier.Operation.ADD_VALUE));
+			steady.removeModifier(id);
+			steady.addTransientModifier(new AttributeModifier(id, EARTH_KNOCKBACK_RESISTANCE, AttributeModifier.Operation.ADD_VALUE));
+		}
+	}
+
+	/** A tamed Air dragon fades from sight: everyone else sees nothing, its owner a faint shimmer of a dragon. */
+	public boolean isAirCloaked() {
+		return this.element == DragonElement.AIR && this.isTame();
+	}
+
+	@Override
+	public boolean isInvisible() {
+		return super.isInvisible() || this.isAirCloaked();
+	}
+
+	@Override
+	public boolean isInvisibleTo(Player player) {
+		if (this.isAirCloaked() && (this.isOwnedBy(player) || this.hasPassenger(player))) {
+			return false; // drawn see-through for its owner and riders, so they can find it
+		}
+		return super.isInvisibleTo(player);
 	}
 
 	public boolean hasSaddlebags() {
@@ -403,6 +482,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.home != null) {
 			output.putLong("island_home", this.home.asLong());
 		}
+		output.putBoolean("elder", this.isElder());
 		output.putBoolean("saddlebags", this.hasSaddlebags());
 		if (this.hasSaddlebags()) {
 			NonNullList<ItemStack> items = NonNullList.withSize(BAG_SLOTS, ItemStack.EMPTY);
@@ -416,6 +496,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		super.readAdditionalSaveData(input);
+		this.entityData.set(ELDER, input.getBooleanOr("elder", false));
 		this.entityData.set(GROWTH, Mth.clamp(input.getFloatOr("growth", 1F), 0F, 1F));
 		this.applyGrowth(false);
 		this.entityData.set(SADDLED, input.getBooleanOr("saddled", false));
@@ -474,6 +555,25 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.callTicks > 0) {
 			this.callTicks--;
 		}
+		if (this.powerCooldown > 0) {
+			this.powerCooldown--;
+		}
+		if (this.isAirCloaked() && !this.isVehicle() && this.tickCount % 40 == 0) {
+			level.sendParticles(ParticleTypes.WHITE_ASH, this.getX(), this.getY() + this.getBbHeight() * 0.6, this.getZ(), 4,
+				this.getBbWidth() * 0.4, this.getBbHeight() * 0.3, this.getBbWidth() * 0.4, 0); // a faint shimmer where it waits
+		}
+		if (!this.swarm.isEmpty() && this.tickCount % 20 == 0) {
+			this.swarm.removeIf(bee -> {
+				if (bee.isAlive() && bee.tickCount < SWARM_LIFETIME) {
+					return false;
+				}
+				if (bee.isAlive()) {
+					level.sendParticles(ParticleTypes.POOF, bee.getX(), bee.getY() + 0.2, bee.getZ(), 4, 0.1, 0.1, 0.1, 0.01);
+					bee.discard();
+				}
+				return true;
+			});
+		}
 		if (this.isVehicle() && TinyWorlds.isTiny(this)) {
 			this.ejectPassengers(); // shrunk by a Shrink Ray: far too small to carry anyone
 		}
@@ -485,6 +585,11 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			this.spawnAtLocation(level, Dragons.eggOf(this.element));
 			this.playSound(SoundEvents.TURTLE_LAY_EGG, 1F, 0.7F);
 			this.eggTimer = EGG_INTERVAL + this.random.nextInt(EGG_JITTER);
+		}
+		// And now and then it sheds a scale.
+		if (this.isTame() && this.isGrown() && --this.shedTimer <= 0) {
+			this.spawnAtLocation(level, new ItemStack(Dragons.DRAGON_SCALE));
+			this.shedTimer = SHED_INTERVAL + this.random.nextInt(SHED_INTERVAL);
 		}
 		boolean airborne = this.isFlying() || (this.isVehicle() && !this.onGround());
 		if (airborne && this.tickCount % 16 == 0) {
@@ -517,16 +622,24 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			case EMBER -> MobEffects.FIRE_RESISTANCE;
 			case TIDE -> MobEffects.WATER_BREATHING;
 			case SHADOW -> MobEffects.NIGHT_VISION;
+			case EARTH -> MobEffects.HASTE;
+			case AIR -> MobEffects.INVISIBILITY;
+			case RAINBOW -> MobEffects.HERO_OF_THE_VILLAGE;
 			default -> null;
 		};
 		// Night vision flickers as it runs out, so it lasts a little longer than the others once you climb off.
-		int duration = this.element == DragonElement.SHADOW ? 260 : 60;
+		int duration = this.element == DragonElement.SHADOW ? 260 : this.element == DragonElement.RAINBOW ? 1200 : 60;
 		for (Entity passenger : this.getPassengers()) {
 			if (!(passenger instanceof Player rider)) {
 				continue;
 			}
 			if (gift != null) {
-				rider.addEffect(new MobEffectInstance(gift, duration, 0, true, false, true), this);
+				// Haste II for an Earth dragon's rider: the stone gives way easily.
+				rider.addEffect(new MobEffectInstance(gift, duration, this.element == DragonElement.EARTH ? 1 : 0, true, false, true), this);
+			}
+			if (this.element == DragonElement.HONEY && this.tickCount % 60 == 0 && rider.getFoodData().needsFood()) {
+				rider.getFoodData().eat(1, 0.5F); // a little honey now and then: its rider never goes hungry
+				((ServerLevel) this.level()).sendParticles(ParticleTypes.FALLING_HONEY, rider.getX(), rider.getY() + 1.6, rider.getZ(), 3, 0.2, 0.1, 0.2, 0);
 			}
 			if (this.element == DragonElement.VERDANT && this.tickCount % VERDANT_HEAL_TICKS == 0 && rider.getHealth() < rider.getMaxHealth()) {
 				rider.heal(1F);
@@ -622,6 +735,28 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			return InteractionResult.PASS;
 		}
 
+		if (stack.is(Dragons.DRAGON_HEART)) {
+			if (server) {
+				if (this.isElder()) {
+					player.sendOverlayMessage(Component.translatable("message.wonderrealms.already_elder").withStyle(ChatFormatting.YELLOW));
+				} else if (!this.isGrown()) {
+					player.sendOverlayMessage(Component.translatable("message.wonderrealms.heart_too_young").withStyle(ChatFormatting.YELLOW));
+				} else {
+					stack.consume(1, player);
+					this.entityData.set(ELDER, true);
+					this.applyGrowth(true);
+					this.setHealth(this.getMaxHealth());
+					((ServerLevel) this.level()).sendParticles(ParticleTypes.TOTEM_OF_UNDYING, this.getX(), this.getY() + this.getBbHeight() * 0.6,
+						this.getZ(), 80, 1.0, 1.0, 1.0, 0.4);
+					this.playSound(SoundEvents.ENDER_DRAGON_GROWL, 1.5F, 1.2F);
+					player.sendOverlayMessage(Component.translatable("message.wonderrealms.became_elder").withStyle(ChatFormatting.GOLD));
+					if (player instanceof ServerPlayer serverPlayer) {
+						WonderAdvancements.award(serverPlayer, "dragon_heart");
+					}
+				}
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (this.isFood(stack) && (this.getHealth() < this.getMaxHealth() || !this.isGrown())) {
 			if (server) {
 				stack.consume(1, player);
@@ -675,6 +810,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 					if (armor == DragonArmor.NETHERITE) {
 						WonderAdvancements.award(serverPlayer, "netherite_dragon");
 					}
+					if (armor == DragonArmor.ELDER) {
+						WonderAdvancements.award(serverPlayer, "elder_armor");
+					}
 				}
 			}
 			return InteractionResult.SUCCESS;
@@ -720,12 +858,13 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		return super.mobInteract(player, hand);
 	}
 
-	/** Killing a wild adult is the other way to get its egg. A saddle comes off too. */
+	/** Killing a wild adult is the other way to get its egg, and it drops a few scales. A saddle comes off too. */
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean killedByPlayer) {
 		super.dropCustomDeathLoot(level, source, killedByPlayer);
 		if (!this.isTame() && this.isGrown()) {
-			this.spawnAtLocation(level, Dragons.eggOf(this.element));
+			this.spawnAtLocation(level, this.trophy());
+			this.spawnAtLocation(level, new ItemStack(Dragons.DRAGON_SCALE, 1 + this.random.nextInt(3)));
 		}
 		if (this.hasSaddlebags()) {
 			this.dropSaddlebags(level);
@@ -736,6 +875,11 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.armor() != null) {
 			this.spawnAtLocation(level, new ItemStack(Dragons.ARMOR_ITEMS.get(this.armor())));
 		}
+	}
+
+	/** What a wild one leaves behind when it's beaten: its egg. */
+	protected ItemStack trophy() {
+		return Dragons.eggOf(this.element);
 	}
 
 	@Override
@@ -847,7 +991,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		}
 		Vec3 target = look.scale(input.z * speed).add(side.scale(-input.x * speed * 0.5));
 		if (rider.isJumping()) {
-			target = target.add(0, 0.35, 0);
+			target = target.add(0, this.element == DragonElement.AIR ? AIR_CLIMB : 0.35, 0);
 		}
 		Vec3 motion = this.getDeltaMovement().lerp(target, 0.12);
 		this.setDeltaMovement(motion);
@@ -1013,6 +1157,238 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		}
 	}
 
+	// ---- Powers ---------------------------------------------------------------------------------------------
+
+	/**
+	 * The power key: each kind of dragon has a power of its own, which then takes half a minute to recharge (twenty
+	 * seconds for an Elder). Powers only strike monsters and whatever the dragon or its rider is fighting.
+	 */
+	public void usePower(Player rider) {
+		if (!(this.level() instanceof ServerLevel level) || !this.isGrown()) {
+			return;
+		}
+		if (this.powerCooldown > 0) {
+			rider.sendOverlayMessage(Component.translatable("message.wonderrealms.power_recharging", (this.powerCooldown + 19) / 20)
+				.withStyle(ChatFormatting.GRAY));
+			return;
+		}
+		this.powerCooldown = this.isElder() ? ELDER_POWER_COOLDOWN : POWER_COOLDOWN;
+		List<LivingEntity> foes = this.powerTargets(level, rider, this.element == DragonElement.STORM ? STORM_POWER_RADIUS : POWER_RADIUS);
+		double x = this.getX(), y = this.getY() + this.getBbHeight() * 0.5, z = this.getZ();
+		switch (this.element) {
+			case EMBER -> { // Inferno: a ring of flame sets everything around alight
+				level.sendParticles(ParticleTypes.FLAME, x, y, z, 250, 5, 1.5, 5, 0.05);
+				level.sendParticles(ParticleTypes.LAVA, x, y, z, 40, 4, 1, 4, 0);
+				level.playSound(null, x, y, z, SoundEvents.BLAZE_SHOOT, SoundSource.NEUTRAL, 2F, 0.6F);
+				for (LivingEntity foe : foes) {
+					this.powerHit(level, foe, this.damageSources().mobAttack(this), 6F);
+					foe.setRemainingFireTicks(Math.max(foe.getRemainingFireTicks(), 160));
+				}
+			}
+			case FROST -> { // Blizzard: everything around is frozen in its tracks
+				level.sendParticles(ParticleTypes.SNOWFLAKE, x, y, z, 350, 5, 2, 5, 0.05);
+				level.playSound(null, x, y, z, SoundEvents.PLAYER_HURT_FREEZE, SoundSource.NEUTRAL, 2F, 0.5F);
+				for (LivingEntity foe : foes) {
+					this.powerHit(level, foe, this.damageSources().freeze(), 4F);
+					foe.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 160, 3), this);
+					foe.setTicksFrozen(foe.getTicksRequiredToFreeze() + 100);
+				}
+			}
+			case STORM -> { // Thunderstorm: lightning strikes the six nearest foes
+				foes.stream().sorted((a, b) -> Double.compare(a.distanceToSqr(this), b.distanceToSqr(this))).limit(6).forEach(foe -> {
+					LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
+					if (bolt != null) {
+						bolt.setVisualOnly(true);
+						bolt.snapTo(foe.getX(), foe.getY(), foe.getZ());
+						level.addFreshEntity(bolt);
+					}
+					this.powerHit(level, foe, this.damageSources().lightningBolt(), 8F);
+				});
+			}
+			case VERDANT -> { // Bloom: heals its riders and itself, poisons foes, and the ground bursts into growth
+				level.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 80, 4, 1.5, 4, 0);
+				level.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 150, 5, 2, 5, 0);
+				level.playSound(null, x, y, z, SoundEvents.BREEZE_SHOOT, SoundSource.NEUTRAL, 2F, 0.7F);
+				this.heal(20F);
+				for (Entity passenger : this.getPassengers()) {
+					if (passenger instanceof Player friend) {
+						friend.heal(8F);
+						friend.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 1), this);
+					}
+				}
+				for (LivingEntity foe : foes) {
+					foe.addEffect(new MobEffectInstance(MobEffects.POISON, 120, 1), this);
+				}
+				this.bloom(level);
+			}
+			case TIDE -> { // Tidal Wave: a surge of water throws every foe back and puts out the fires around
+				level.sendParticles(ParticleTypes.SPLASH, x, y, z, 400, 5, 1.5, 5, 0.3);
+				level.sendParticles(ParticleTypes.BUBBLE_POP, x, y, z, 120, 5, 1, 5, 0.1);
+				level.playSound(null, x, y, z, SoundEvents.PLAYER_SPLASH_HIGH_SPEED, SoundSource.NEUTRAL, 2F, 0.6F);
+				for (LivingEntity foe : foes) {
+					Vec3 away = foe.position().subtract(this.position()).multiply(1, 0, 1);
+					away = away.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : away.normalize();
+					this.powerHit(level, foe, foe.isSensitiveToWater() ? this.damageSources().drown() : this.damageSources().mobAttack(this),
+						foe.isSensitiveToWater() ? 8F : 4F);
+					foe.clearFire();
+					foe.push(away.x * 2.2, 0.7, away.z * 2.2);
+				}
+				for (BlockPos pos : BlockPos.betweenClosed(this.blockPosition().offset(-6, -3, -6), this.blockPosition().offset(6, 3, 6))) {
+					BlockState state = level.getBlockState(pos);
+					if (state.getBlock() instanceof BaseFireBlock) {
+						level.removeBlock(pos, false);
+					} else if (CampfireBlock.isLitCampfire(state)) {
+						CampfireBlock.douse(this, level, pos, state);
+						level.setBlockAndUpdate(pos, state.setValue(CampfireBlock.LIT, false));
+					}
+				}
+			}
+			case CRYSTAL -> { // Crystal Shield: it and its riders are wrapped in crystal, and every foe around lights up
+				level.sendParticles(ParticleTypes.END_ROD, x, y, z, 120, 2.5, 2, 2.5, 0.05);
+				level.sendParticles(this.element.breathParticle, x, y, z, 120, 3, 2, 3, 0);
+				level.playSound(null, x, y, z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.NEUTRAL, 2F, 1F);
+				this.shield(new MobEffectInstance(MobEffects.RESISTANCE, 300, 1), new MobEffectInstance(MobEffects.ABSORPTION, 300, 1));
+				for (LivingEntity foe : this.powerTargets(level, rider, STORM_POWER_RADIUS)) {
+					foe.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0), this);
+				}
+			}
+			case SHADOW -> { // Shadow Cloak: it and its riders vanish, and its foes are left blind and weak
+				level.sendParticles(ParticleTypes.SQUID_INK, x, y, z, 200, 3, 2, 3, 0.05);
+				level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y, z, 80, 3, 2, 3, 0.02);
+				level.playSound(null, x, y, z, SoundEvents.WITHER_SHOOT, SoundSource.NEUTRAL, 1.5F, 0.5F);
+				this.shield(new MobEffectInstance(MobEffects.INVISIBILITY, 300, 0, false, false, true));
+				for (LivingEntity foe : foes) {
+					foe.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 100, 0), this);
+					foe.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 1), this);
+					foe.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 0), this);
+				}
+			}
+			case EARTH -> { // Earthquake: the ground heaves, flinging every foe around into the air and leaving them reeling
+				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.COARSE_DIRT.defaultBlockState()), x, this.getY(), z, 400, 6, 0.4, 6, 0.4);
+				level.sendParticles(ParticleTypes.EXPLOSION, x, this.getY(), z, 14, 5, 0.3, 5, 0);
+				level.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.NEUTRAL, 2F, 0.5F);
+				level.playSound(null, x, y, z, SoundEvents.ANVIL_LAND, SoundSource.NEUTRAL, 1F, 0.5F);
+				for (LivingEntity foe : foes) {
+					BlockState under = level.getBlockState(foe.blockPosition().below());
+					if (!under.isAir()) {
+						level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, under), foe.getX(), foe.getY(), foe.getZ(), 30, 0.5, 0.2, 0.5, 0.2);
+					}
+					this.powerHit(level, foe, this.damageSources().mobAttack(this), 8F);
+					foe.push(0, 0.9, 0);
+					foe.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 120, 2), this);
+					foe.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 120, 0), this);
+				}
+			}
+			case HONEY -> { // Swarm: a cloud of angry bees pours out to sting every foe around
+				level.sendParticles(ParticleTypes.FALLING_HONEY, x, y, z, 60, 3, 1.5, 3, 0);
+				level.playSound(null, x, y, z, SoundEvents.BEE_LOOP_AGGRESSIVE, SoundSource.NEUTRAL, 2F, 1F);
+				List<LivingEntity> nearest = foes.stream().sorted((a, b) -> Double.compare(a.distanceToSqr(this), b.distanceToSqr(this))).toList();
+				for (int i = 0; i < SWARM_SIZE; i++) {
+					Bee bee = EntityTypes.BEE.create(level, EntitySpawnReason.MOB_SUMMONED);
+					if (bee == null) {
+						break;
+					}
+					bee.snapTo(x + this.random.nextGaussian(), y + 0.5 + this.random.nextDouble(), z + this.random.nextGaussian(), this.random.nextFloat() * 360F, 0F);
+					if (!nearest.isEmpty()) {
+						bee.setTarget(nearest.get(i % nearest.size()));
+						bee.startPersistentAngerTimer();
+					}
+					level.addFreshEntity(bee);
+					this.swarm.add(bee);
+				}
+			}
+			case RAINBOW -> { // Rainbow Burst: rings of colour dazzle every foe, sheep turn every colour, and its riders are lifted up
+				for (int ring = 0; ring < RAINBOW_DUST.length; ring++) {
+					double radius = 2 + ring * 1.2;
+					for (int i = 0; i < 24; i++) {
+						double angle = Math.PI * 2 * i / 24;
+						level.sendParticles(RAINBOW_DUST[ring], x + Math.cos(angle) * radius, y, z + Math.sin(angle) * radius, 1, 0, 0.1, 0, 0);
+					}
+				}
+				level.playSound(null, x, y, z, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.NEUTRAL, 2F, 1.2F);
+				level.playSound(null, x, y, z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.NEUTRAL, 2F, 1.5F);
+				this.shield(new MobEffectInstance(MobEffects.REGENERATION, 200, 0), new MobEffectInstance(MobEffects.SPEED, 600, 1));
+				for (LivingEntity foe : foes) {
+					foe.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0), this);
+					foe.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0), this);
+					foe.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 120, 1), this);
+				}
+				for (Sheep sheep : level.getEntitiesOfClass(Sheep.class, this.getBoundingBox().inflate(POWER_RADIUS))) {
+					sheep.setColor(DyeColor.values()[this.random.nextInt(DyeColor.values().length)]);
+				}
+			}
+			case AIR -> { // Tornado: a whirlwind sweeps every foe around together and flings them sky-high
+				level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE, x, y, z, 3, 2, 1, 2, 0);
+				level.sendParticles(ParticleTypes.CLOUD, x, y, z, 200, 5, 2, 5, 0.15);
+				level.playSound(null, x, y, z, SoundEvents.WIND_CHARGE_BURST.value(), SoundSource.NEUTRAL, 2F, 0.6F);
+				level.playSound(null, x, y, z, SoundEvents.BREEZE_SHOOT, SoundSource.NEUTRAL, 2F, 0.5F);
+				for (LivingEntity foe : foes) {
+					Vec3 in = this.position().subtract(foe.position()).multiply(1, 0, 1);
+					in = in.lengthSqr() < 1.0E-4 ? Vec3.ZERO : in.normalize().scale(0.5);
+					this.powerHit(level, foe, this.damageSources().mobAttack(this), 4F);
+					foe.clearFire();
+					foe.push(in.x, 1.4, in.z);
+					level.sendParticles(ParticleTypes.GUST, foe.getX(), foe.getY() + 0.5, foe.getZ(), 1, 0, 0, 0, 0);
+				}
+				if (!foes.isEmpty() && rider instanceof ServerPlayer serverRider) {
+					WonderAdvancements.award(serverRider, "gone_with_the_wind");
+				}
+			}
+			case ENDER -> { // Void Rift: every foe around is hurled into the air, to fall back down hard
+				level.sendParticles(ParticleTypes.REVERSE_PORTAL, x, y, z, 300, 5, 2, 5, 0.1);
+				level.playSound(null, x, y, z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.NEUTRAL, 2F, 0.5F);
+				for (LivingEntity foe : foes) {
+					this.powerHit(level, foe, this.damageSources().mobAttack(this), 4F);
+					foe.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 50, 3), this);
+				}
+			}
+		}
+		rider.sendOverlayMessage(Component.translatable("power.wonderrealms." + this.element.id).withStyle(ChatFormatting.GOLD));
+		if (rider instanceof ServerPlayer serverRider) {
+			WonderAdvancements.award(serverRider, "dragon_power");
+		}
+	}
+
+	/** Monsters near the dragon, and anything the dragon or its rider is fighting. Never friends. */
+	private List<LivingEntity> powerTargets(ServerLevel level, Player rider, double radius) {
+		LivingEntity owner = this.getOwner();
+		return level.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(radius), foe -> foe != this && foe.isAlive()
+			&& !this.hasPassenger(foe) && !this.isFriend(foe, owner) && foe.distanceToSqr(this) < radius * radius
+			&& (foe instanceof Enemy || foe == this.getTarget() || foe == rider.getLastHurtMob()
+				|| foe instanceof Mob mob && (mob.getTarget() == rider || mob.getTarget() == this)));
+	}
+
+	private void powerHit(ServerLevel level, LivingEntity foe, DamageSource source, float amount) {
+		foe.setInvulnerableTime(0);
+		this.creditOwner(foe);
+		foe.hurtServer(level, source, amount);
+	}
+
+	/** Gives the dragon and everyone riding it these effects. */
+	private void shield(MobEffectInstance... effects) {
+		for (MobEffectInstance effect : effects) {
+			this.addEffect(new MobEffectInstance(effect), this);
+			for (Entity passenger : this.getPassengers()) {
+				if (passenger instanceof Player friend) {
+					friend.addEffect(new MobEffectInstance(effect), this);
+				}
+			}
+		}
+	}
+
+	/** Bone meal on a few dozen spots of the ground around the dragon. */
+	private void bloom(ServerLevel level) {
+		BlockPos center = this.blockPosition();
+		for (int i = 0; i < 40; i++) {
+			BlockPos pos = center.offset(this.random.nextInt(13) - 6, this.random.nextInt(7) - 3, this.random.nextInt(13) - 6);
+			BlockState state = level.getBlockState(pos);
+			if (state.getBlock() instanceof BonemealableBlock plant && plant.isValidBonemealTarget(level, pos, state, BonemealSource.MOB)) {
+				plant.performBonemeal(level, this.random, pos, state, BonemealSource.MOB);
+				level.levelEvent(1505, pos, 15);
+			}
+		}
+	}
+
 	// ---- Breath ---------------------------------------------------------------------------------------------
 
 	public boolean canBreathe() {
@@ -1034,7 +1410,17 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.breathCooldown = BREATH_TICKS + (ridden ? RIDDEN_BREATH_REST : AI_BREATH_REST);
 		this.triggerAnim("breath", "breath");
 		Vec3 mouth = this.mouth(this.breathDirection);
-		level.playSound(null, mouth.x, mouth.y, mouth.z, this.element.breathSound, SoundSource.NEUTRAL, 1.2F, 0.7F + this.random.nextFloat() * 0.3F);
+		level.playSound(null, mouth.x, mouth.y, mouth.z, this.breathElement().breathSound, SoundSource.NEUTRAL, 1.2F, 0.7F + this.random.nextFloat() * 0.3F);
+	}
+
+	/** The element of its breath: its own, though the Elder Dragon's changes as the fight goes on. */
+	protected DragonElement breathElement() {
+		return this.element;
+	}
+
+	/** Damage for each blast of a breath's stream. Grown dragons hit harder, and Elders harder still. */
+	protected float breathDamage() {
+		return (1.2F + 1.2F * this.growth()) * (this.isElder() ? 1.5F : 1F);
 	}
 
 	private Vec3 mouth(Vec3 direction) {
@@ -1056,7 +1442,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		Vec3 mouth = this.mouth(dir);
 		float range = BREATH_RANGE * (0.5F + 0.5F * this.getScale());
 		// The stream stops at the first solid block (or a pool's surface, for frost to freeze or a tide jet to cool lava).
-		boolean wetBreath = this.element == DragonElement.FROST || this.element == DragonElement.TIDE;
+		boolean wetBreath = this.breathElement() == DragonElement.FROST || this.breathElement() == DragonElement.TIDE;
 		BlockHitResult hit = level.clip(new ClipContext(mouth, mouth.add(dir.scale(range)), ClipContext.Block.COLLIDER,
 			wetBreath ? ClipContext.Fluid.ANY : ClipContext.Fluid.NONE, this));
 		double reach = hit.getType() == HitResult.Type.MISS ? range : hit.getLocation().distanceTo(mouth);
@@ -1064,7 +1450,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		for (int i = 1; i <= 8; i++) {
 			Vec3 at = mouth.add(dir.scale(reach * i / 8.0));
 			double spread = 0.1 + i * 0.1;
-			level.sendParticles(this.element.breathParticle, at.x, at.y, at.z, 3, spread, spread, spread, 0.02);
+			ParticleOptions particle = this.breathElement() == DragonElement.RAINBOW ? RAINBOW_DUST[(i - 1) % RAINBOW_DUST.length]
+				: this.breathElement().breathParticle;
+			level.sendParticles(particle, at.x, at.y, at.z, 3, spread, spread, spread, 0.02);
 		}
 		if (this.breathTicks % BREATH_HIT_INTERVAL != 0) {
 			return;
@@ -1078,11 +1466,18 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private void burnEntities(ServerLevel level, Vec3 mouth, Vec3 dir, double reach) {
 		LivingEntity owner = this.getOwner();
 		AABB area = new AABB(mouth, mouth.add(dir.scale(reach))).inflate(reach * 0.45);
-		float damage = 1.2F + 1.2F * this.growth();
+		float damage = this.breathDamage();
 		List<LivingEntity> hit = level.getEntitiesOfClass(LivingEntity.class, area, e -> e != this && e.isAlive() && !this.hasPassenger(e));
 		for (LivingEntity target : hit) {
 			Vec3 to = target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(mouth);
 			if (to.length() > reach + 0.5 || to.normalize().dot(dir) < BREATH_CONE_COS || this.isFriend(target, owner)) {
+				continue;
+			}
+			if (this.breathElement() == DragonElement.RAINBOW && target instanceof Sheep sheep) {
+				// Sheep aren't hurt by a rainbow: they just come out a new colour.
+				sheep.setColor(DyeColor.values()[this.random.nextInt(DyeColor.values().length)]);
+				level.sendParticles(ParticleTypes.HAPPY_VILLAGER, sheep.getX(), sheep.getY() + sheep.getBbHeight(), sheep.getZ(), 4, 0.3, 0.2, 0.3, 0);
+				this.awardBreath("rainbow_sheep");
 				continue;
 			}
 			target.setInvulnerableTime(0); // a steady stream, not one blow
@@ -1090,7 +1485,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			if (!target.hurtServer(level, this.damageSources().mobAttack(this), damage)) {
 				continue;
 			}
-			switch (this.element) {
+			switch (this.breathElement()) {
 				case EMBER -> target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(), 100));
 				case FROST -> {
 					target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 2), this);
@@ -1116,6 +1511,28 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 					target.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 1), this);
 					target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0), this);
 				}
+				case EARTH -> {
+					// A blast of grit staggers them back.
+					target.push(dir.x * 0.4, 0.08, dir.z * 0.4);
+					target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 1), this);
+				}
+				case RAINBOW -> {
+					// Dazzled: lit up in every colour and stumbling about.
+					target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0), this);
+					target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 0), this);
+					target.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 100, 0), this);
+				}
+				case AIR -> {
+					// A gust that blows them clean away, and blows out any fire on them.
+					target.clearFire();
+					target.push(dir.x * 1.1, 0.35, dir.z * 1.1);
+				}
+				case HONEY -> {
+					// Gummed up with honey, they can barely move.
+					target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 3), this);
+					level.sendParticles(ParticleTypes.LANDING_HONEY, target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
+						4, 0.3, 0.3, 0.3, 0);
+				}
 				case STORM -> {
 					if (this.random.nextFloat() < 0.12F) {
 						LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
@@ -1134,9 +1551,17 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 
 	/** What the breath does to the world: frost freezes water (and lava), fire melts ice and snow and lights fires. */
 	private void affectBlocks(ServerLevel level, BlockPos center) {
+		if (this.breathElement() == DragonElement.EARTH) {
+			this.dig(level, center);
+			return;
+		}
+		if (this.breathElement() == DragonElement.RAINBOW) {
+			this.paint(level, center);
+			return;
+		}
 		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-1, -1, -1), center.offset(1, 1, 1))) {
 			BlockState state = level.getBlockState(pos);
-			switch (this.element) {
+			switch (this.breathElement()) {
 				case FROST -> {
 					boolean openAbove = level.getBlockState(pos.above()).isAir();
 					if (state.is(Blocks.WATER) && level.getFluidState(pos).isSource() && openAbove) {
@@ -1195,6 +1620,25 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 						level.levelEvent(1501, pos, 0); // hiss and smoke
 					}
 				}
+				case AIR -> {
+					// A gust blows out fires, campfires and candles.
+					if (state.getBlock() instanceof BaseFireBlock) {
+						level.removeBlock(pos, false);
+					} else if (CampfireBlock.isLitCampfire(state)) {
+						CampfireBlock.douse(this, level, pos, state);
+						level.setBlockAndUpdate(pos, state.setValue(CampfireBlock.LIT, false));
+					} else if (AbstractCandleBlock.isLit(state)) {
+						AbstractCandleBlock.extinguish(null, state, level, pos);
+					}
+				}
+				case HONEY -> {
+					// Beehives and bee nests it touches brim with honey, ready to harvest.
+					if (state.getBlock() instanceof BeehiveBlock && state.getValue(BeehiveBlock.HONEY_LEVEL) < BeehiveBlock.MAX_HONEY_LEVELS) {
+						level.setBlockAndUpdate(pos, state.setValue(BeehiveBlock.HONEY_LEVEL, BeehiveBlock.MAX_HONEY_LEVELS));
+						level.playSound(null, pos, SoundEvents.BEEHIVE_DRIP, SoundSource.BLOCKS, 1F, 1F);
+						this.awardBreath("liquid_gold");
+					}
+				}
 				case CRYSTAL -> {
 					// Budding amethyst sings back, and its crystals grow.
 					if (state.is(Blocks.BUDDING_AMETHYST) && this.random.nextFloat() < 0.3F) {
@@ -1206,6 +1650,73 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 				}
 			}
 		}
+	}
+
+	/**
+	 * An Earth dragon's breath grinds away the ground it hits, a few blocks each blast, dropping what it digs as a
+	 * pickaxe would. Only when someone's riding and aiming it: on its own it never digs, so it can't wreck builds or
+	 * its own island. And only natural ground: stone, earth, sand, gravel, terracotta and ore.
+	 */
+	private void dig(ServerLevel level, BlockPos center) {
+		if (!this.breathRidden || !(this.getControllingPassenger() instanceof Player rider)) {
+			return;
+		}
+		int dug = 0;
+		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-1, -1, -1), center.offset(1, 1, 1))) {
+			if (dug >= DIG_PER_BLAST || pos.distSqr(center) > 2 || this.random.nextFloat() < 0.35F) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			if (isDiggable(state, level, pos) && rider.mayInteract(level, pos) && level.destroyBlock(pos.immutable(), true, this)) {
+				dug++;
+			}
+		}
+		if (dug > 0) {
+			this.awardBreath("tunnel_vision");
+		}
+	}
+
+	/**
+	 * A Rainbow dragon's breath repaints coloured blocks it hits (wool, concrete, terracotta, glass and carpet) in
+	 * random colours, and colours plain glass and terracotta. Only when someone's riding it and aiming, like digging.
+	 */
+	private void paint(ServerLevel level, BlockPos center) {
+		if (!this.breathRidden || !(this.getControllingPassenger() instanceof Player rider)) {
+			return;
+		}
+		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-1, -1, -1), center.offset(1, 1, 1))) {
+			if (this.random.nextFloat() < 0.5F) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			ColorCollection<Block> family = state.is(Blocks.GLASS) ? Blocks.STAINED_GLASS : state.is(Blocks.GLASS_PANE) ? Blocks.STAINED_GLASS_PANE
+				: state.is(Blocks.TERRACOTTA) ? Blocks.DYED_TERRACOTTA : null;
+			for (ColorCollection<Block> colors : PAINTABLE) {
+				if (family == null && colors.asList().contains(state.getBlock())) {
+					family = colors;
+				}
+			}
+			if (family != null && rider.mayInteract(level, pos)) {
+				Block colored = family.pick(DyeColor.values()[this.random.nextInt(DyeColor.values().length)]);
+				level.setBlockAndUpdate(pos.immutable(), colored.withPropertiesOf(state));
+			}
+		}
+	}
+
+	private static boolean isDiggable(BlockState state, ServerLevel level, BlockPos pos) {
+		if (state.isAir() || state.hasBlockEntity() || !state.getFluidState().isEmpty()) {
+			return false;
+		}
+		float hardness = state.getDestroySpeed(level, pos);
+		if (hardness < 0 || hardness > 4.5F) {
+			return false; // bedrock, obsidian and the like are too hard
+		}
+		return state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.BASE_STONE_NETHER) || state.is(BlockTags.DIRT)
+			|| state.is(BlockTags.SAND) || state.is(BlockTags.TERRACOTTA) || state.is(BlockTags.ORES)
+			|| state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.PODZOL) || state.is(Blocks.MYCELIUM) || state.is(Blocks.MUD)
+			|| state.is(Blocks.CLAY) || state.is(Blocks.GRAVEL) || state.is(Blocks.SANDSTONE) || state.is(Blocks.RED_SANDSTONE)
+			|| state.is(Blocks.CALCITE) || state.is(Blocks.DRIPSTONE_BLOCK) || state.is(Blocks.COBBLESTONE) || state.is(Blocks.COBBLED_DEEPSLATE)
+			|| state.is(Blocks.SOUL_SAND) || state.is(Blocks.SOUL_SOIL) || state.is(Blocks.SNOW_BLOCK);
 	}
 
 	/** The concrete a powder sets into: white concrete powder becomes white concrete, and so on. */

@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:salmon"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.whale_calf.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.whale_calf.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:sky_whale"
+}

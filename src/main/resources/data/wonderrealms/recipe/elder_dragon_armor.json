@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "SSS",
+    "SNS",
+    "SSS"
+  ],
+  "key": {
+    "S": "wonderrealms:elder_scale",
+    "N": "wonderrealms:netherite_dragon_armor"
+  },
+  "result": {
+    "id": "wonderrealms:elder_dragon_armor",
+    "count": 1
+  }
+}

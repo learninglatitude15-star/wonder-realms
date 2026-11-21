@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:air_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/air_egg"
+}

@@ -1,0 +1,241 @@
+{
+ "format_version": "1.12.0",
+ "minecraft:geometry": [
+  {
+   "description": {
+    "identifier": "geometry.sky_whale",
+    "texture_width": 128,
+    "texture_height": 128,
+    "visible_bounds_width": 6,
+    "visible_bounds_height": 3,
+    "visible_bounds_offset": [
+     0,
+     1,
+     0
+    ]
+   },
+   "bones": [
+    {
+     "name": "root",
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "name": "body",
+     "pivot": [
+      0,
+      10,
+      0
+     ],
+     "parent": "root",
+     "cubes": [
+      {
+       "origin": [
+        -11,
+        2,
+        -18
+       ],
+       "size": [
+        22,
+        16,
+        32
+       ],
+       "uv": [
+        0,
+        0
+       ]
+      },
+      {
+       "origin": [
+        -10,
+        0,
+        -18
+       ],
+       "size": [
+        20,
+        2,
+        24
+       ],
+       "uv": [
+        0,
+        48
+       ]
+      },
+      {
+       "origin": [
+        11,
+        8,
+        -14
+       ],
+       "size": [
+        1,
+        2,
+        2
+       ],
+       "uv": [
+        110,
+        99
+       ]
+      },
+      {
+       "origin": [
+        -12,
+        8,
+        -14
+       ],
+       "size": [
+        1,
+        2,
+        2
+       ],
+       "uv": [
+        110,
+        99
+       ],
+       "mirror": true
+      }
+     ]
+    },
+    {
+     "name": "fin_left",
+     "pivot": [
+      11,
+      7,
+      -6
+     ],
+     "parent": "body",
+     "cubes": [
+      {
+       "origin": [
+        11,
+        6,
+        -9
+       ],
+       "size": [
+        12,
+        2,
+        7
+       ],
+       "uv": [
+        72,
+        99
+       ]
+      }
+     ]
+    },
+    {
+     "name": "fin_right",
+     "pivot": [
+      -11,
+      7,
+      -6
+     ],
+     "parent": "body",
+     "cubes": [
+      {
+       "origin": [
+        -23,
+        6,
+        -9
+       ],
+       "size": [
+        12,
+        2,
+        7
+       ],
+       "uv": [
+        72,
+        99
+       ],
+       "mirror": true
+      }
+     ]
+    },
+    {
+     "name": "tail",
+     "pivot": [
+      0,
+      10,
+      14
+     ],
+     "parent": "body",
+     "cubes": [
+      {
+       "origin": [
+        -7,
+        4,
+        14
+       ],
+       "size": [
+        14,
+        11,
+        14
+       ],
+       "uv": [
+        0,
+        74
+       ]
+      }
+     ]
+    },
+    {
+     "name": "tail2",
+     "pivot": [
+      0,
+      9,
+      28
+     ],
+     "parent": "tail",
+     "cubes": [
+      {
+       "origin": [
+        -4,
+        6,
+        28
+       ],
+       "size": [
+        8,
+        7,
+        12
+       ],
+       "uv": [
+        56,
+        74
+       ]
+      }
+     ]
+    },
+    {
+     "name": "fluke",
+     "pivot": [
+      0,
+      9,
+      40
+     ],
+     "parent": "tail2",
+     "cubes": [
+      {
+       "origin": [
+        -13,
+        8,
+        39
+       ],
+       "size": [
+        26,
+        2,
+        10
+       ],
+       "uv": [
+        0,
+        99
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
