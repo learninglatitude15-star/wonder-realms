@@ -10,9 +10,10 @@ import com.wonderrealms.dragon.DragonEntity;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.AABB;
 
 /**
- * Draws a dragon. All eight kinds, and the Elder Dragon, share one model and set of animations. Each has a skin for
+ * Draws a dragon. All twelve kinds, and the Elder Dragon, share one model and set of animations. Each has a skin for
  * every combination of armor (none, iron, gold, diamond, netherite, elder) and tack (none, a saddle, or a saddle with
  * saddlebags). The saddlebags are cubes in the model that only the "bags" skins paint; the rest leave them clear.
  */
@@ -23,6 +24,16 @@ public class DragonRenderer extends GeoEntityRenderer<DragonEntity, LivingEntity
 	/** {@code skin} names the skins: the element's id, or "elder" for the Elder Dragon. */
 	public DragonRenderer(EntityRendererProvider.Context context, String skin) {
 		super(context, new Model(skin));
+	}
+
+	/**
+	 * Spread, the wings reach almost three blocks either side of a grown dragon and beat up to three blocks high, well
+	 * past its hitbox, so it must still be drawn when the hitbox is out of view.
+	 */
+	@Override
+	protected AABB getBoundingBoxForCulling(DragonEntity dragon, float partialTick) {
+		float out = dragon.getBbWidth() * 0.95F;
+		return super.getBoundingBoxForCulling(dragon, partialTick).inflate(out, dragon.getBbHeight() * 0.55F, out);
 	}
 
 	@Override

@@ -5,15 +5,23 @@
 Run from the wonder-realms folder:  python3 tools/generate_dragon_assets.py
 
 The model is built from boxes (Bedrock geometry, as GeckoLib reads it). Each box gets a spot on the texture via
-simple shelf packing, and every face is painted from the element's palette with a scale pattern, so changing the
-model or a palette regenerates everything consistently.
+simple shelf packing, and every face is painted from the element's palette by dragon_skins.py (shaded overlapping
+scales, belly plates, eyes and teeth, scalloped wings and each element's own markings), so changing the model or a
+palette regenerates everything consistently.
+
+Set WR_RESOURCES to write into another resources folder (a preview copy) instead of src/main/resources.
 """
 import json
+import math
+import os
 import struct
 import zlib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+import dragon_skins
+from dragon_skins import METALS
+
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 NS = "wonderrealms"
 TEX = 128
@@ -55,6 +63,33 @@ PALETTES = {
 
 # --- Model: bone -> (parent, pivot, [(name, origin, size, kind, mirror)]) ---------------------------------------
 # Units are pixels (1/16 block). The dragon faces -Z (its head is at negative Z).
+
+def wing_bones(side):
+    """A wing: an arm out to the wrist, then a finger as long again out to the point, each with membrane behind it.
+    The arm and finger bend at the shoulder and wrist. Each membrane is a childless bone of its own, so folding can
+    gather it up (scale its Z) without squashing or skewing the bones that hang off the joints."""
+    left = side == "left"
+
+    def pivot(x, y, z):
+        return [x if left else -x, y, z]
+
+    def cube(name, origin, size, kind):
+        x, y, z = origin
+        return name, [x if left else -(x + size[0]), y, z], size, kind, not left
+
+    wing = f"wing_{side}"
+    return [
+        (wing, "body", pivot(7, 21, -4.5), [
+            cube("wing_arm", [7, 20, -6], [20, 2, 3], "scales"),
+            cube("wing_claw", [26, 20.5, -8], [2, 1, 3], "horn"),  # the thumb's claw, on the wrist
+        ]),
+        (f"{wing}_skin", wing, pivot(7, 21, -3), [cube("wing_membrane", [7, 20.5, -3], [20, 1, 16], "membrane")]),
+        (f"{wing}_tip", wing, pivot(27, 21, -4.5), [cube("wing_finger", [27, 20, -5], [20, 2, 2], "scales")]),
+        (f"{wing}_tip_skin", f"{wing}_tip", pivot(27, 21, -3),
+         [cube("wing_tip_membrane", [27, 20.5, -3], [20, 1, 16], "membrane")]),
+    ]
+
+
 BONES = [
     ("root", None, [0, 0, 0], []),
     ("body", "root", [0, 14, 0], [
@@ -84,14 +119,8 @@ BONES = [
         ("spike_small", [-1, 18, 28], [2, 2, 2], "horn", False),
     ]),
     ("tail3", "tail2", [0, 15, 36], [("tail3", [-2, 14, 36], [4, 3, 12], "scales", False)]),
-    ("wing_left", "body", [7, 20, -4], [
-        ("wing_arm", [7, 20, -6], [20, 2, 3], "scales", False),
-        ("wing_membrane", [7, 20.5, -3], [20, 1, 16], "membrane", False),
-    ]),
-    ("wing_right", "body", [-7, 20, -4], [
-        ("wing_arm", [-27, 20, -6], [20, 2, 3], "scales", True),
-        ("wing_membrane", [-27, 20.5, -3], [20, 1, 16], "membrane", True),
-    ]),
+    *wing_bones("left"),
+    *wing_bones("right"),
     ("leg_front_left", "root", [5, 12, -6], [("leg_front", [3, 0, -8], [4, 12, 4], "scales", False)]),
     ("leg_front_right", "root", [-5, 12, -6], [("leg_front", [-7, 0, -8], [4, 12, 4], "scales", True)]),
     ("leg_back_left", "root", [5, 12, 8], [("leg_back", [3, 0, 6], [5, 12, 5], "scales", False)]),
@@ -104,6 +133,11 @@ def box_uv_size(size):
     return 2 * (d + w), d + h
 
 
+# Cubes added after the skins were first laid out. They go on shelves below the others, so nothing already painted
+# moves: the skins' patterns are seeded by where they sit on the texture.
+ADDED = ("wing_claw", "wing_finger", "wing_tip_membrane")
+
+
 def pack():
     """Assigns each distinct cube name a texture spot (shelf packing). Mirrored cubes share their twin's spot."""
     spots, x, y, shelf = {}, 0, 0, 0
@@ -114,218 +148,18 @@ def pack():
                 order.append(name)
                 spots[name] = (size, kind)
     placed = {}
-    for name in sorted(order, key=lambda n: -box_uv_size(spots[n][0])[1]):
+    first = sorted((n for n in order if n not in ADDED), key=lambda n: -box_uv_size(spots[n][0])[1])
+    later = sorted((n for n in order if n in ADDED), key=lambda n: -box_uv_size(spots[n][0])[1])
+    for name in first + later:
         size, kind = spots[name]
         bw, bh = box_uv_size(size)
-        if x + bw > TEX:
+        if x + bw > TEX or name == later[0]:
             x, y, shelf = 0, y + shelf, 0
         assert y + bh <= TEX, "texture full"
         placed[name] = (x, y, size, kind)
         x += bw
         shelf = max(shelf, bh)
     return placed
-
-
-def faces(u, v, size):
-    """Box UV face rectangles: name -> (x, y, w, h)."""
-    w, h, d = (int(round(s)) for s in size)
-    return {
-        "top": (u + d, v, w, d), "bottom": (u + d + w, v, w, d),
-        "east": (u, v + d, d, h), "north": (u + d, v + d, w, h),
-        "west": (u + d + w, v + d, d, h), "south": (u + 2 * d + w, v + d, w, h),
-    }
-
-
-def noise(x, y, seed):
-    n = (x * 374761393 + y * 668265263 + seed * 2654435761) & 0xFFFFFFFF
-    n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
-    return ((n ^ (n >> 16)) & 0xFFFF) / 0xFFFF
-
-
-def shade(c, f):
-    return tuple(max(0, min(255, int(v * f))) for v in c)
-
-
-STRIPED = ("body", "neck", "tail1", "tail2", "tail3")
-RAINBOW = [(0xff, 0x40, 0x40), (0xff, 0x9a, 0x30), (0xff, 0xe6, 0x40), (0x50, 0xd0, 0x50), (0x40, 0xa8, 0xff), (0x58, 0x58, 0xe8),
-           (0xb0, 0x58, 0xe8)]
-
-
-def rainbow_at(along, n):
-    return shade(RAINBOW[(along // 2) % len(RAINBOW)], 0.85 + 0.25 * n)
-
-
-def paint_skin(pal, placed):
-    img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
-
-    def put(x, y, c):
-        img[y][x] = (*c, 255)
-
-    for name, (u, v, size, kind) in placed.items():
-        if kind == "bag":
-            continue  # left clear: the saddlebags only show once they're painted on
-        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-            for yy in range(fh):
-                for xx in range(fw):
-                    px, py = fx + xx, fy + yy
-                    n = noise(px, py, 7)
-                    if kind == "membrane":
-                        c = shade(pal["membrane"], 0.85 + 0.25 * noise(px // 3, py, 3))
-                        if "rainbow" in pal:
-                            r = rainbow_at(xx, n)  # a pearly shimmer of every colour
-                            c = tuple((a + b * 2) // 3 for a, b in zip(r, c))
-                        if xx % 5 == 0:  # finger bones through the membrane
-                            c = pal["dark"]
-                    elif kind == "horn":
-                        c = shade(pal["horn"], 0.9 + 0.2 * n)
-                    elif kind == "belly" or face == "bottom":
-                        c = shade(pal["belly"], 0.9 + 0.15 * n)
-                        if yy % 3 == 0:
-                            c = shade(pal["belly"], 0.8)
-                    else:
-                        # Overlapping scale rows: dark edges, light highlights.
-                        if (xx + (yy // 2) % 2) % 3 == 0 and yy % 2 == 0:
-                            c = pal["dark"]
-                        elif n > 0.82:
-                            c = pal["light"]
-                        else:
-                            c = shade(pal["base"], 0.92 + 0.16 * n)
-                        if face == "top" and n > 0.6:
-                            c = pal["light"]
-                        if "rainbow" in pal:
-                            # Bands of every colour along its length, red through violet, with darker scale edges.
-                            along = yy if face in ("top", "bottom") else xx
-                            edge = (xx + (yy // 2) % 2) % 3 == 0 and yy % 2 == 0
-                            c = shade(rainbow_at(along, n), 0.7 if edge else 1.0)
-                        if "fleck" in pal and face != "bottom" and n > 0.9:
-                            c = shade(pal["fleck"], 0.85 + 0.3 * noise(px, py, 5))  # chips of stone
-                        # Bands round the body, neck and tail, across their length (yy on top, xx on the flanks).
-                        if "stripe" in pal and name in STRIPED and face in ("top", "east", "west"):
-                            along = yy if face == "top" else xx
-                            if (along // 3) % 2 == 1:
-                                c = shade(pal["stripe"], 0.9 + 0.3 * n)
-                    put(px, py, c)
-        if kind == "head":
-            # Glowing eyes near the front-top of both sides of the skull.
-            for face in ("east", "west"):
-                fx, fy, fw, fh = faces(u, v, size)[face]
-                for ex in (1, fw - 3):
-                    for dx in range(2):
-                        put(fx + ex + dx, fy + 2, pal["eye"])
-                        put(fx + ex + dx, fy + 3, shade(pal["eye"], 0.7))
-    return img
-
-
-LEATHER = dict(base=(0x7a, 0x4a, 0x26), light=(0x96, 0x60, 0x30), dark=(0x4a, 0x2c, 0x16),
-               stitch=(0xd8, 0xb8, 0x78), iron=(0xb8, 0xb8, 0xc0))
-
-
-def paint_saddle(img, placed):
-    """Paints a saddle onto a copy of a skin: a seat on the middle of the back, skirts and a girth strap with an
-    iron buckle down both flanks, and the strap under the belly. Everything is centred on the body's length, so it
-    reads the same whichever way a face's texture runs."""
-    img = [row[:] for row in img]
-    u, v, size, _ = placed["body"]
-    f = faces(u, v, size)
-    w, h, d = (int(round(n)) for n in size)
-    lo, hi = d // 2 - 4, d // 2 + 3  # saddle rows along the body (8 of them)
-
-    def put(x, y, c):
-        img[y][x] = (*c, 255)
-
-    fx, fy, _, _ = f["top"]
-    for z in range(lo, hi + 1):
-        for x in range(w):
-            c = LEATHER["base"] if 0 < x < w - 1 else LEATHER["dark"]
-            if z in (lo, hi):
-                c = LEATHER["dark"]
-            elif z in (lo + 1, hi - 1):
-                c = LEATHER["stitch"] if x % 2 == 0 and 0 < x < w - 1 else LEATHER["base"]
-            elif 3 <= x <= w - 4:
-                c = LEATHER["light"] if (x + z) % 5 else LEATHER["base"]  # the worn seat
-            put(fx + x, fy + z, c)
-    for side in ("east", "west"):
-        fx, fy, _, _ = f[side]
-        for z in range(lo, hi + 1):
-            for y in range(4):  # skirt
-                c = LEATHER["dark"] if y == 3 or z in (lo, hi) else LEATHER["base"]
-                if y == 1 and z % 2 == 0 and lo < z < hi:
-                    c = LEATHER["stitch"]
-                put(fx + z, fy + y, c)
-        for z in range(d // 2 - 2, d // 2 + 2):  # girth strap
-            for y in range(4, h):
-                put(fx + z, fy + y, LEATHER["iron"] if y in (6, 7) else LEATHER["dark"])
-    fx, fy, _, _ = f["bottom"]
-    for z in range(d // 2 - 2, d // 2 + 2):
-        for x in range(w):
-            put(fx + x, fy + z, LEATHER["dark"])
-    return img
-
-
-def paint_bags(img, placed):
-    """Paints the saddlebags onto a copy of a saddled skin: leather bags with a buckled flap over the top."""
-    img = [row[:] for row in img]
-    u, v, size, _ = placed["saddlebag"]
-    for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-        for yy in range(fh):
-            for xx in range(fw):
-                if face in ("top", "bottom"):
-                    c = LEATHER["dark"] if xx in (0, fw - 1) or yy in (0, fh - 1) else LEATHER["base"]
-                elif yy == 0 or yy == 3 or xx in (0, fw - 1):
-                    c = LEATHER["dark"]  # the rim, the flap's edge and the seams
-                elif yy < 3:
-                    c = LEATHER["iron"] if yy == 2 and xx == fw // 2 else LEATHER["light"]  # the flap and its buckle
-                else:
-                    c = LEATHER["stitch"] if yy == fh - 2 and xx % 2 == 1 else shade(LEATHER["base"], 0.9 + 0.2 * noise(fx + xx, fy + yy, 5))
-                img[fy + yy][fx + xx] = (*c, 255)
-    return img
-
-
-METALS = {
-    "iron": dict(light=(0xe6, 0xe6, 0xea), mid=(0xb2, 0xb4, 0xba), dark=(0x70, 0x72, 0x7a), rivet=(0x50, 0x52, 0x58)),
-    "golden": dict(light=(0xff, 0xf4, 0x8a), mid=(0xf0, 0xc4, 0x38), dark=(0xb0, 0x7c, 0x14), rivet=(0x7a, 0x50, 0x08)),
-    "diamond": dict(light=(0xd0, 0xff, 0xfa), mid=(0x5c, 0xe0, 0xd8), dark=(0x22, 0x9a, 0x96), rivet=(0x14, 0x5e, 0x5c)),
-    "netherite": dict(light=(0x7a, 0x70, 0x76), mid=(0x4c, 0x44, 0x4a), dark=(0x30, 0x2a, 0x2e), rivet=(0xd8, 0xa8, 0x5a)),
-    "elder": dict(light=(0xff, 0xf4, 0xd8), mid=(0xd8, 0xb8, 0x70), dark=(0x8a, 0x64, 0x2a), rivet=(0xc8, 0x20, 0x30)),
-}
-
-# Which faces of which cubes get plated, and how many rows down from the top edge (None = the whole face).
-ARMOR_PLATES = {
-    "skull": {"top": None, "north": 3},
-    "snout": {"top": None},
-    "neck": {"top": None, "east": None, "west": None},
-    "body": {"top": None, "north": None, "east": 8, "west": 8},
-    "tail1": {"top": None, "east": 4, "west": 4},
-    "leg_front": {"north": 6, "east": 6, "west": 6, "south": 6},
-    "leg_back": {"north": 6, "east": 6, "west": 6, "south": 6},
-}
-
-
-def paint_armor(img, placed, metal):
-    """Paints overlapping armor plates onto a copy of a skin: riveted plates over the head, neck, back, flanks,
-    tail and thighs, leaving the eyes, belly, horns and wings bare."""
-    img = [row[:] for row in img]
-    m = METALS[metal]
-    for name, plated in ARMOR_PLATES.items():
-        u, v, size, _ = placed[name]
-        f = faces(u, v, size)
-        for face, rows in plated.items():
-            fx, fy, fw, fh = f[face]
-            for yy in range(fh if rows is None else min(rows, fh)):
-                for xx in range(fw):
-                    if (xx, yy) in ((0, 0), (fw - 1, 0)) and face != "top":
-                        continue  # rounded corners
-                    c = shade(m["mid"], 0.9 + 0.15 * noise(fx + xx, fy + yy, 21))
-                    if yy % 4 == 0:
-                        c = m["light"]  # the upper lip of each plate catches the light
-                    elif yy % 4 == 3:
-                        c = m["dark"]  # and its lower edge overlaps the next
-                    if yy % 4 == 1 and xx % 4 == 1:
-                        c = m["rivet"]
-                    if rows is not None and yy == min(rows, fh) - 1:
-                        c = m["dark"]  # hem of the barding
-                    img[fy + yy][fx + xx] = (*c, 255)
-    return img
 
 
 def write_png(path, img):
@@ -360,7 +194,7 @@ def geometry(placed):
         "format_version": "1.12.0",
         "minecraft:geometry": [{
             "description": {"identifier": "geometry.dragon", "texture_width": TEX, "texture_height": TEX,
-                            "visible_bounds_width": 8, "visible_bounds_height": 5, "visible_bounds_offset": [0, 1.5, 0]},
+                            "visible_bounds_width": 12, "visible_bounds_height": 5, "visible_bounds_offset": [0, 1.5, 0]},
             "bones": bones,
         }],
     }
@@ -371,13 +205,32 @@ def kf(*pairs):
     return {f"{t:.2f}": v for t, v in pairs}
 
 
-# GeckoLib turns X and Y keyframe rotations the Bedrock way round but not Z: in model space this is a turn of
-# -80 degrees about Y (wing swept back along the flank) then the membrane tipped up 30 degrees, and scaled down
-# so the membranes bunch into a low ridge along the spine instead of crossing over each other.
-FOLDED = {
-    "wing_left": {"rotation": [0, -80, 30], "scale": [0.8, 1, 0.45]},
-    "wing_right": {"rotation": [0, 80, -30], "scale": [0.8, 1, 0.45]},
-}
+def both_wings(shoulder, skin, wrist, tip_skin):
+    """Channels for the left wing's four bones, and their mirror image for the right: mirroring across the body turns
+    Y and Z rotations and X moves round, and leaves the rest."""
+    flips = {"rotation": (1, -1, -1), "position": (-1, 1, 1), "scale": (1, 1, 1)}
+
+    def flip(value, signs):
+        if isinstance(value, dict):
+            return {t: flip(v, signs) for t, v in value.items()}
+        return [v * k if v else 0 for v, k in zip(value, signs)]
+
+    out = {}
+    for end, channels in (("", shoulder), ("_skin", skin), ("_tip", wrist), ("_tip_skin", tip_skin)):
+        out[f"wing_left{end}"] = channels
+        out[f"wing_right{end}"] = {kind: flip(value, flips[kind]) for kind, value in channels.items()}
+    return out
+
+
+# Folded, each wing stands on the flank as an upturned V: the arm climbs back to the wrist, about 35 pixels up, and the
+# finger doubles back down past the hip, with the membrane gathered inside. It is set out from the flank far enough to
+# clear both riders' arms and legs, the saddlebags and the swaying tail, and the finger sits a little proud of the arm
+# so the two don't flicker where they overlap.
+# (GeckoLib turns X and Y keyframe rotations the Bedrock way round but not Z: these act as Rz(-z) Ry(y) Rx(-x).)
+FOLDED = both_wings(
+    {"rotation": [-14.77, -51.42, -57.8], "position": [1.6, 0, 0]}, {"scale": [1, 1, 0.34]},
+    {"rotation": [0, -75.93, 0], "position": [0, 0.65, 0]}, {"scale": [1, 1, 0.34]},
+)
 
 
 def animations():
@@ -394,9 +247,21 @@ def animations():
             "leg_front_left": leg(25), "leg_back_right": leg(25),
             "leg_front_right": leg(-25), "leg_back_left": leg(-25),
             "neck": {"rotation": kf((0, [2, 0, 0]), (0.5, [-2, 0, 0]), (1, [2, 0, 0]))}}
-    flap = lambda s: {"rotation": kf((0, [0, 0, 35 * s]), (0.4, [0, 0, -30 * s]), (0.8, [0, 0, 35 * s]))}
-    fly = {"wing_left": flap(1), "wing_right": flap(-1), **tail_sway(5, 1.6),
-           "body": {"position": kf((0, [0, 0, 0]), (0.4, [0, 1.2, 0]), (0.8, [0, 0, 0]))},
+    # Two wing beats to each sway of the tail: 0.8 seconds a beat, as often as the flap sound plays. The shoulders
+    # drive, and the wrists follow a little late, so the tips trail and curl like a whip.
+    beat, length = 0.8, 1.6
+
+    def swing(amount, middle=0.0, late=0.0):
+        times = [i / 10 for i in range(17)]
+        return kf(*((t, [0, 0, round(middle + amount * math.cos(2 * math.pi * (t - late) / beat), 2)]) for t in times))
+
+    flap = both_wings(
+        {"rotation": swing(26, -4), "position": [0, 0, 0]}, {"scale": [1, 1, 1]},
+        {"rotation": swing(15, late=0.12), "position": [0, 0, 0]}, {"scale": [1, 1, 1]},
+    )
+    fly = {**flap, **tail_sway(5, length),
+           "body": {"position": kf((0, [0, 0, 0]), (0.4, [0, 1.2, 0]), (0.8, [0, 0, 0]), (1.2, [0, 1.2, 0]),
+                                   (1.6, [0, 0, 0]))},
            "leg_front_left": {"rotation": [45, 0, 0]}, "leg_front_right": {"rotation": [45, 0, 0]},
            "leg_back_left": {"rotation": [60, 0, 0]}, "leg_back_right": {"rotation": [60, 0, 0]}}
     sit = {**FOLDED, **tail_sway(3, 5),
@@ -411,35 +276,9 @@ def animations():
         return {"loop": loop, "animation_length": length, "bones": bones}
 
     return {"format_version": "1.8.0", "animations": {
-        "misc.idle": anim(idle, 4), "move.walk": anim(walk, 1), "move.fly": anim(fly, 0.8),
+        "misc.idle": anim(idle, 4), "move.walk": anim(walk, 1), "move.fly": anim(fly, length),
         "misc.sit": anim(sit, 5), "attack.breath": anim(breath, 1.1, loop=False),
     }}
-
-
-def egg_texture(pal, stage):
-    img = []
-    for y in range(16):
-        row = []
-        for x in range(16):
-            n = noise(x, y, 11)
-            c = shade(pal["base"], 0.85 + 0.25 * n)
-            if n > 0.8:
-                c = pal["light"]
-            elif n < 0.12:
-                c = pal["dark"]
-            if "stripe" in pal and y in (5, 6, 10, 11):
-                c = shade(pal["stripe"], 0.9 + 0.2 * n)  # a honey egg is banded like a bee
-            if "rainbow" in pal:
-                c = rainbow_at(y, n)  # a rainbow egg, red at the top to violet at the bottom
-            row.append((*c, 255))
-        img.append(row)
-    # Cracks spread as the egg gets closer to hatching.
-    cracks = [[(7, 2), (8, 3), (7, 4), (8, 5)], [(3, 6), (4, 7), (5, 7), (6, 8)], [(11, 8), (10, 9), (11, 10), (12, 11), (11, 12)]]
-    glow = pal["eye"]
-    for i in range(stage):
-        for x, y in cracks[i]:
-            img[y][x] = (*glow, 255)
-    return img
 
 
 SPAWN_EGGS = {
@@ -466,34 +305,6 @@ SPAWN_EGGS = {
 }
 
 
-def spawn_egg_texture(base, spot):
-    """A 16x16 spawn egg: a shaded egg in the mob's main colour, spotted with its second colour, outlined darker."""
-    inside = set()
-    for y in range(16):
-        for x in range(16):
-            dy = (y + 0.5 - 9) / 6.4
-            if abs(dy) >= 1:
-                continue
-            rx = 4.6 * (1 - dy * dy) ** 0.5 * (1 - 0.18 * max(0.0, -dy))  # narrower towards the top
-            if abs(x + 0.5 - 8) <= rx:
-                inside.add((x, y))
-    spots = {(6, 5), (7, 5), (9, 7), (10, 7), (10, 8), (5, 9), (6, 9), (8, 11), (9, 11), (8, 12), (11, 11), (6, 13), (7, 13)}
-    img = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
-    for x, y in inside:
-        edge = any((x + dx, y + dy) not in inside for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        light = 1.15 - 0.05 * ((x - 5) ** 2 + (y - 5) ** 2) ** 0.5  # lit from the upper left
-        if edge:
-            c = shade(base, 0.55)
-        elif (x, y) in spots:
-            c = shade(spot, max(0.75, min(1.1, light + 0.2)))
-        elif (x, y) in ((6, 4), (5, 5), (5, 6)):
-            c = shade(base, 1.45)  # highlight
-        else:
-            c = shade(base, max(0.7, min(1.2, light + 0.25)))
-        img[y][x] = (*c, 255)
-    return img
-
-
 def main():
     placed = pack()
     (ASSETS / "geckolib" / "models" / "entity").mkdir(parents=True, exist_ok=True)
@@ -510,22 +321,22 @@ def main():
              "rainbow": ("Rainbow Dragon", "Rainbow Egg"), "air": ("Air Dragon", "Air Egg"),
              "elder": ("Elder Dragon", None)}
     for element, pal in PALETTES.items():
-        skin = paint_skin(pal, placed)
+        skin = dragon_skins.paint_skin(element, pal, placed, TEX)
         # Every combination of armor (or none) and saddle (or none) gets its own skin.
         for metal in [None, *METALS]:
-            armored = skin if metal is None else paint_armor(skin, placed, metal)
+            armored = skin if metal is None else dragon_skins.paint_armor(skin, placed, metal)
             name = f"{element}_dragon" + ("" if metal is None else f"_{metal}")
             write_png(ASSETS / "textures" / "entity" / f"{name}.png", armored)
-            saddled = paint_saddle(armored, placed)
+            saddled = dragon_skins.paint_saddle(armored, placed)
             write_png(ASSETS / "textures" / "entity" / f"{name}_saddled.png", saddled)
-            write_png(ASSETS / "textures" / "entity" / f"{name}_saddled_bags.png", paint_bags(saddled, placed))
+            write_png(ASSETS / "textures" / "entity" / f"{name}_saddled_bags.png", dragon_skins.paint_bags(saddled, placed))
         lang[f"entity.{NS}.{element}_dragon"] = names[element][0]
         if names[element][1] is None:
             continue  # the ender dragon hatches from the End's own Dragon Egg
         egg = f"{element}_egg"
         variants = {}
         for stage in range(4):
-            write_png(ASSETS / "textures" / "block" / f"{egg}_{stage}.png", egg_texture(pal, stage))
+            write_png(ASSETS / "textures" / "block" / f"{egg}_{stage}.png", dragon_skins.egg_texture(element, pal, stage))
             model = {"parent": "minecraft:block/dragon_egg", "textures": {"all": f"{NS}:block/{egg}_{stage}", "particle": f"{NS}:block/{egg}_{stage}"}}
             (ASSETS / "models" / "block").mkdir(parents=True, exist_ok=True)
             (ASSETS / "models" / "block" / f"{egg}_{stage}.json").write_text(json.dumps(model, indent=2))
@@ -538,7 +349,7 @@ def main():
         lang[f"block.{NS}.{egg}"] = names[element][1]
     for mob, (base, spot, name) in SPAWN_EGGS.items():
         egg = f"{mob}_spawn_egg"
-        write_png(ASSETS / "textures" / "item" / f"{egg}.png", spawn_egg_texture(base, spot))
+        write_png(ASSETS / "textures" / "item" / f"{egg}.png", dragon_skins.spawn_egg_texture(base, spot))
         (ASSETS / "models" / "item").mkdir(parents=True, exist_ok=True)
         (ASSETS / "models" / "item" / f"{egg}.json").write_text(json.dumps(
             {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{egg}"}}, indent=2))

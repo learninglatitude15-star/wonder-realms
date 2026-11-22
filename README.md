@@ -8,6 +8,13 @@ A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) w
 - **Sky Islands & Airships**: explore floating islands of twelve kinds and villages in the sky, ride a sky whale,
   face the Storm Leviathan, raid pillager sky outposts, and fight battles between airships.
 
+## What's new in 1.4.0+
+
+- **Longer wings**: every dragon's wings are twice as long, with a wrist joint that curls as they beat and folds them
+  up on the ground. A grown dragon's wingspan is now nearly six blocks.
+- **New textures** for dragons, creatures, airships, eggs and items.
+- **Fixes**: smoother tails in flight, and faces for the Pixel Miners. See [the changelog](UPDATE-1.4.0+.md).
+
 ## What's new in 1.4
 
 - **The Elder Dragon**: a boss more than twice the size of any other dragon, guarding the hoard of a **Sky Citadel**,
@@ -362,4 +369,12 @@ python3 tools/generate_dragonfly_assets.py
 python3 tools/generate_creature_assets.py
 python3 tools/generate_gear_assets.py
 python3 tools/generate_data.py
+```
+
+The painting itself lives in `tools/dragon_skins.py`, `tools/creature_skins.py` and `tools/item_art.py`, on top of
+`tools/texkit.py`. To look at changes before they go in, set `WR_RESOURCES` to a copy of `src/main/resources` while
+running the generators, then compare the two (no image libraries needed):
+
+```
+python3 tools/texture_preview.py src/main/resources path/to/the/copy path/for/the/page
 ```

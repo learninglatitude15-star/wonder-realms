@@ -4,257 +4,34 @@ cannon, dragon and Elder scales, the Dragon Heart, and dragonscale armor (with i
 item icons, item models and definitions, crafting (and smithing) recipes, and names.
 
 Run from the wonder-realms folder after generate_assets.py:  python3 tools/generate_gear_assets.py
-Pixel art is drawn from the character grids below (no image library needed).
+The icons and worn textures are drawn by item_art.py (shaped parts, bevel shading and outlines; no image library).
 """
 import json
+import os
 from pathlib import Path
 
-from generate_assets import write_png, rgba
+import item_art as art
 from generate_dragon_assets import write_png as write_image
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
 
-def grid(*rows):
-    """Pads or trims each row to 16 pixels, so the art below can be drawn without counting dots."""
-    rows = [row.ljust(16, ".")[:16] for row in rows]
-    return rows + ["." * 16] * (16 - len(rows))
-
-
-# A barding plate for a dragon's neck and chest, horned and riveted, with a leather strap.
-ARMOR = grid(
-    "................",
-    ".........h......",
-    "........hMd.....",
-    ".......hMMd.....",
-    "...hhhhMMMMd....",
-    "..hMMMMMMMMMd...",
-    "..hMrMMMMMrMd...",
-    "..hMMMMMMMMMd...",
-    "...dMMMMMMMd....",
-    "....kdMMMdk.....",
-    "...hMMMMMMMd....",
-    "..hMMrMMMrMMd...",
-    "..hMMMMMMMMMd...",
-    "...dMMMMMMMd....",
-    "....ddddddd.....",
-)
-METALS = {
-    "iron": ("e6e6ea", "b2b4ba", "70727a", "50525a"),
-    "golden": ("fff48a", "f0c438", "b07c14", "7a5008"),
-    "diamond": ("d0fffa", "5ce0d8", "229a96", "145e5c"),
-    "netherite": ("7a7076", "4c444a", "302a2e", "d8a85a"),
-    "elder": ("fff4d8", "d8b870", "8a642a", "c82030"),
-}
-
-
-def armor_palette(light, mid, dark, rivet):
-    return {"h": rgba(light), "M": rgba(mid), "d": rgba(dark), "r": rgba(rivet), "k": rgba("6b4423")}
-
-
-WHISTLE = grid(
-    "................",
-    "................",
-    "..........ss....",
-    ".........s..s...",
-    ".........s...s..",
-    "..........s..s..",
-    "...bbbbbbbbs.s..",
-    "..bWWWWWWWWb.s..",
-    ".bWWhWWWWWWWbs..",
-    ".bWkkWWWWWWWb...",
-    "..bWWWWWWWWb....",
-    "...bbbbbbbb.....",
-)
-WHISTLE_PAL = {"W": rgba("f0ead6"), "h": rgba("ffffff"), "k": rgba("5a4a3a"), "b": rgba("9a9078"), "s": rgba("c8a870")}
-
-SHRINK_RAY = grid(
-    "................",
-    "................",
-    "...........pp...",
-    "..........pPPp..",
-    "...gggggggPPPp..",
-    "..gGGGGGGGGPp...",
-    "..gGhhGGGGGGg...",
-    "..gGGGGGGGGGg...",
-    "...gggGGgggg....",
-    ".....gGGg.......",
-    ".....gGGg.......",
-    ".....gGGg.......",
-    "......gg........",
-)
-SHRINK_RAY_PAL = {"g": rgba("3a3a46"), "G": rgba("8a8ea0"), "h": rgba("d8dcef"), "P": rgba("e0a0ff"), "p": rgba("8a3ad8")}
-
-CHISEL = grid(
-    "................",
-    "............ss..",
-    "...........sSs..",
-    "..........sSs...",
-    ".........sSs....",
-    "........sSs.....",
-    ".......wws......",
-    "......wWw.......",
-    ".....wWw........",
-    "....wWw.........",
-    "...wWw..........",
-    "..wWw.....a.....",
-    "..ww.....aAa....",
-    "..........a.....",
-)
-CHISEL_PAL = {"s": rgba("5a5e66"), "S": rgba("c8ccd6"), "w": rgba("5a3a20"), "W": rgba("9a6a3a"), "a": rgba("8a5ad8"), "A": rgba("f0e0ff")}
-
-CANNON = grid(
-    "................",
-    "................",
-    "................",
-    "..........kk....",
-    ".....kkkkkkKk...",
-    "...kkKKKKKKKKk..",
-    "..kKKhhKKKKKKk..",
-    "..kKKKKKKKKKKk..",
-    "...kkKKKKKKkk...",
-    "....wWWWWWw.....",
-    "...wWWWWWWWw....",
-    "..wwOwwwwwOww...",
-    "..wOOOw..wOOOw..",
-    "...OOO....OOO...",
-)
-CANNON_PAL = {"k": rgba("1e2024"), "K": rgba("3a3e46"), "h": rgba("6a707a"), "w": rgba("4a3018"), "W": rgba("7a5230"), "O": rgba("2a2a2e")}
-
-SCALE = grid(
-    "................",
-    "................",
-    "......hhhh......",
-    ".....hLLLLh.....",
-    "....hLLMMMMd....",
-    "....hLMMMMMd....",
-    "...hLMMMMMMMd...",
-    "...hLMMMMMMMd...",
-    "...hMMMMMMMMd...",
-    "....dMMMMMMd....",
-    "....dMMMMMMd....",
-    ".....dMMMMd.....",
-    "......dMMd......",
-    ".......dd.......",
-)
-
-
-def scale_palette(edge, shine, mid, dark):
-    return {"h": rgba(edge), "L": rgba(shine), "M": rgba(mid), "d": rgba(dark)}
-
-
-HEART = grid(
-    "................",
-    "................",
-    "...ddd....ddd...",
-    "..dRRRd..dRRRd..",
-    ".dRRhRRddRRRRRd.",
-    ".dRhhRRRRRRRRRd.",
-    ".dRRRRRRGRRRRRd.",
-    ".dRRRRRGGGRRRRd.",
-    "..dRRRRRGRRRRd..",
-    "...dRRRRRRRRd...",
-    "....dRRRRRRd....",
-    ".....dRRRRd.....",
-    "......dRRd......",
-    ".......dd.......",
-)
-HEART_PAL = {"d": rgba("4a0808"), "R": rgba("b81c1c"), "h": rgba("ff8a7a"), "G": rgba("ffd040")}
-
-# Dragonscale armor: teal-green scales trimmed with gold.
-DRAGONSCALE_PAL = {"d": rgba("0e3a30"), "M": rgba("1f8a6a"), "L": rgba("6ad8b0"), "g": rgba("e0b040")}
-DRAGONSCALE_PIECES = {
-    "helmet": grid(
-        "................",
-        "................",
-        "................",
-        "....dddddddd....",
-        "...dMLMLMLMMd...",
-        "..dMMMMMMMMMMd..",
-        "..dMLMLMLMLMMd..",
-        "..dMMggggggMMd..",
-        "..dMd......dMd..",
-        "..dMd......dMd..",
-        "..ddd......ddd..",
-    ),
-    "chestplate": grid(
-        "................",
-        "..ddd......ddd..",
-        ".dMMMd....dMMMd.",
-        ".dMLMMddddMMLMd.",
-        ".dMMMMMMMMMMMMd.",
-        "..ddMLMLMLMLdd..",
-        "...dMMMMMMMMd...",
-        "...dMLMLMLMLd...",
-        "...dMMMMMMMMd...",
-        "...dMLMLMLMLd...",
-        "...dMMMMMMMMd...",
-        "...dggggggggd...",
-        "...dddddddddd...",
-    ),
-    "leggings": grid(
-        "................",
-        "...dddddddddd...",
-        "...dggggggggd...",
-        "...dMMMMMMMMd...",
-        "...dMLMddMLMd...",
-        "...dMMMddMMMd...",
-        "...dMLd..dMLd...",
-        "...dMMd..dMMd...",
-        "...dMLd..dMLd...",
-        "...dMMd..dMMd...",
-        "...dMLd..dMLd...",
-        "...dddd..dddd...",
-    ),
-    "boots": grid(
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "...dddd..dddd...",
-        "...dMLd..dMLd...",
-        "...dMMd..dMMd...",
-        "...dMLd..dMLd...",
-        "..ddMMd..dMMdd..",
-        ".dMMMMd..dMMMMd.",
-        ".dggggd..dggggd.",
-        ".dddddd..dddddd.",
-    ),
-}
-
-# Dragon Wings, folded: a pair of teal membrane wings with pale veins, like an elytra.
-WINGS = grid(
-    "................",
-    "..dd........dd..",
-    ".dMMd......dMMd.",
-    ".dMLMd....dMLMd.",
-    "dMMLMMd..dMMLMMd",
-    "dMLMMLd..dLMMLMd",
-    "dMMLMMd..dMMLMMd",
-    "dMLMMLd..dLMMLMd",
-    ".dMMLMd..dMLMMd.",
-    ".dMLMMd..dMMLMd.",
-    "..dMMLd..dLMMd..",
-    "..dMLMd..dMLMd..",
-    "...dMd....dMd...",
-    "...dd......dd...",
-)
-
+SCALE_COLORS = {"dragon_scale": (0x2a, 0xa8, 0x8a), "elder_scale": (0xc0, 0x8a, 0x30)}
 ITEMS = {
-    **{f"{metal}_dragon_armor": (f"{metal.capitalize()} Dragon Armor", ARMOR, armor_palette(*colors)) for metal, colors in METALS.items()},
-    "dragon_whistle": ("Dragon Whistle", WHISTLE, WHISTLE_PAL),
-    "shrink_ray": ("Shrink Ray", SHRINK_RAY, SHRINK_RAY_PAL),
-    "pixel_chisel": ("Pixel Chisel", CHISEL, CHISEL_PAL),
-    "airship_cannon": ("Airship Cannon", CANNON, CANNON_PAL),
-    "dragon_scale": ("Dragon Scale", SCALE, scale_palette("bff8e8", "8ff0d0", "2aa88a", "146450")),
-    "elder_scale": ("Elder Scale", SCALE, scale_palette("fff4d0", "ffd870", "c08a30", "6a3a10")),
-    "dragon_heart": ("Dragon Heart", HEART, HEART_PAL),
-    "dragon_wings": ("Dragon Wings", WINGS, DRAGONSCALE_PAL),
-    **{f"dragonscale_{piece}": (f"Dragonscale {piece.capitalize()}", rows, DRAGONSCALE_PAL) for piece, rows in DRAGONSCALE_PIECES.items()},
+    **{f"{metal}_dragon_armor": (f"{metal.capitalize()} Dragon Armor", lambda metal=metal: art.dragon_armor(metal)) for metal in art.METAL_COLORS},
+    "dragon_whistle": ("Dragon Whistle", art.whistle_icon),
+    "shrink_ray": ("Shrink Ray", art.shrink_ray_icon),
+    "pixel_chisel": ("Pixel Chisel", art.chisel_icon),
+    "airship_cannon": ("Airship Cannon", art.cannon_icon),
+    "dragon_scale": ("Dragon Scale", lambda: art.scale_icon(SCALE_COLORS["dragon_scale"])),
+    "elder_scale": ("Elder Scale", lambda: art.scale_icon(SCALE_COLORS["elder_scale"])),
+    "dragon_heart": ("Dragon Heart", art.heart_icon),
+    "dragon_wings": ("Dragon Wings", art.wings_icon),
+    **{f"dragonscale_{piece}": (f"Dragonscale {piece.capitalize()}", lambda piece=piece: art.dragonscale_icon(piece))
+       for piece in art.DRAGONSCALE_PIECES},
 }
 
 
@@ -298,47 +75,6 @@ RECIPES = {
 }
 
 
-def scale_pixel(x, y):
-    """Dragonscale armor, as worn: overlapping teal scales with dark edges and a light catch on each."""
-    n = (x * 7 + y * 13) % 5
-    if y % 2 == 0 and (x + (y // 2) % 2 * 2) % 4 == 0:
-        return DRAGONSCALE_PAL["d"]
-    if n == 0:
-        return DRAGONSCALE_PAL["L"]
-    return DRAGONSCALE_PAL["M"]
-
-
-def armor_layer(paint):
-    """A 64x32 humanoid armor texture, painting only the pixels where paint(x, y) is true."""
-    img = [[(0, 0, 0, 0)] * 64 for _ in range(32)]
-    for y in range(32):
-        for x in range(64):
-            if paint(x, y):
-                img[y][x] = scale_pixel(x, y)
-    return img
-
-
-def armor_textures():
-    """The worn look of dragonscale armor: a helmet with an open face, a chestplate with sleeves and a gold-trimmed
-    hem, and boots on the main layer; leggings and a scaled belt on the leggings layer."""
-    def outer(x, y):
-        head = y < 16 and x < 32 and not (8 <= x < 16 and 8 <= y < 16 and 9 <= x <= 14 and y >= 10)  # the face stays open
-        body = 16 <= x < 40 and 16 <= y < 32
-        arms = 40 <= x < 56 and 16 <= y < 32
-        boots = x < 16 and (y >= 27 or (8 <= x < 12 and 16 <= y < 20))  # the feet and soles of the leg boxes
-        return head or body or arms or boots
-
-    def leggings(x, y):
-        legs = x < 16 and 20 <= y < 30
-        belt = 16 <= x < 40 and 28 <= y < 32
-        return legs or belt
-
-    main = armor_layer(outer)
-    for x in range(16, 40):
-        main[31][x] = DRAGONSCALE_PAL["g"]  # gold trim at the chestplate's hem
-    return main, armor_layer(leggings)
-
-
 def elder_blade_texture():
     """The Elder Blade, held point up and to the right like any sword: an ivory blade edged in gold and red, a gold
     crossguard set with a red gem, a dark grip and a gold pommel, all outlined dark."""
@@ -368,29 +104,6 @@ def elder_blade_texture():
     return img
 
 
-def wings_texture():
-    """Dragon Wings as worn, on the 64x32 elytra layout (each wing is a 10x20x2 box at 22,0): teal membrane, a dark
-    arm bone along the top, dark finger bones down it, and a scalloped trailing edge between the fingers."""
-    img = [[(0, 0, 0, 0)] * 64 for _ in range(32)]
-    pal = DRAGONSCALE_PAL
-    for y in range(22):
-        for x in range(22, 46):
-            if y < 2 and not 24 <= x < 44:
-                continue  # the box's top and bottom faces are only 10 wide
-            fx = (x - 24) % 12  # across the front (24-33) or back (36-45) face
-            finger = x in (26, 29, 32, 38, 41, 44)
-            if y >= 20 and not finger and (y == 21 or fx % 3 == 1):
-                continue  # the scalloped trailing edge
-            if y < 4:
-                c = pal["d"]  # the arm bone along the top
-            elif finger:
-                c = pal["d"]
-            else:
-                c = pal["L"] if (x * 7 + y * 3) % 11 == 0 else pal["M"]
-            img[y][x] = c
-    return img
-
-
 def dump(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n")
@@ -399,22 +112,22 @@ def dump(path, data):
 def main():
     lang_path = ASSETS / "lang" / "en_us.json"
     lang = json.loads(lang_path.read_text())
-    for item, (name, rows, palette) in ITEMS.items():
-        write_png(ASSETS / "textures" / "item" / f"{item}.png", rows, palette)
+    for item, (name, draw) in ITEMS.items():
+        write_image(ASSETS / "textures" / "item" / f"{item}.png", draw())
         dump(ASSETS / "models" / "item" / f"{item}.json", {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{item}"}})
         dump(ASSETS / "items" / f"{item}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/{item}"}})
         lang[f"item.{NS}.{item}"] = name
     for name, recipe in RECIPES.items():
         dump(DATA / "recipe" / f"{name}.json", recipe)
     # Dragonscale armor: how it looks when worn, and what repairs it.
-    main_layer, leggings_layer = armor_textures()
+    main_layer, leggings_layer = art.dragonscale_worn()
     write_image(ASSETS / "textures" / "entity" / "equipment" / "humanoid" / "dragonscale.png", main_layer)
     write_image(ASSETS / "textures" / "entity" / "equipment" / "humanoid_leggings" / "dragonscale.png", leggings_layer)
     dump(ASSETS / "equipment" / "dragonscale.json", {"layers": {"humanoid": [{"texture": f"{NS}:dragonscale"}],
                                                                 "humanoid_leggings": [{"texture": f"{NS}:dragonscale"}]}})
     dump(DATA / "tags" / "item" / "repairs_dragonscale_armor.json", {"values": [f"{NS}:dragon_scale"]})
     # Dragon Wings: how they look when worn, like an elytra's wings.
-    write_image(ASSETS / "textures" / "entity" / "equipment" / "wings" / "dragon_wings.png", wings_texture())
+    write_image(ASSETS / "textures" / "entity" / "equipment" / "wings" / "dragon_wings.png", art.dragon_wings_worn())
     dump(ASSETS / "equipment" / "dragon_wings.json", {"layers": {"wings": [{"texture": f"{NS}:dragon_wings"}]}})
     # The Elder Blade: drawn pixel by pixel, held like a sword, repaired with Elder Scales.
     write_image(ASSETS / "textures" / "item" / "elder_blade.png", elder_blade_texture())

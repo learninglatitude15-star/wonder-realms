@@ -4,6 +4,12 @@ Shrink to the size of a bug, raise and ride elemental dragons, and raid pillager
 
 **Three adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
 
+## ✨ New in 1.4.0+
+
+- **Longer wings:** every dragon's wings are twice as long, with a wrist joint that curls as they beat and folds them up on the ground. A grown dragon's wingspan is now nearly six blocks.
+- **New textures:** dragons with real scales, teeth, claws and markings for every element, plus new looks for creatures, airships, eggs and items.
+- **Fixes:** smoother tails in flight, and faces for the Pixel Miners.
+
 ## ✨ New in 1.4
 
 - **The Elder Dragon:** a boss more than twice the size of any other dragon, with 200 hearts and a boss bar. It guards the hoard of a **Sky Citadel**, a ruined castle in the clouds, and breathes fire, then frost, then lightning, then shadow as the fight goes on.

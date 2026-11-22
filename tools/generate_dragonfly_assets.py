@@ -5,17 +5,16 @@ Run from the wonder-realms folder after generate_beetle_assets.py:  python3 tool
 (The dragonfly's spawn egg is drawn with the others, in generate_dragon_assets.py.)
 """
 import json
+import os
 from pathlib import Path
 
-from generate_dragon_assets import LEATHER, box_uv_size, faces, kf, noise, shade, write_png
+import creature_skins as skins
+from generate_dragon_assets import box_uv_size, kf, write_png
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 NS = "wonderrealms"
 TEX = 64
-
-PALETTE = dict(dark=(0x0a, 0x3a, 0x48), base=(0x1a, 0x8a, 0xa0), light=(0x6a, 0xe0, 0xe0), eye=(0x7a, 0xf0, 0x5a),
-               wing=(0xe0, 0xf0, 0xf8), vein=(0x9a, 0xb8, 0xc8), spot=(0x3a, 0x4a, 0x5a))
 
 # --- Model: bone -> (parent, pivot, [(name, origin, size, kind, mirror)]). Pixels; the dragonfly faces -Z. ---------
 # Four flat wings (cubes with no thickness), a short thorax to sit on, and a long, banded tail.
@@ -90,55 +89,6 @@ def animations():
     return {"format_version": "1.8.0", "animations": {"move.fly": {"loop": True, "animation_length": 0.12, "bones": fly}}}
 
 
-def paint_skin(placed):
-    pal = PALETTE
-    img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
-    for name, (u, v, size, kind) in placed.items():
-        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-            for yy in range(fh):
-                for xx in range(fw):
-                    n = noise(fx + xx, fy + yy, 17)
-                    if kind == "wing":
-                        c = pal["wing"]
-                        if yy == 0 or xx % 3 == 0:
-                            c = pal["vein"]  # the leading edge and the veins across
-                        if xx >= fw - 2 and yy == 0:
-                            c = pal["spot"]  # the dark spot near each wing tip
-                    elif kind == "eye":
-                        c = shade(pal["eye"], 0.85 + 0.3 * n)
-                        if face == "top" and xx == 0 and yy == 0:
-                            c = (0xf0, 0xff, 0xe0)
-                    elif kind == "tail":
-                        c = shade(pal["base"], 0.85 + 0.3 * n)
-                        if face in ("east", "west", "top", "bottom") and xx % 3 == 2:
-                            c = pal["dark"]  # the bands down its tail (along the length of the side faces)
-                        if face in ("north", "south"):
-                            c = pal["dark"]
-                    else:
-                        c = shade(pal["base"], 0.8 + 0.3 * n)
-                        if n > 0.8:
-                            c = pal["light"]  # the metallic shimmer
-                    img[fy + yy][fx + xx] = (*c, 255)
-    return img
-
-
-def paint_saddle(img, placed):
-    """A tiny leather saddle on the thorax, strapped round underneath."""
-    img = [row[:] for row in img]
-    u, v, size, _ = placed["thorax"]
-    f = faces(u, v, size)
-    fx, fy, fw, fh = f["top"]
-    for yy in range(fh):
-        for xx in range(fw):
-            c = LEATHER["dark"] if yy in (0, fh - 1) else LEATHER["light"] if (xx + yy) % 3 else LEATHER["base"]
-            img[fy + yy][fx + xx] = (*c, 255)
-    for side in ("east", "west"):
-        fx, fy, fw, fh = f[side]
-        for yy in range(fh):
-            img[fy + yy][fx + fw // 2] = (*(LEATHER["iron"] if yy == 1 else LEATHER["dark"]), 255)
-    return img
-
-
 def main():
     placed = pack()
     models = ASSETS / "geckolib" / "models" / "entity"
@@ -147,9 +97,9 @@ def main():
     anims = ASSETS / "geckolib" / "animations" / "entity"
     anims.mkdir(parents=True, exist_ok=True)
     (anims / "dragonfly.animation.json").write_text(json.dumps(animations(), indent=1))
-    skin = paint_skin(placed)
+    skin = skins.paint_model(placed, TEX, skins.dragonfly_texel)
     write_png(ASSETS / "textures" / "entity" / "dragonfly.png", skin)
-    write_png(ASSETS / "textures" / "entity" / "dragonfly_saddled.png", paint_saddle(skin, placed))
+    write_png(ASSETS / "textures" / "entity" / "dragonfly_saddled.png", skins.dragonfly_saddle(skin, placed))
     lang_path = ASSETS / "lang" / "en_us.json"
     lang = json.loads(lang_path.read_text())
     lang[f"entity.{NS}.dragonfly"] = "Dragonfly"

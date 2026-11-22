@@ -5,21 +5,18 @@ Run from the wonder-realms folder:  python3 tools/generate_miner_assets.py
 The miner is modelled one block tall; the game shrinks it with the scale attribute.
 """
 import json
+import os
 from pathlib import Path
 
-from generate_dragon_assets import box_uv_size, faces, noise, shade, write_png
+import creature_skins as skins
+import item_art as art
+from generate_dragon_assets import box_uv_size, write_png
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 TEX = 64
-
-COLORS = {
-    "skin": (0xe8, 0xb8, 0x90), "beard": (0xc8, 0xc8, 0xc0), "shirt": (0x3a, 0x5a, 0x9a), "pants": (0x5a, 0x40, 0x2a),
-    "helmet": (0xf0, 0xc0, 0x30), "lamp": (0xff, 0xff, 0xb0), "wood": (0x8a, 0x5e, 0x34), "iron": (0xb0, 0xb4, 0xb8),
-    "boot": (0x2a, 0x20, 0x1a),
-}
 
 # bone -> (parent, pivot, [(cube name, origin, size, kind, mirror)]). Faces -Z.
 BONES = [
@@ -62,31 +59,8 @@ def pack():
 
 
 def skin(placed):
-    img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
-    for name, (u, v, size, kind) in placed.items():
-        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-            for yy in range(fh):
-                for xx in range(fw):
-                    n = noise(fx + xx, fy + yy, 5)
-                    if kind == "face":
-                        c = COLORS["skin"]
-                        if face == "north":
-                            if yy == 1 and xx in (1, fw - 2):
-                                c = (0x20, 0x18, 0x14)  # eyes
-                            elif yy >= 3:
-                                c = COLORS["beard"]
-                        elif face in ("east", "west") and yy >= 3:
-                            c = COLORS["beard"]
-                    elif kind == "pants":
-                        c = COLORS["boot"] if yy >= fh - 1 and face != "top" else COLORS["pants"]
-                    elif kind == "shirt" and name == "arm" and yy >= fh - 1:
-                        c = COLORS["skin"]  # hands
-                    else:
-                        c = COLORS[kind]
-                    if kind not in ("lamp",):
-                        c = shade(c, 0.9 + 0.18 * n)
-                    img[fy + yy][fx + xx] = (*c, 255)
-    return img
+    """The miner's skin, painted by creature_skins (face under the helmet's brim, beard, braces, belt, boots, pick)."""
+    return skins.paint_model(placed, TEX, skins.miner_texel)
 
 
 def geometry(placed):
@@ -128,26 +102,6 @@ def animations():
         "misc.idle": anim(idle, 3), "move.walk": anim(walk, 0.6), "misc.mine": anim(mine, 0.6)}}
 
 
-def pixel_icon(light, base, dark):
-    """A single chunky gem pixel with a sparkle."""
-    rows = []
-    for y in range(16):
-        row = []
-        for x in range(16):
-            c = (0, 0, 0, 0)
-            if 5 <= x <= 10 and 5 <= y <= 10:
-                c = (*base, 255)
-                if x == 5 or y == 5:
-                    c = (*light, 255)
-                if x == 10 or y == 10:
-                    c = (*dark, 255)
-            if (x, y) in ((7, 7), (12, 3), (3, 12)):
-                c = (255, 255, 255, 255)
-            row.append(c)
-        rows.append(row)
-    return rows
-
-
 def main():
     placed = pack()
     geo_dir = ASSETS / "geckolib" / "models" / "entity"
@@ -164,7 +118,7 @@ def main():
     gems = {"diamond_pixel": ("Diamond Pixel", (0xc8, 0xff, 0xf8), (0x4a, 0xe0, 0xd4), (0x1a, 0x8a, 0x84), "minecraft:diamond"),
             "emerald_pixel": ("Emerald Pixel", (0xa8, 0xff, 0xb8), (0x2a, 0xc8, 0x5a), (0x10, 0x7a, 0x30), "minecraft:emerald")}
     for item, (name, light, base, dark, result) in gems.items():
-        write_png(ASSETS / "textures" / "item" / f"{item}.png", pixel_icon(light, base, dark))
+        write_png(ASSETS / "textures" / "item" / f"{item}.png", art.gem_icon(base))
         (ASSETS / "models" / "item" / f"{item}.json").write_text(json.dumps({"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{item}"}}, indent=2))
         (ASSETS / "items" / f"{item}.json").write_text(json.dumps({"model": {"type": "minecraft:model", "model": f"{NS}:item/{item}"}}, indent=2))
         (DATA / "recipe").mkdir(parents=True, exist_ok=True)

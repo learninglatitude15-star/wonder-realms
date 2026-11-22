@@ -4,15 +4,17 @@ grasshopper (plain and saddled), the firefly (with the glowmask that lights its 
 saddled), plus the Firefly Jar block.
 
 Run from the wonder-realms folder after generate_dragonfly_assets.py:  python3 tools/generate_creature_assets.py
-(Their spawn eggs are drawn with the others, in generate_dragon_assets.py.)
+(Their spawn eggs are drawn with the others, in generate_dragon_assets.py; their skins are painted by creature_skins.py.)
 """
 import json
+import os
 import math
 from pathlib import Path
 
-from generate_dragon_assets import LEATHER, box_uv_size, faces, kf, noise, shade, write_png
+import creature_skins as skins
+from generate_dragon_assets import box_uv_size, kf, write_png
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
@@ -63,34 +65,6 @@ def geometry(identifier, bones, placed, tex, bounds):
                         "visible_bounds_width": width, "visible_bounds_height": height, "visible_bounds_offset": [0, offset, 0]},
         "bones": out,
     }]}
-
-
-def paint(placed, tex, painter):
-    """Paints every face of every cube: painter(name, kind, face, x, y, width, height, noise) gives a colour or None."""
-    img = [[(0, 0, 0, 0)] * tex for _ in range(tex)]
-    for name, (u, v, size, kind) in placed.items():
-        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-            for yy in range(fh):
-                for xx in range(fw):
-                    c = painter(name, kind, face, xx, yy, fw, fh, noise(fx + xx, fy + yy, 23))
-                    if c is not None:
-                        img[fy + yy][fx + xx] = c if len(c) == 4 else (*c, 255)
-    return img
-
-
-def overpaint(img, placed, cube, face_names, painter):
-    """A copy of a skin with some faces of one cube painted over: painter(face, x, y, width, height) or None to keep."""
-    img = [row[:] for row in img]
-    u, v, size, _ = placed[cube]
-    for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-        if face not in face_names:
-            continue
-        for yy in range(fh):
-            for xx in range(fw):
-                c = painter(face, xx, yy, fw, fh)
-                if c is not None:
-                    img[fy + yy][fx + xx] = (*c, 255)
-    return img
 
 
 def wave(amplitude, length, phase=0.0, steps=8, axis=0, offset=0.0):
@@ -144,54 +118,6 @@ GRASSHOPPER = [
         ("shin", [-3.5, 0, 5], [1, 5, 1], "leg", True),
     ]),
 ]
-HOPPER = dict(base=(0x5a, 0xa0, 0x3a), dark=(0x2e, 0x5a, 0x1e), light=(0x9a, 0xd0, 0x5a), belly=(0xc8, 0xd8, 0x7a),
-              wing=(0x7a, 0x96, 0x4a), vein=(0x4a, 0x62, 0x2a), eye=(0x3a, 0x2a, 0x1a), glint=(0xd0, 0xe0, 0xc0),
-              leg=(0x4a, 0x86, 0x2e), spine=(0x9a, 0x3a, 0x2a))
-
-
-def grasshopper_pixel(name, kind, face, xx, yy, fw, fh, n):
-    p = HOPPER
-    if kind == "wing":
-        c = p["vein"] if (xx + yy) % 4 == 0 else p["wing"]
-        return shade(c, 0.8 if face == "bottom" else 0.9 + 0.2 * n)
-    if kind == "eye":
-        return p["glint"] if xx == 0 and yy == 0 else shade(p["eye"], 0.9 + 0.3 * n)
-    if kind == "antenna":
-        return shade(p["dark"], 0.9 + 0.3 * n)
-    if kind == "leg":
-        return p["dark"] if yy == fh - 1 else shade(p["leg"], 0.9 + 0.2 * n)
-    if kind == "thigh":
-        if face == "bottom":
-            return p["spine"] if xx % 2 == 0 else p["dark"]  # the spiny underside
-        if face in ("east", "west"):
-            return p["light"] if (xx + abs(yy - fh // 2)) % 3 == 0 else shade(p["base"], 0.9 + 0.2 * n)  # chevrons
-        return shade(p["base"], 0.85 + 0.2 * n)
-    if face == "bottom":
-        return shade(p["belly"], 0.85 + 0.2 * n)
-    if kind == "abdomen":
-        c = shade(p["base"], 0.9 + 0.2 * n)
-        if face in ("top", "east", "west") and (yy if face == "top" else xx) % 2 == 0:
-            c = shade(p["dark"], 1.1)  # the segments down its tail
-        return c
-    if kind == "head":
-        if face == "north" and yy >= fh - 2:
-            return p["dark"] if xx in (fw // 2 - 1, fw // 2) else p["belly"]  # mouthparts
-        return shade(p["base"], 0.95 + 0.2 * n)
-    c = shade(p["base"], 0.9 + 0.2 * n)
-    if face == "top" and xx in (fw // 2 - 1, fw // 2):
-        c = p["light"]  # a pale stripe down its back
-    return c
-
-
-def grasshopper_saddle(img, placed):
-    """A tiny saddle across the thorax and the front of the wings, strapped round underneath."""
-    leather = lambda face, xx, yy, fw, fh: LEATHER["dark"] if yy in (0, fh - 1) else LEATHER["light"] if (xx + yy) % 3 else LEATHER["base"]
-    img = overpaint(img, placed, "thorax", ("top",), leather)
-    img = overpaint(img, placed, "thorax", ("east", "west"),
-                    lambda face, xx, yy, fw, fh: (LEATHER["iron"] if yy == 1 else LEATHER["dark"]) if xx == fw // 2 else None)
-    return img
-
-
 def grasshopper_animations():
     stride = lambda a: {"rotation": kf((0, [a, 0, 0]), (0.2, [-a, 0, 0]), (0.4, [a, 0, 0]))}
     walk = {"leg_front_left": stride(25), "leg_front_right": stride(-25), "leg_middle_left": stride(-25), "leg_middle_right": stride(25),
@@ -226,27 +152,6 @@ FIREFLY = [
     ("wing_left", "body", [0.5, 3, -1.5], [("wing", [0.5, 3, -1.5], [3, 0, 5], "wing", False)]),
     ("wing_right", "body", [-0.5, 3, -1.5], [("wing", [-3.5, 3, -1.5], [3, 0, 5], "wing", True)]),
 ]
-FLY = dict(body=(0x2a, 0x22, 0x1e), shield=(0xe0, 0x6a, 0x3a), spot=(0x1a, 0x12, 0x10), wing=(0x5a, 0x4a, 0x3e),
-           edge=(0xc8, 0xa0, 0x60), lantern=(0xd8, 0xf0, 0x70), bright=(0xf6, 0xff, 0xb0))
-
-
-def firefly_pixel(name, kind, face, xx, yy, fw, fh, n):
-    p = FLY
-    if kind == "wing":
-        return p["edge"] if xx in (0, fw - 1) else shade(p["wing"], 0.9 + 0.2 * n)
-    if kind == "lantern":
-        return p["bright"] if n > 0.7 else shade(p["lantern"], 0.9 + 0.15 * n)
-    if kind == "head":
-        return shade(p["body"], 1.0 + 0.4 * n)
-    if face == "top":
-        return p["spot"] if xx == fw // 2 and yy < 2 else p["shield"]  # the orange shield over its head
-    return shade(p["body"], 0.9 + 0.3 * n)
-
-
-def firefly_glow(name, kind, face, xx, yy, fw, fh, n):
-    return firefly_pixel(name, kind, face, xx, yy, fw, fh, n) if kind == "lantern" else None
-
-
 def firefly_animations():
     beat = []
     for i in range(25):
@@ -276,97 +181,6 @@ WHALE = [
     ("tail2", "tail", [0, 9, 28], [("tail2", [-4, 6, 28], [8, 7, 12], "hide", False)]),
     ("fluke", "tail2", [0, 9, 40], [("fluke", [-13, 8, 39], [26, 2, 10], "fin", False)]),
 ]
-WHALE_PAL = dict(back=(0x2e, 0x44, 0x86), dark=(0x1e, 0x2c, 0x5a), light=(0x4a, 0x66, 0xb0), cloud=(0xe8, 0xf0, 0xff),
-                 belly=(0xd8, 0xdc, 0xf0), groove=(0xa8, 0xb0, 0xd0), barnacle=(0xc8, 0xc4, 0xb8), eye=(0x10, 0x10, 0x18),
-                 fin=(0x3a, 0x52, 0x9a))
-BLANKET = dict(red=(0xb0, 0x20, 0x30), deep=(0x80, 0x14, 0x22), gold=(0xe8, 0xc0, 0x40))
-
-
-def whale_pixel(name, kind, face, xx, yy, fw, fh, n):
-    p = WHALE_PAL
-    if kind == "eye":
-        return (0xff, 0xff, 0xff) if xx == 0 and yy == 0 else p["eye"]
-    if kind == "jaw" or face == "bottom":
-        if face in ("east", "west") and yy == 0:
-            return p["dark"]  # the long line of its mouth
-        return p["groove"] if face == "bottom" and xx % 3 == 0 else shade(p["belly"], 0.92 + 0.12 * n)
-    if kind == "fin":
-        return p["light"] if n > 0.85 else shade(p["fin"], 0.9 + 0.2 * n)
-    # The hide: deep blue, lighter down the flanks and pale toward the belly, with drifting cloud-white patches.
-    patch = noise(xx // 3, yy // 3, len(name) * 7 + (0 if face == "top" else 3))
-    if face in ("east", "west") and yy >= fh - 3:
-        return shade(p["belly"], 0.95 + 0.1 * n)
-    if patch > 0.86:
-        return shade(p["cloud"], 0.95 + 0.08 * n)
-    if face == "top" and name == "body" and n > 0.97:
-        return p["barnacle"]
-    c = shade(p["back"], 0.9 + 0.2 * n)
-    if face in ("east", "west") and yy >= fh // 2:
-        c = shade(p["light"], 0.9 + 0.15 * n)
-    return c
-
-
-# The Storm Leviathan wears the whale's shape in storm colours: charcoal and slate, thundercloud patches, and
-# zigzag lightning scars down its back and flanks that glow (with its eyes) from the glowmask.
-LEVIATHAN_PAL = dict(back=(0x2a, 0x2e, 0x3a), dark=(0x14, 0x16, 0x1e), light=(0x4a, 0x50, 0x64), cloud=(0x3e, 0x44, 0x56),
-                     belly=(0x6a, 0x70, 0x84), groove=(0x4a, 0x50, 0x60), barnacle=(0x8a, 0x8a, 0x90), eye=(0xff, 0xe0, 0x40),
-                     fin=(0x22, 0x26, 0x32))
-BOLT = (0xff, 0xf0, 0x60)
-
-
-def is_scar(name, kind, face, xx, yy):
-    if kind != "hide" or face not in ("top", "east", "west"):
-        return False
-    zig = yy % 6 if (yy // 6) % 2 == 0 else 5 - yy % 6
-    return (xx + zig) % 13 == 0
-
-
-def leviathan_pixel(name, kind, face, xx, yy, fw, fh, n):
-    if kind == "eye":
-        return LEVIATHAN_PAL["eye"]
-    if is_scar(name, kind, face, xx, yy):
-        return BOLT
-    global WHALE_PAL
-    saved, WHALE_PAL = WHALE_PAL, LEVIATHAN_PAL
-    try:
-        return whale_pixel(name, kind, face, xx, yy, fw, fh, n)
-    finally:
-        WHALE_PAL = saved
-
-
-def leviathan_glow(name, kind, face, xx, yy, fw, fh, n):
-    if kind == "eye":
-        return LEVIATHAN_PAL["eye"]
-    return BOLT if is_scar(name, kind, face, xx, yy) else None
-
-
-def whale_saddle(img, placed):
-    """A long saddle blanket across the middle of its back, room for four, fringed with gold and strapped underneath."""
-    u, v, (w, h, d), _ = placed["body"]
-    start, end = d // 2 - 7, d // 2 + 7  # centred along its length
-
-    def top(face, xx, yy, fw, fh):
-        if not start <= yy < end:
-            return None
-        if yy in (start, end - 1) or xx in (0, fw - 1):
-            return BLANKET["gold"]
-        return BLANKET["deep"] if (xx // 2 + yy // 2) % 4 == 0 else BLANKET["red"]
-
-    def side(face, xx, yy, fw, fh):
-        if xx in (d // 2 - 1, d // 2):
-            return LEATHER["iron"] if yy == 6 else LEATHER["dark"]  # the girth strap
-        if not start <= xx < end or yy > 4:
-            return None
-        return BLANKET["gold"] if yy == 4 or xx in (start, end - 1) else BLANKET["red"]
-
-    def belly(face, xx, yy, fw, fh):
-        return LEATHER["dark"] if yy in (d // 2 - 1, d // 2) else None
-
-    img = overpaint(img, placed, "body", ("top",), top)
-    img = overpaint(img, placed, "body", ("east", "west"), side)
-    return overpaint(img, placed, "body", ("bottom",), belly)
-
-
 def whale_animations():
     swim = {"tail": {"rotation": wave(7, 4, 0.0)},
             "tail2": {"rotation": wave(11, 4, 0.12)},
@@ -375,35 +189,6 @@ def whale_animations():
             "fin_right": {"rotation": wave(-12, 4, 0.1, axis=2)},
             "body": {"rotation": wave(2, 4, 0.5), "position": wave(0.6, 4, 0.25, axis=1)}}
     return {"move.swim": {"loop": True, "animation_length": 4, "bones": swim}}
-
-
-# --- The Firefly Jar --------------------------------------------------------------------------------------------
-# A 16x16 texture: the jar's glass sides (clear but for the rim and a glint), its base, a cork lid, and the cloud of
-# fireflies inside (bright dots on clear). Clear pixels make the block cut out, so you see the fireflies through it.
-
-GLASS, GLINT, CORK, CORK_DARK = (0xd8, 0xf0, 0xf0, 255), (0xff, 0xff, 0xff, 255), (0xa8, 0x78, 0x48, 255), (0x6a, 0x4a, 0x2a, 255)
-GLOW, GLOW_BRIGHT = (0xd8, 0xf0, 0x70, 255), (0xf6, 0xff, 0xb0, 255)
-
-
-def jar_texture():
-    img = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
-    for y in range(8):  # side: 6 x 8 at (0, 0)
-        for x in range(6):
-            if x in (0, 5) or y in (0, 7):
-                img[y][x] = GLASS
-    img[2][1] = img[3][1] = GLINT
-    for y in range(6):  # base: 6 x 6 at (6, 0)
-        for x in range(6, 12):
-            img[y][x] = GLASS
-    for y in range(9, 16):  # lid top: 7 x 7 at (0, 9)
-        for x in range(7):
-            img[y][x] = CORK_DARK if x in (0, 6) or y in (9, 15) else CORK
-    for y in range(9, 11):  # lid side: 7 x 2 at (7, 9)
-        for x in range(7, 14):
-            img[y][x] = CORK_DARK if y == 10 else CORK
-    for x, y in ((12, 1), (14, 0), (15, 3), (13, 3), (12, 4), (14, 2)):  # the fireflies: 4 x 5 at (12, 0)
-        img[y][x] = GLOW_BRIGHT if (x + y) % 2 else GLOW
-    return img
 
 
 def jar_model():
@@ -434,24 +219,24 @@ def dump(path, data):
 def main():
     placed = pack(GRASSHOPPER, GRASSHOPPER_TEX)
     write_model("grasshopper", GRASSHOPPER, placed, GRASSHOPPER_TEX, (2, 1.5, 0.5), grasshopper_animations())
-    skin = paint(placed, GRASSHOPPER_TEX, grasshopper_pixel)
+    skin = skins.paint_model(placed, GRASSHOPPER_TEX, skins.grasshopper_texel)
     write_png(ASSETS / "textures" / "entity" / "grasshopper.png", skin)
-    write_png(ASSETS / "textures" / "entity" / "grasshopper_saddled.png", grasshopper_saddle(skin, placed))
+    write_png(ASSETS / "textures" / "entity" / "grasshopper_saddled.png", skins.grasshopper_saddle(skin, placed))
 
     placed = pack(FIREFLY, FIREFLY_TEX)
     write_model("firefly", FIREFLY, placed, FIREFLY_TEX, (1, 1, 0.2), firefly_animations())
-    write_png(ASSETS / "textures" / "entity" / "firefly.png", paint(placed, FIREFLY_TEX, firefly_pixel))
-    write_png(ASSETS / "textures" / "entity" / "firefly_glowmask.png", paint(placed, FIREFLY_TEX, firefly_glow))
+    write_png(ASSETS / "textures" / "entity" / "firefly.png", skins.paint_model(placed, FIREFLY_TEX, skins.firefly_texel))
+    write_png(ASSETS / "textures" / "entity" / "firefly_glowmask.png", skins.paint_model(placed, FIREFLY_TEX, skins.firefly_glow))
 
     placed = pack(WHALE, WHALE_TEX)
     write_model("sky_whale", WHALE, placed, WHALE_TEX, (6, 3, 1), whale_animations())
-    skin = paint(placed, WHALE_TEX, whale_pixel)
+    skin, leviathan, glow = skins.whale_skins(placed, WHALE_TEX)
     write_png(ASSETS / "textures" / "entity" / "sky_whale.png", skin)
-    write_png(ASSETS / "textures" / "entity" / "sky_whale_saddled.png", whale_saddle(skin, placed))
-    write_png(ASSETS / "textures" / "entity" / "storm_leviathan.png", paint(placed, WHALE_TEX, leviathan_pixel))
-    write_png(ASSETS / "textures" / "entity" / "storm_leviathan_glowmask.png", paint(placed, WHALE_TEX, leviathan_glow))
+    write_png(ASSETS / "textures" / "entity" / "sky_whale_saddled.png", skins.whale_saddle(skin, placed))
+    write_png(ASSETS / "textures" / "entity" / "storm_leviathan.png", leviathan)
+    write_png(ASSETS / "textures" / "entity" / "storm_leviathan_glowmask.png", glow)
 
-    write_png(ASSETS / "textures" / "block" / "firefly_jar.png", jar_texture())
+    write_png(ASSETS / "textures" / "block" / "firefly_jar.png", skins.jar_texture())
     dump(ASSETS / "models" / "block" / "firefly_jar.json", jar_model())
     dump(ASSETS / "blockstates" / "firefly_jar.json", {"variants": {"": {"model": f"{NS}:block/firefly_jar"}}})
     dump(ASSETS / "items" / "firefly_jar.json", {"model": {"type": "minecraft:model", "model": f"{NS}:block/firefly_jar"}})

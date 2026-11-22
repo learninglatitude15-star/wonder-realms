@@ -7,11 +7,13 @@ Run from the wonder-realms folder after the other generators (generate_assets.py
     python3 tools/generate_data.py
 """
 import json
+import os
 from pathlib import Path
 
-from generate_dragon_assets import shade, write_png, noise
+import item_art as art
+from generate_dragon_assets import write_png
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
@@ -226,17 +228,8 @@ def advancement(key, parent, icon, title, description, frame, criteria):
 
 
 def sky_background():
-    """The advancement screen's tile: a deep evening sky with soft drifting clouds, dark enough for the text."""
-    sky, cloud = (0x2a, 0x3e, 0x66), (0x4e, 0x66, 0x94)
-    img = []
-    for y in range(16):
-        row = []
-        for x in range(16):
-            puff = sum(noise((x + dx) // 3, (y + dy) // 2, 41) for dx in (0, 2) for dy in (0, 1)) / 4
-            c = cloud if puff > 0.62 else shade(sky, 0.92 + 0.12 * noise(x, y, 5))
-            row.append((*c, 255))
-        img.append(row)
-    return img
+    """The advancement screen's tile (drawn by item_art): a deep evening sky with soft clouds, seamless when tiled."""
+    return art.sky_backdrop()
 
 
 # --- Loot ------------------------------------------------------------------------------------------------------

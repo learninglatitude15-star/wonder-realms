@@ -5,11 +5,14 @@ and one per dye color), item icon, recipe and lang.
 Run from the wonder-realms/tools folder:  python3 generate_airship_assets.py
 """
 import json
+import os
 from pathlib import Path
 
-from generate_dragon_assets import box_uv_size, faces, noise, shade, write_png
+import creature_skins as skins
+import item_art as art
+from generate_dragon_assets import box_uv_size, write_png
 
-ROOT = Path(__file__).resolve().parent.parent / "src" / "main" / "resources"
+ROOT = Path(os.environ.get("WR_RESOURCES") or Path(__file__).resolve().parent.parent / "src" / "main" / "resources")
 ASSETS = ROOT / "assets" / "wonderrealms"
 DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
@@ -94,28 +97,8 @@ def pack():
 
 
 def skin(placed, stripes=(COLORS["red"], COLORS["cream"])):
-    img = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
-    for name, (u, v, size, kind) in placed.items():
-        for face, (fx, fy, fw, fh) in faces(u, v, size).items():
-            for yy in range(fh):
-                for xx in range(fw):
-                    px, py = fx + xx, fy + yy
-                    n = noise(px, py, 9)
-                    if kind == "cloth":
-                        c = stripes[0] if (xx // 6) % 2 == 0 else stripes[1]
-                        c = shade(c, 0.92 + 0.1 * n)
-                    elif kind == "wood":
-                        c = shade(COLORS["wood"], 0.85 + 0.25 * noise(px // 4, py, 2))
-                        if (yy % 4 == 0 and face in ("north", "south", "east", "west")) or (xx % 4 == 0 and face in ("top", "bottom")):
-                            c = shade(COLORS["wood"], 0.7)  # plank seams
-                    elif kind == "iron":
-                        c = shade(COLORS["iron"], 0.85 + 0.3 * n)
-                        if name == "engine" and face == "north" and 2 <= yy <= 4 and 2 <= xx <= fw - 3:
-                            c = (0xff, 0x9a, 0x30)  # firebox glow
-                    else:
-                        c = shade(COLORS[kind], 0.85 + 0.25 * n)
-                    img[py][px] = (*c, 255)
-    return img
+    """The airship's skin, painted by creature_skins: shaded striped envelope with a rope net, planked hull, iron."""
+    return skins.paint_model(placed, TEX, skins.airship_painter(stripes))
 
 
 def geometry(placed, cannon=False):
@@ -155,28 +138,6 @@ def animations():
     return {"format_version": "1.8.0", "animations": {"misc.idle": anim(idle, 4), "move.fly": anim(fly, 0.4 if False else 2)}}
 
 
-ICON = [
-    "................",
-    "....RRCCRRCC....",
-    "...RRCCRRCCRR...",
-    "..RRCCRRCCRRCC..",
-    "..RRCCRRCCRRCC..",
-    "...RRCCRRCCRR...",
-    "....RRCCRRCC....",
-    ".....r....r.....",
-    ".....r....r.....",
-    ".....r....r.....",
-    "..WWWWWWWWWWWW..",
-    "..WwwwwwwwwwwW..",
-    "...WWWWWWWWWW...",
-    "....dddddddd....",
-    "................",
-    "................",
-]
-ICON_PAL = {"R": (0xc0, 0x30, 0x2a, 255), "C": (0xf0, 0xe4, 0xc8, 255), "r": (0xc8, 0xa8, 0x70, 255),
-            "W": (0x9a, 0x6a, 0x3a, 255), "w": (0x7a, 0x52, 0x2a, 255), "d": (0x5a, 0x3a, 0x20, 255)}
-
-
 def main():
     placed = pack()
     (ASSETS / "geckolib" / "models" / "entity" / "airship.geo.json").write_text(json.dumps(geometry(placed), indent=1))
@@ -192,8 +153,7 @@ def main():
         light = name in ("white", "light_gray", "yellow")
         write_png(ASSETS / "textures" / "entity" / f"airship_{name}.png", skin(placed, (color, tint(color, -0.25) if light else tint(color, 0.45))))
 
-    icon = [[ICON_PAL.get(ch, (0, 0, 0, 0)) for ch in row] for row in ICON]
-    write_png(ASSETS / "textures" / "item" / "airship.png", icon)
+    write_png(ASSETS / "textures" / "item" / "airship.png", art.airship_icon())
     (ASSETS / "models" / "item" / "airship.json").write_text(json.dumps({"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/airship"}}, indent=2))
     (ASSETS / "items" / "airship.json").write_text(json.dumps({"model": {"type": "minecraft:model", "model": f"{NS}:item/airship"}}, indent=2))
     (DATA / "recipe" / "airship.json").write_text(json.dumps({
