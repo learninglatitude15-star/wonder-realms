@@ -1,0 +1,103 @@
+{
+  "attributes": {
+    "minecraft:gameplay/natural_mob_spawns": {
+      "argument": {
+        "spawn_costs": {},
+        "spawns_by_category": {
+          "creature": [
+            {
+              "type": "minecraft:rabbit",
+              "count": {
+                "type": "minecraft:uniform",
+                "min_inclusive": 2,
+                "max_inclusive": 3
+              },
+              "weight": 4
+            },
+            {
+              "type": "wonderrealms:crystal_dragon",
+              "count": 1,
+              "weight": 3
+            },
+            {
+              "type": "wonderrealms:frost_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:aurora_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:moon_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:star_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:pearl_dragon",
+              "count": 1,
+              "weight": 1
+            }
+          ]
+        }
+      },
+      "modifier": "overlay"
+    },
+    "minecraft:visual/fog_color": "#eadfff",
+    "minecraft:visual/sky_color": "#b7a7ff",
+    "minecraft:visual/ambient_particles": {
+      "argument": [
+        {
+          "particle": {
+            "type": "minecraft:end_rod"
+          },
+          "probability": 0.0008
+        }
+      ],
+      "modifier": "append"
+    }
+  },
+  "carvers": [],
+  "downfall": 0.4,
+  "effects": {
+    "water_color": "#8f7dff"
+  },
+  "features": [
+    [],
+    [],
+    [
+      "wonderrealms:overcloud_geode"
+    ],
+    [],
+    [
+      "wonderrealms:overcloud_island"
+    ],
+    [],
+    [
+      "minecraft:ore_coal_upper",
+      "minecraft:ore_iron_upper",
+      "minecraft:ore_copper",
+      "minecraft:ore_emerald",
+      "minecraft:ore_diamond"
+    ],
+    [],
+    [
+      "minecraft:spring_water"
+    ],
+    [
+      "minecraft:glow_lichen",
+      "minecraft:trees_cherry",
+      "minecraft:flower_cherry",
+      "minecraft:patch_grass_normal"
+    ],
+    []
+  ],
+  "has_precipitation": true,
+  "temperature": 0.4
+}

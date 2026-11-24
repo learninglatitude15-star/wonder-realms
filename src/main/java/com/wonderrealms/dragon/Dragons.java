@@ -5,6 +5,8 @@ import com.wonderrealms.WonderRealms;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Function;
+import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -51,6 +53,10 @@ import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Unit;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -62,9 +68,11 @@ import net.minecraft.world.level.material.PushReaction;
 /**
  * Registers the dragons: one creature type per element and the Elder Dragon, eggs for the wild kinds, dragon armor,
  * the whistle, dragon scales and dragonscale armor, the Elder Dragon's scales and heart, and the breath and power
- * keys' network messages. Wild dragons live only on sky islands, guarding roosts or carrying pillagers (see
- * {@code SkyIslandFeature}). Eggs only come from dragons: kill a wild adult for its egg, or tame one and it lays
- * eggs. The End's Dragon Egg hatches an Ender Dragon when fed chorus fruit.
+ * keys' network messages. The first wild dragons live on sky islands, guarding roosts or carrying pillagers (see
+ * {@code SkyIslandFeature}); since 2.0, eight more live on the ground in the Overworld's biomes (the Echo dragon in
+ * lairs in the Deep Dark), and eight in the Overcloud's (see its biomes' data). Eggs only come from dragons: kill a
+ * wild adult for its egg, or tame one and it lays eggs. The End's Dragon Egg hatches an Ender Dragon when fed chorus
+ * fruit.
  */
 public final class Dragons {
 	public static final Map<DragonElement, EntityType<DragonEntity>> TYPES = new EnumMap<>(DragonElement.class);
@@ -121,19 +129,24 @@ public final class Dragons {
 			.build(ELDER_KEY));
 	public static final Item ELDER_SPAWN_EGG = item("elder_dragon_spawn_egg", properties -> new SpawnEggItem(properties.spawnEgg(ELDER)));
 
+	/** The Echo dragon's lairs in the Deep Dark (data/wonderrealms/worldgen/{feature,placed_feature}/echo_lair). */
+	public static final ResourceKey<PlacedFeature> ECHO_LAIR = ResourceKey.create(Registries.PLACED_FEATURE, WonderRealms.id("echo_lair"));
+
 	/** Chance each chorus fruit fed to the End's Dragon Egg hatches it. */
 	private static final float CHORUS_HATCH_CHANCE = 0.25F;
 
 	static {
 		for (DragonElement element : DragonElement.values()) {
 			ResourceKey<EntityType<?>> typeKey = ResourceKey.create(Registries.ENTITY_TYPE, WonderRealms.id(element.id + "_dragon"));
-			EntityType<DragonEntity> type = Registry.register(BuiltInRegistries.ENTITY_TYPE, typeKey,
-				FabricEntityType.Builder.<DragonEntity>createMob((t, level) -> new DragonEntity(t, level, element), MobCategory.CREATURE,
-						mob -> mob.spawnPlacement(SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Dragons::canSpawn))
-					.sized(2.2F, 1.9F)
-					.eyeHeight(1.6F)
-					.clientTrackingRange(10)
-					.build(typeKey));
+			EntityType.Builder<DragonEntity> builder = FabricEntityType.Builder.<DragonEntity>createMob((t, level) -> new DragonEntity(t, level, element),
+					MobCategory.CREATURE, mob -> mob.spawnPlacement(SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Dragons::canSpawn))
+				.sized(2.2F, 1.9F)
+				.eyeHeight(1.6F)
+				.clientTrackingRange(10);
+			if (element == DragonElement.PHOENIX) {
+				builder = builder.fireImmune(); // born of fire
+			}
+			EntityType<DragonEntity> type = Registry.register(BuiltInRegistries.ENTITY_TYPE, typeKey, builder.build(typeKey));
 			TYPES.put(element, type);
 			FabricDefaultAttributeRegistry.register(type, DragonEntity.createAttributes());
 			ResourceKey<Item> spawnEggKey = ResourceKey.create(Registries.ITEM, WonderRealms.id(element.id + "_dragon_spawn_egg"));
@@ -157,6 +170,22 @@ public final class Dragons {
 					case HONEY -> MapColor.COLOR_YELLOW;
 					case RAINBOW -> MapColor.COLOR_PINK;
 					case AIR -> MapColor.SNOW;
+					case SLIME -> MapColor.COLOR_LIGHT_GREEN;
+					case MUSHROOM -> MapColor.COLOR_RED;
+					case BLOSSOM -> MapColor.COLOR_PINK;
+					case IRON -> MapColor.METAL;
+					case BONE -> MapColor.QUARTZ;
+					case JUNGLE -> MapColor.COLOR_GREEN;
+					case ECHO -> MapColor.COLOR_CYAN;
+					case CORAL -> MapColor.COLOR_ORANGE;
+					case SUN -> MapColor.GOLD;
+					case MOON -> MapColor.COLOR_LIGHT_GRAY;
+					case STAR -> MapColor.COLOR_BLUE;
+					case AURORA -> MapColor.EMERALD;
+					case PHOENIX -> MapColor.FIRE;
+					case NIMBUS -> MapColor.COLOR_GRAY;
+					case GOLD -> MapColor.GOLD;
+					case PEARL -> MapColor.SNOW;
 					default -> MapColor.COLOR_PURPLE;
 				})
 				.strength(3F, 9F)
@@ -189,8 +218,8 @@ public final class Dragons {
 	}
 
 	/**
-	 * Dragons don't spawn naturally (they come from sky islands, eggs and spawn eggs). This only matters to things
-	 * like a dragon monster spawner: open, solid ground under the sky, and one attempt in four.
+	 * Where a dragon may appear on its own: open, solid ground under the sky, one attempt in four. The first dragons
+	 * only ever do through a dragon monster spawner; the 2.0 kinds spawn in their biomes as the world is made.
 	 */
 	private static boolean canSpawn(EntityType<DragonEntity> type, ServerLevelAccessor level, EntitySpawnReason reason, BlockPos pos, RandomSource random) {
 		return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
@@ -198,6 +227,9 @@ public final class Dragons {
 	}
 
 	public static void init() {
+		DragonEffects.init();
+		DragonKinds.registerEvents();
+		wildHomes();
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.NATURAL_BLOCKS).register(output -> EGG_ITEMS.values().forEach(output::accept));
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.SPAWN_EGGS).register(output -> {
 			SPAWN_EGGS.values().forEach(output::accept);
@@ -253,6 +285,31 @@ public final class Dragons {
 			}
 			return InteractionResult.SUCCESS;
 		});
+	}
+
+	/**
+	 * Where the Overworld's own dragons live: each in its biomes, appearing (like horses or llamas) as new land is
+	 * made, one at a time and none too often. The Echo dragon lives in lairs in the Deep Dark instead, out of the sky's
+	 * reach. (The Overcloud's dragons are in its biomes' data.)
+	 */
+	private static void wildHomes() {
+		home(DragonElement.SLIME, 5, Biomes.SWAMP, Biomes.MANGROVE_SWAMP);
+		home(DragonElement.MUSHROOM, 6, Biomes.MUSHROOM_FIELDS);
+		home(DragonElement.MUSHROOM, 3, Biomes.DARK_FOREST);
+		home(DragonElement.BLOSSOM, 4, Biomes.CHERRY_GROVE);
+		home(DragonElement.BLOSSOM, 2, Biomes.FLOWER_FOREST, Biomes.MEADOW);
+		home(DragonElement.IRON, 4, Biomes.WINDSWEPT_HILLS, Biomes.WINDSWEPT_GRAVELLY_HILLS, Biomes.WINDSWEPT_FOREST, Biomes.STONY_PEAKS);
+		home(DragonElement.BONE, 3, Biomes.DESERT, Biomes.BADLANDS, Biomes.WOODED_BADLANDS, Biomes.ERODED_BADLANDS);
+		home(DragonElement.BONE, 2, Biomes.PALE_GARDEN);
+		home(DragonElement.JUNGLE, 5, Biomes.JUNGLE, Biomes.BAMBOO_JUNGLE, Biomes.SPARSE_JUNGLE);
+		home(DragonElement.CORAL, 4, Biomes.BEACH);
+		Registry.register(BuiltInRegistries.FEATURE_TYPE, WonderRealms.id("echo_lair"), EchoLairFeature.CODEC);
+		BiomeModifications.addFeature(BiomeSelectors.includeByKey(Biomes.DEEP_DARK), GenerationStep.Decoration.UNDERGROUND_DECORATION, ECHO_LAIR);
+	}
+
+	@SafeVarargs
+	private static void home(DragonElement element, int weight, ResourceKey<Biome>... biomes) {
+		BiomeModifications.addSpawn(BiomeSelectors.includeByKey(biomes), MobCategory.CREATURE, TYPES.get(element), weight, 1, 1);
 	}
 
 	/** A full set of dragonscale armor: falls don't hurt and fire can't burn. (And who's gliding on Dragon Wings.) */

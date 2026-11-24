@@ -1,12 +1,30 @@
 # Wonder Realms
 
-A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) with three adventures in one:
+A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) with four adventures in one:
 
 - **Tiny Worlds**: shrink to the size of a bug, shrink your enemies too, ride a beetle up a wall, fly a dragonfly,
   and leap on a grasshopper.
 - **Dragons**: win an egg, raise a dragon, armor it, fly it, unleash its power, and face the Elder Dragon.
 - **Sky Islands & Airships**: explore floating islands of twelve kinds and villages in the sky, ride a sky whale,
   face the Storm Leviathan, raid pillager sky outposts, and fight battles between airships.
+- **The Overcloud**: rise through the storm into a new world above the sky, where floating continents drift over an
+  endless sea of clouds.
+
+## What's new in 2.0
+
+- **The Overcloud**: a new dimension above the sky. Floating continents in four biomes (Sunlit Meadows, Storm
+  Heights, Crystal Reaches and Dragon Peaks) drift over an endless sea of clouds, crowded with sky islands, dragons
+  and sky whales.
+- **The Storm Eye**: the Storm Leviathan's eye, or four Elder Scales around a Heart of the Sea. Hold it at y 300 or
+  higher in the Overworld and the storm lifts you, and your dragon, airship or whale, into the Overcloud.
+- **Clouds**: soft blocks that break any fall. Sneak to sink through, and sink out of the bottom of the cloud sea to
+  drift back down into the Overworld.
+- **Sixteen new dragons**: eight that live on the ground in the Overworld's biomes (Slime, Mushroom, Blossom, Iron,
+  Bone, Jungle, Echo and Coral) and eight in the Overcloud (Sun, Moon, Star, Aurora, Phoenix, Nimbus, Gold and Pearl),
+  each with its own breath, gift, power, food and egg, plus two new effects and eleven new advancements.
+- **Ocean islands**: a sea in the sky, with a coral reef, kelp, fish, a lighthouse, and sunken treasure at the bottom
+  (often a Heart of the Sea). It leaks, pouring waterfalls into the sky below.
+- **Dragons rear back** on their hind legs, wings flung wide, and roar when they use their power. See [the changelog](UPDATE-2.0.0.md).
 
 ## What's new in 1.4.0+
 
@@ -222,6 +240,32 @@ Heart** and a pile of **Elder Scales**.
 - **Elder Scales**: eight around netherite dragon armor make **Elder Dragon Armor**; two on a netherite sword make
   the **Elder Blade**, which lets loose fire, frost, lightning or shadow with every blow.
 
+### The 2.0 dragons
+
+Eight dragons live on the ground in the Overworld, each in its biomes, appearing as new land is explored. They're
+peaceful unless attacked. Eight more live in the Overcloud's biomes. They guard sky island roosts too: the Overworld's
+islands can have any of its eight new kinds as well as the first eleven, and the Overcloud's islands any kind at all. Each has a breath, a gift for its rider, a power
+(R) and a favourite food (every dragon eats meat too):
+
+| Dragon | Lives in | Breath | Gift | Power (R) | Favourite food |
+| --- | --- | --- | --- | --- | --- |
+| **Slime** | Swamps | Goo that bounces foes up and gums their feet | **Bouncy**: no fall damage, and higher jumps | **Boing!** Every foe bounces sky-high | Slimeballs |
+| **Mushroom** | Mushroom fields, dark forests | Dizzying spores. Ridden, it sprouts mushrooms and grows them huge | Shrugs off poison, hunger, nausea and weakness | **Fairy Ring**: mushrooms spring up all around, foes reel, riders feast | Mushrooms |
+| **Blossom** | Cherry groves, flower forests, meadows | Petals that calm foes and make animals fall in love | Baby animals near it grow up fast | **Petal Storm**: heals friends, calms foes, and animals fall in love | Pink petals, apples |
+| **Iron** | Windswept hills, stony peaks | A heavy blast of iron filings | Plated hide; its rider gets Resistance | **Iron Guard**: an iron golem fights beside you for half a minute | Iron ingots or nuggets |
+| **Bone** | Deserts, badlands, the pale garden | Bone shards that weaken foes | The undead leave its rider alone | **Grave Howl**: the undead crumble, and every foe is left weak | Bones |
+| **Jungle** | Jungles | A lash of vines that drags foes in and snares them | Its rider strikes harder (Strength) | **Vine Snare**: every foe is yanked in and tied up | Melon slices, cocoa beans |
+| **Echo** | Lairs in the Deep Dark, and gloom sky islands | A sonic pulse that no armor stops, leaving foes in darkness | Echolocation: monsters near its rider glow | **Sonic Boom**: the warden's own blast at every foe | Sculk, echo shards |
+| **Coral** | Beaches | Bubbles that float foes helplessly away | Swims as fast as it flies; its rider swims like a dolphin | **Bubble Trap**: every foe floats off in a bubble | Fish |
+| **Sun** | Sunlit Meadows | A sunbeam that blinds foes and burns the undead. Ridden, it bakes sand into glass, clay into terracotta and more | Golden hearts, topped up by the sun | **Solar Flare**: a blinding flash that sets the undead ablaze | Sunflowers |
+| **Moon** | Crystal Reaches | Moon dust that sends foes to sleep | Slow falling, as if on the moon | **Lullaby**: every foe falls asleep | Cookies |
+| **Star** | Crystal Reaches, Dragon Peaks | Stardust that lights foes up and bursts | Lucky star: more experience from kills | **Meteor Shower**: falling stars strike every foe | Glow berries, glowstone dust |
+| **Aurora** | Crystal Reaches | Shimmering light that heals friends and lights up foes | Two extra hearts | **Aurora Veil**: heals and shields every friend around | Fish |
+| **Phoenix** | Dragon Peaks | Fire that heals the phoenix as it burns | It can't burn, and it saves its rider from death (every 5 minutes) | **Rebirth Blaze**: a ring of fire, and the phoenix and its riders rise renewed | Blaze powder |
+| **Nimbus** | Storm Heights, Sunlit Meadows | A cloudburst that blinds foes. Ridden, it builds clouds you can walk on, even in midair | Arrows can't touch its rider | **Rain Cloud**: a raincloud bursts over every foe | Snowballs |
+| **Gold** | Dragon Peaks | Dazzling gold dust that throws foes back | Treasure sense: unopened chests nearby sparkle | **Golden Hoard**: golden armor for the dragon and its riders | Gold nuggets or ingots |
+| **Pearl** | Storm Heights, Crystal Reaches | A shimmer that blinks foes away | It blinks out of danger, and endermen leave its rider alone | **Blink**: teleport across the sky | Ender pearls |
+
 ## Sky Islands
 
 Floating islands drift between y 180 and 230 in every overworld biome, roughly a hundred blocks apart. Each has a
@@ -237,6 +281,10 @@ themes:
 - **Verdant**: moss, flowering azalea, pink petals, and spore blossoms and glow berries thick beneath.
 - **Lagoon**: sandy shores round a lagoon of seagrass and glowing sea pickles, palm trees, sea lantern pillars, and
   waterfalls. Prismarine, sea lanterns and glow lichen beneath.
+- **Ocean**: a sea in the sky. A beach ring round a coral reef and kelp forest full of fish, palm trees, a little
+  lighthouse, and sunken treasure half buried at the bottom (often a Heart of the Sea). And it leaks: the sea spills
+  over the beach, gushes from the island's sides and pours out of holes underneath, in waterfalls you can see from far
+  off.
 - **Crystal**: calcite and giant amethyst crystals (some with budding amethyst at their heart, so they grow back),
   cherry trees in blossom, and crystals hanging beneath. The most diamonds of any island.
 - **Gloom**: pale moss and pale oaks trailing moss, eyeblossoms that open at night, sculk, soul-lit obelisks and soul
@@ -322,6 +370,38 @@ Pillagers fly airships too, under dark balloons, and every one carries a cannon.
 then when a player is near, and sky outposts keep one docked. Shoot the crew off and the ship, and the plunder in
 its hold, are yours to take. Or sink it with your own cannon.
 
+## The Overcloud
+
+A dimension above the sky: floating continents over an endless sea of clouds.
+
+**Getting there.** You need a **Storm Eye**. The Storm Leviathan drops one, or you can craft one:
+
+```
+             elder scale
+elder scale  heart of the sea  elder scale
+             elder scale
+```
+
+Hold it in either hand at **y 300 or higher in the Overworld** and the storm lifts you into the Overcloud, onto the
+top of the cloud sea. Whatever you're riding (a dragon, an airship, a sky whale) comes too, with everyone on it. From
+y 200 up, the eye tugs upward and tells you how much higher to go. It isn't used up.
+
+**Getting back.** The cloud sea is made of **Cloud** blocks. They hold you up, and landing on them never hurts. Sneak
+to sink through them. Sink out of the bottom and you fall back into the Overworld's sky at y 290, with Slow Falling
+(for your mount too) to drift down safely. Clouds can be mined and placed anywhere, as a soft landing pad.
+
+**Biomes.**
+
+- **Sunlit Meadows**, the commonest: meadows of flowers and pumpkins, with sheep, cows, chickens and rabbits.
+- **Storm Heights**: wind-bent trees under a grey sky crackling with sparks, with goats and Storm dragons.
+- **Crystal Reaches**: cherry groves and amethyst geodes in the cliffs, with Crystal and Frost dragons.
+- **Dragon Peaks**: savanna peaks under a sunset haze, with llamas and Ember, Earth, Honey, Verdant, Air and Rainbow
+  dragons.
+
+**Sky islands.** Every kind of sky island from the Overworld floats in the Overcloud too: higher (from y 240), about
+three times as often, and more of them are dragon roosts, sky villages and Sky Citadels. Sky whales swim at every
+height.
+
 ## Advancements
 
 The **Wonder Realms** tab tracks these:
@@ -338,6 +418,11 @@ The **Wonder Realms** tab tracks these:
   dragon.
 - **Sky**: boarding an airship, capturing a pillager airship, dyeing a balloon, firing a cannon, sinking a pillager
   ship, riding and steering a sky whale, and catching fireflies in a jar.
+- **Overcloud**: getting a Storm Eye, and rising through the storm into the Overcloud.
+- **2.0 dragons**: taming every dragon of the Overworld's wilds, and every dragon of the Overcloud; bouncing a mob with
+  a Slime dragon, making animals fall in love with a Blossom dragon, calling an Iron dragon's golem, trapping a mob in a
+  Coral dragon's bubble, baking glass with a Sun dragon, sending a mob to sleep with a Moon dragon, building clouds with
+  a Nimbus dragon, being saved by a Phoenix dragon, and blinking with a Pearl dragon.
 
 ## For developers
 
@@ -368,6 +453,7 @@ python3 tools/generate_beetle_assets.py
 python3 tools/generate_dragonfly_assets.py
 python3 tools/generate_creature_assets.py
 python3 tools/generate_gear_assets.py
+python3 tools/generate_overcloud.py
 python3 tools/generate_data.py
 ```
 

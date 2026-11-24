@@ -20,6 +20,7 @@ import com.wonderrealms.grasshopper.Grasshoppers;
 import com.wonderrealms.whale.SkyWhales;
 import com.wonderrealms.miner.PixelMinerEntity;
 import com.wonderrealms.miner.PixelMiners;
+import com.wonderrealms.overcloud.Overcloud;
 import com.wonderrealms.pixel.PixelMining;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -105,6 +106,8 @@ public class WonderRealmsClient implements ClientModInitializer {
 		tips.put(TinyWorlds.SHRINK_RAY, "shrink_ray");
 		tips.put(TinyWorlds.PIXEL_CHISEL, "pixel_chisel");
 		tips.put(Dragons.WHISTLE, "dragon_whistle");
+		tips.put(Overcloud.STORM_EYE, "storm_eye");
+		tips.put(Overcloud.CLOUD_ITEM, "cloud");
 		tips.put(Dragons.DRAGON_SCALE, "dragon_scale");
 		tips.put(Dragons.ELDER_SCALE, "elder_scale");
 		tips.put(Dragons.DRAGON_HEART, "dragon_heart");

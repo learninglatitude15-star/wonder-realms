@@ -7,6 +7,7 @@ import com.wonderrealms.dragon.DragonElement;
 import com.wonderrealms.dragon.DragonEntity;
 import com.wonderrealms.dragon.ElderDragonEntity;
 import com.wonderrealms.dragon.Dragons;
+import com.wonderrealms.overcloud.Overcloud;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,9 +97,13 @@ public record SkyIslandFeature() implements Feature {
 	private static final ResourceKey<LootTable> HOARD_LOOT = loot("chests/dragon_hoard");
 	private static final ResourceKey<LootTable> OUTPOST_LOOT = loot("chests/sky_outpost");
 	private static final ResourceKey<LootTable> CITADEL_LOOT = loot("chests/sky_citadel");
+	/** Half buried at the bottom of an ocean island's sea. */
+	private static final ResourceKey<LootTable> SUNKEN_LOOT = loot("chests/sunken_treasure");
 
 	private static final int MIN_Y = 180;
 	private static final int Y_SPREAD = 50;
+	/** In the Overcloud, islands float above its continents, and more of them are villages, citadels and roosts. */
+	private static final int OVERCLOUD_MIN_Y = 240, OVERCLOUD_Y_SPREAD = 36;
 	/** How far from the island's middle anything is built: inside the 3x3 chunks a feature may write to. */
 	private static final int REACH = 22;
 
@@ -115,12 +120,16 @@ public record SkyIslandFeature() implements Feature {
 
 	@Override
 	public boolean place(WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos origin) {
-		int top = Math.min(MIN_Y + random.nextInt(Y_SPREAD), level.getMaxY() - 40);
+		boolean overcloud = level.getLevel().dimension() == Overcloud.LEVEL;
+		int top = overcloud ? Math.min(OVERCLOUD_MIN_Y + random.nextInt(OVERCLOUD_Y_SPREAD), level.getMaxY() - 30)
+			: Math.min(MIN_Y + random.nextInt(Y_SPREAD), level.getMaxY() - 40);
 		// Centred on the chunk, so the whole island fits in the area this chunk's decoration may build in.
 		BlockPos center = new BlockPos((origin.getX() & ~15) + 8, top, (origin.getZ() & ~15) + 8);
 		int roll = random.nextInt(20);
-		Kind kind = roll < 4 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 19 ? Kind.CITADEL : roll == 18 ? Kind.VILLAGE : Kind.WILD;
-		DragonElement guardian = DragonElement.WILD[random.nextInt(DragonElement.WILD.length)];
+		Kind kind = overcloud
+			? roll < 5 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 8 ? Kind.CITADEL : roll < 11 ? Kind.VILLAGE : Kind.WILD
+			: roll < 4 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 19 ? Kind.CITADEL : roll == 18 ? Kind.VILLAGE : Kind.WILD;
+		DragonElement guardian = roostGuardian(overcloud, random);
 		Theme theme = switch (kind) {
 			case ROOST -> Theme.of(guardian);
 			case OUTPOST -> random.nextBoolean() ? Theme.MEADOW : Theme.STORM;
@@ -129,8 +138,20 @@ public record SkyIslandFeature() implements Feature {
 			// Meadows are the commonest wild islands (three in ten); every other theme is one in ten.
 			case WILD -> random.nextInt(10) < 3 ? Theme.MEADOW : Theme.ELEMENTAL[random.nextInt(Theme.ELEMENTAL.length)];
 		};
-		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : kind == Kind.CITADEL || kind == Kind.VILLAGE ? 13 + random.nextInt(2) : 7 + random.nextInt(5);
+		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : kind == Kind.CITADEL || kind == Kind.VILLAGE ? 13 + random.nextInt(2)
+			: theme == Theme.OCEAN ? 12 + random.nextInt(2) : 7 + random.nextInt(5);
 
+		decorate(level, center, kind, theme, guardian, radius, random);
+		return true;
+	}
+
+	/** Builds a wild ocean island centred on {@code center}, just as the feature would (so the tests can look one over). */
+	public static void placeOceanIsland(WorldGenLevel level, BlockPos center, RandomSource random) {
+		decorate(level, center, Kind.WILD, Theme.OCEAN, DragonElement.CORAL, 12 + random.nextInt(2), random);
+	}
+
+	private static void decorate(WorldGenLevel level, BlockPos center, Kind kind, Theme theme, DragonElement guardian, int radius,
+			RandomSource random) {
 		Island island = Island.shape(level, center, radius, theme, random);
 		island.build(random);
 		switch (kind) {
@@ -139,35 +160,57 @@ public record SkyIslandFeature() implements Feature {
 			case CITADEL -> citadel(island, random);
 			case VILLAGE -> village(island, random);
 			case WILD -> {
-				// Every lagoon island that's big enough has its lagoon.
-				if (radius >= 9 && random.nextBoolean() || theme == Theme.LAGOON && radius >= 8) {
-					pond(island, random);
+				if (theme == Theme.OCEAN) {
+					sea(island, random); // its own little ocean, with treasure at the bottom
+				} else {
+					// Every lagoon island that's big enough has its lagoon.
+					if (radius >= 9 && random.nextBoolean() || theme == Theme.LAGOON && radius >= 8) {
+						pond(island, random);
+					}
+					shrine(island, random);
 				}
-				shrine(island, random);
 			}
 		}
 		if (kind != Kind.CITADEL && kind != Kind.VILLAGE) {
 			landmarks(island, random); // the castle is a citadel's landmark, and the houses a village's
 		}
 		trees(island, kind, random);
-		int waterfalls = theme == Theme.LAGOON ? 1 + random.nextInt(2) : theme.hasWaterfalls() && random.nextInt(3) == 0 ? 1 : 0;
+		int waterfalls = theme == Theme.OCEAN ? 2 + random.nextInt(2) : theme == Theme.LAGOON ? 1 + random.nextInt(2)
+			: theme.hasWaterfalls() && random.nextInt(3) == 0 ? 1 : 0;
 		for (int i = 0; i < waterfalls; i++) {
 			waterfall(island, random);
 		}
 		island.hangUnderside(random);
 		plants(island, random);
 		islets(island, random);
-		return true;
+		if (theme == Theme.OCEAN) {
+			leaks(island, random); // last, so nothing built afterwards plugs them
+		}
+	}
+
+	/**
+	 * Who guards a roost: any of the sky islands' own eleven kinds, or (since 2.0) one of the new dragons: the
+	 * Overworld's wild kinds on its islands, and on the Overcloud's islands any kind at all.
+	 */
+	private static DragonElement roostGuardian(boolean overcloud, RandomSource random) {
+		List<DragonElement> kinds = new ArrayList<>(Arrays.asList(DragonElement.WILD));
+		kinds.addAll(Arrays.asList(DragonElement.OVERWORLD_WILDS));
+		if (overcloud) {
+			kinds.addAll(Arrays.asList(DragonElement.OVERCLOUD));
+		}
+		return kinds.get(random.nextInt(kinds.size()));
 	}
 
 	// ---- Themes ---------------------------------------------------------------------------------------------
 
 	/** What an island is made of and what grows on it. Roosts take on their dragon's element. */
 	private enum Theme {
-		MEADOW, EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM, CANYON, HIVE, RAINBOW, CLOUD;
+		MEADOW, EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM, CANYON, HIVE, RAINBOW, CLOUD,
+		/** A sea in the sky: a ring of beach round a little ocean, with a reef, kelp, fish and sunken treasure. */
+		OCEAN;
 
-		/** The themes besides the plain meadow, one for each wild dragon. */
-		static final Theme[] ELEMENTAL = {EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM, CANYON, HIVE, RAINBOW, CLOUD};
+		/** The themes besides the plain meadow: one for each of the first wild dragons, and the ocean islands. */
+		static final Theme[] ELEMENTAL = {EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM, CANYON, HIVE, RAINBOW, CLOUD, OCEAN};
 
 		static Theme of(DragonElement element) {
 			return switch (element) {
@@ -182,12 +225,25 @@ public record SkyIslandFeature() implements Feature {
 				case HONEY -> HIVE;
 				case RAINBOW -> RAINBOW;
 				case AIR -> CLOUD;
+				// The 2.0 dragons nest on the islands most like home.
+				case SLIME, JUNGLE -> VERDANT;
+				case MUSHROOM, ECHO -> GLOOM;
+				case BLOSSOM -> HIVE;
+				case IRON -> STORM;
+				case BONE -> CANYON;
+				case CORAL -> LAGOON;
+				case MOON, STAR -> CRYSTAL;
+				case AURORA -> FROST;
+				case PHOENIX -> EMBER;
+				case NIMBUS, PEARL -> CLOUD;
+				case GOLD -> RAINBOW;
 				default -> MEADOW;
 			};
 		}
 
 		boolean hasWaterfalls() {
-			return this == MEADOW || this == STORM || this == VERDANT || this == LAGOON || this == HIVE || this == RAINBOW || this == CLOUD;
+			return this == MEADOW || this == STORM || this == VERDANT || this == LAGOON || this == HIVE || this == RAINBOW || this == CLOUD
+				|| this == OCEAN;
 		}
 
 		BlockState top(RandomSource random) {
@@ -209,6 +265,7 @@ public record SkyIslandFeature() implements Feature {
 				case CANYON -> r < 0.6F ? Blocks.RED_SAND : r < 0.8F ? Blocks.COARSE_DIRT : r < 0.92F ? Blocks.TERRACOTTA : Blocks.DYED_TERRACOTTA.orange();
 				case HIVE, RAINBOW -> Blocks.GRASS_BLOCK;
 				case CLOUD -> r < 0.85F ? Blocks.WOOL.white() : Blocks.SNOW_BLOCK; // soft as a cloud
+				case OCEAN -> r < 0.9F ? Blocks.SAND : Blocks.GRAVEL; // a beach all the way round
 			}).defaultBlockState();
 		}
 
@@ -228,6 +285,7 @@ public record SkyIslandFeature() implements Feature {
 				case HIVE -> r < 0.85F ? Blocks.DIRT : Blocks.ROOTED_DIRT;
 				case RAINBOW -> Blocks.DIRT;
 				case CLOUD -> Blocks.WOOL.white();
+				case OCEAN -> Blocks.SANDSTONE; // holds the beach up
 			}).defaultBlockState();
 		}
 
@@ -245,6 +303,7 @@ public record SkyIslandFeature() implements Feature {
 				case CANYON -> state.is(Blocks.RED_SAND) || state.is(Blocks.COARSE_DIRT) || state.is(Blocks.TERRACOTTA) || state.is(Blocks.DYED_TERRACOTTA.orange());
 				case HIVE, RAINBOW -> state.is(Blocks.GRASS_BLOCK);
 				case CLOUD -> state.is(Blocks.WOOL.white()) || state.is(Blocks.SNOW_BLOCK);
+				case OCEAN -> state.is(Blocks.SAND) || state.is(Blocks.GRAVEL);
 			};
 		}
 
@@ -284,7 +343,10 @@ public record SkyIslandFeature() implements Feature {
 					: roll < 0.21F ? Blocks.BLUE_ICE : roll < 0.28F ? Blocks.CALCITE : Blocks.STONE;
 				case STORM -> block = roll < 0.09F ? Blocks.COPPER_ORE : roll < 0.12F ? Blocks.IRON_ORE : roll < 0.13F ? Blocks.EMERALD_ORE
 					: deep && roll < 0.14F ? Blocks.DIAMOND_ORE : roll < 0.3F ? (deep ? Blocks.TUFF : Blocks.ANDESITE) : Blocks.STONE;
-				// Sea-floor stone, rich in lapis and copper.
+				// Sea-floor stone, rich in lapis and copper (and an ocean island's, in prismarine and clay too).
+				case OCEAN -> block = roll < 0.05F ? Blocks.LAPIS_ORE : roll < 0.1F ? Blocks.COPPER_ORE : roll < 0.12F ? Blocks.GOLD_ORE
+					: deep && roll < 0.135F ? Blocks.DIAMOND_ORE : roll < 0.3F ? Blocks.PRISMARINE : roll < 0.38F ? Blocks.DARK_PRISMARINE
+					: roll < 0.48F ? Blocks.CLAY : roll < 0.65F ? Blocks.SANDSTONE : Blocks.STONE;
 				case LAGOON -> block = roll < 0.04F ? Blocks.LAPIS_ORE : roll < 0.08F ? Blocks.COPPER_ORE : roll < 0.11F ? Blocks.IRON_ORE
 					: roll < 0.12F ? Blocks.GOLD_ORE : deep && roll < 0.13F ? Blocks.DIAMOND_ORE : roll < 0.3F ? Blocks.PRISMARINE
 					: roll < 0.45F ? Blocks.SANDSTONE : Blocks.STONE;
@@ -313,7 +375,7 @@ public record SkyIslandFeature() implements Feature {
 					: random.nextInt(8) == 0 ? Blocks.GILDED_BLACKSTONE : Blocks.POLISHED_BLACKSTONE_BRICKS;
 				case FROST -> pick == 0 ? Blocks.PACKED_ICE : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
 				case STORM -> pick == 0 ? Blocks.CUT_COPPER.weathering().oxidized() : pick == 1 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS;
-				case LAGOON -> pick == 0 ? Blocks.PRISMARINE : pick == 1 ? Blocks.DARK_PRISMARINE : Blocks.PRISMARINE_BRICKS;
+				case LAGOON, OCEAN -> pick == 0 ? Blocks.PRISMARINE : pick == 1 ? Blocks.DARK_PRISMARINE : Blocks.PRISMARINE_BRICKS;
 				case CRYSTAL -> pick == 0 ? Blocks.CALCITE : pick == 1 ? Blocks.POLISHED_TUFF : Blocks.TUFF_BRICKS;
 				case GLOOM -> pick == 0 ? Blocks.CRACKED_DEEPSLATE_BRICKS : pick == 1 ? Blocks.DEEPSLATE_TILES
 					: pick == 2 ? Blocks.CRACKED_DEEPSLATE_TILES : Blocks.DEEPSLATE_BRICKS;
@@ -365,6 +427,9 @@ public record SkyIslandFeature() implements Feature {
 		private final int[] surface = new int[SIZE * SIZE];
 		private final int[] bottom = new int[SIZE * SIZE];
 		private final float[] inner = new float[SIZE * SIZE];
+		/** An ocean island's sea: its columns (dx, dz, floor) and the height of its surface (see {@code sea}). */
+		List<int[]> sea = List.of();
+		int seaLevel;
 
 		private Island(WorldGenLevel level, BlockPos center, int radius, Theme theme) {
 			this.level = level;
@@ -432,6 +497,11 @@ public record SkyIslandFeature() implements Feature {
 
 		void setSurface(int dx, int dz, int y) {
 			this.surface[index(dx, dz)] = y;
+		}
+
+		/** The lowest block of a column's underside. */
+		int bottom(int dx, int dz) {
+			return this.bottom[index(dx, dz)];
 		}
 
 		/** How far inside the island a column is: 0 at (or beyond) the edge, 1 in the middle of a lobe. */
@@ -547,7 +617,7 @@ public record SkyIslandFeature() implements Feature {
 								this.glowBerries(tip, 1 + random.nextInt(5), 0.4F, random);
 							}
 						}
-						case LAGOON -> {
+						case LAGOON, OCEAN -> {
 							if (random.nextInt(3) == 0) {
 								this.set(tip, Blocks.GLOW_LICHEN.defaultBlockState().setValue(MultifaceBlock.getFaceProperty(Direction.UP), true));
 							} else {
@@ -685,6 +755,7 @@ public record SkyIslandFeature() implements Feature {
 			case STORM, FROST, GLOOM -> 2 + random.nextInt(3);
 			case EMBER, CRYSTAL -> 3 + random.nextInt(3);
 			case LAGOON, HIVE, CLOUD -> 1 + random.nextInt(2);
+			case OCEAN -> 1;
 			case RAINBOW -> 2 + random.nextInt(2);
 			case CANYON -> 3 + random.nextInt(3);
 			default -> 0;
@@ -707,6 +778,7 @@ public record SkyIslandFeature() implements Feature {
 					}
 				}
 				case LAGOON -> seaLanternPillar(island, ground, random);
+				case OCEAN -> lighthouse(island, ground, random);
 				case CRYSTAL -> crystal(island, ground, random);
 				case CANYON -> {
 					if (count % 3 == 0) {
@@ -1057,7 +1129,9 @@ public record SkyIslandFeature() implements Feature {
 		for (int attempt = 0; attempt < 40 && planted.size() < wanted; attempt++) {
 			int dx = random.nextInt(island.radius * 2 + 1) - island.radius;
 			int dz = random.nextInt(island.radius * 2 + 1) - island.radius;
-			if (island.inner(dx, dz) < 0.25F || dx * dx + dz * dz < clearing * clearing || !island.isOpenGround(dx, dz)) {
+			// An ocean island's palms stand on its beach, all the way out to the edge.
+			float inward = island.theme == Theme.OCEAN ? 0.08F : 0.25F;
+			if (island.inner(dx, dz) < inward || dx * dx + dz * dz < clearing * clearing || !island.isOpenGround(dx, dz)) {
 				continue;
 			}
 			BlockPos ground = island.ground(dx, dz);
@@ -1107,7 +1181,7 @@ public record SkyIslandFeature() implements Feature {
 					crown(leaves, base.above(logs.size() - 1), 2.6, 0.75, Blocks.OAK_LEAVES.defaultBlockState(), null, random);
 				}
 			}
-			case LAGOON -> {
+			case LAGOON, OCEAN -> {
 				log = Blocks.JUNGLE_LOG.defaultBlockState();
 				palm(base, random, logs, leaves);
 			}
@@ -1372,7 +1446,7 @@ public record SkyIslandFeature() implements Feature {
 							}
 						}
 					}
-					case LAGOON -> {
+					case LAGOON, OCEAN -> {
 						if (soil.is(Blocks.SAND)) {
 							if (roll < 0.06F) {
 								island.set(above, Blocks.SHORT_DRY_GRASS.defaultBlockState());
@@ -1588,6 +1662,270 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
+	/** How far inside an ocean island its sea begins: the beach round it is what holds the water in. */
+	private static final float SEA_INNER = 0.3F;
+	private static final Block[] CORAL_BLOCKS = {Blocks.TUBE_CORAL_BLOCK, Blocks.BRAIN_CORAL_BLOCK, Blocks.BUBBLE_CORAL_BLOCK,
+		Blocks.FIRE_CORAL_BLOCK, Blocks.HORN_CORAL_BLOCK};
+	private static final Block[] CORALS = {Blocks.TUBE_CORAL, Blocks.BRAIN_CORAL, Blocks.BUBBLE_CORAL, Blocks.FIRE_CORAL, Blocks.HORN_CORAL,
+		Blocks.TUBE_CORAL_FAN, Blocks.BRAIN_CORAL_FAN, Blocks.BUBBLE_CORAL_FAN, Blocks.FIRE_CORAL_FAN, Blocks.HORN_CORAL_FAN};
+
+	/**
+	 * An ocean island's sea: the middle of the island hollowed out and filled with water, held in by the beach all
+	 * round it (built up wherever it's low). A coral reef grows in the shallows and kelp sways in the deeps, seagrass
+	 * and glowing sea pickles dot the sandy floor, fish and squid swim about, and a chest of sunken treasure lies half
+	 * buried at the bottom, by a sea lantern. Sometimes a Coral dragon swims there too, guarding it. Once the rest of
+	 * the island is built, the sea gets its leaks (see {@link #leaks}).
+	 */
+	private static void sea(Island island, RandomSource random) {
+		int level = island.center.getY(); // the sea's surface
+		List<int[]> cells = new ArrayList<>();
+		for (int dx = -REACH; dx <= REACH; dx++) {
+			for (int dz = -REACH; dz <= REACH; dz++) {
+				boolean inside = island.inner(dx, dz) >= SEA_INNER;
+				for (Direction side : Direction.Plane.HORIZONTAL) {
+					inside &= island.has(dx + side.getStepX(), dz + side.getStepZ());
+				}
+				if (inside) {
+					cells.add(new int[] {dx, dz, 0});
+				}
+			}
+		}
+		if (cells.size() < 20) {
+			return;
+		}
+		// The beach has to stand at least as high as the sea all round it, or it'd spill: build it up where it's low.
+		for (int[] cell : cells) {
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				int x = cell[0] + side.getStepX(), z = cell[1] + side.getStepZ();
+				if (isCell(cells, x, z) || island.surface(x, z) >= level) {
+					continue;
+				}
+				for (int y = island.surface(x, z) + 1; y <= level; y++) {
+					island.set(island.column(x, y, z), (y == level ? Blocks.SAND : Blocks.SANDSTONE).defaultBlockState());
+				}
+				island.setSurface(x, z, level);
+			}
+		}
+		// Hollow it out and fill it, deepest in the middle. The water never reaches below the underside of any column
+		// round it, so it can't leak out underneath.
+		int[] deepest = null;
+		for (int[] cell : cells) {
+			int x = cell[0], z = cell[1];
+			int depth = 2 + (int) ((island.inner(x, z) - SEA_INNER) / (1 - SEA_INNER) * 7) + random.nextInt(2);
+			int floor = Math.max(level - depth, island.bottom(x, z) + 1);
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				floor = Math.max(floor, island.bottom(x + side.getStepX(), z + side.getStepZ()) + 1);
+			}
+			floor = Math.min(floor, level - 1);
+			for (int y = level + 1; y <= island.surface(x, z); y++) {
+				island.set(island.column(x, y, z), Blocks.AIR.defaultBlockState());
+			}
+			float bed = random.nextFloat();
+			island.set(island.column(x, floor, z), (bed < 0.12F ? Blocks.GRAVEL : bed < 0.2F ? Blocks.CLAY : Blocks.SAND).defaultBlockState());
+			for (int y = floor + 1; y <= level; y++) {
+				island.set(island.column(x, y, z), Blocks.WATER.defaultBlockState());
+			}
+			island.setSurface(x, z, level);
+			cell[2] = floor;
+			if (deepest == null || floor < deepest[2]) {
+				deepest = cell;
+			}
+		}
+		island.sea = cells;
+		island.seaLevel = level;
+		// Life on the sea floor.
+		for (int[] cell : cells) {
+			int x = cell[0], z = cell[1], floor = cell[2], depth = level - floor;
+			BlockPos bed = island.column(x, floor, z);
+			float roll = random.nextFloat();
+			if (roll < 0.24F && depth <= 4) {
+				// The reef: coral blocks with corals and fans growing on them.
+				island.set(bed, CORAL_BLOCKS[random.nextInt(CORAL_BLOCKS.length)].defaultBlockState());
+				if (random.nextFloat() < 0.65F && depth >= 2) {
+					island.set(bed.above(), CORALS[random.nextInt(CORALS.length)].defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true));
+				}
+			} else if (roll < 0.38F && depth >= 4) {
+				// A kelp frond reaching up toward the light.
+				int top = level - 1 - random.nextInt(2);
+				for (int y = floor + 1; y < top; y++) {
+					island.set(island.column(x, y, z), Blocks.KELP_PLANT.defaultBlockState());
+				}
+				island.set(island.column(x, top, z), Blocks.KELP.defaultBlockState());
+			} else if (roll < 0.62F) {
+				if (depth >= 3 && random.nextInt(3) == 0) {
+					island.set(bed.above(), Blocks.TALL_SEAGRASS.defaultBlockState().setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.LOWER));
+					island.set(bed.above(2), Blocks.TALL_SEAGRASS.defaultBlockState().setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
+				} else {
+					island.set(bed.above(), Blocks.SEAGRASS.defaultBlockState());
+				}
+			} else if (roll < 0.68F) {
+				island.set(bed.above(), Blocks.SEA_PICKLE.defaultBlockState()
+					.setValue(SeaPickleBlock.PICKLES, 1 + random.nextInt(SeaPickleBlock.MAX_PICKLES)).setValue(SeaPickleBlock.WATERLOGGED, true));
+			}
+		}
+		// Sunken treasure at the bottom, a sea lantern glowing beside it.
+		BlockPos treasure = island.column(deepest[0], deepest[2], deepest[1]);
+		island.set(treasure.above(), Blocks.WATER.defaultBlockState());
+		island.set(treasure, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random))
+			.setValue(ChestBlock.WATERLOGGED, true));
+		RandomizableContainer.setBlockEntityLootTable(island.level, random, treasure, SUNKEN_LOOT);
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			int x = deepest[0] + side.getStepX(), z = deepest[1] + side.getStepZ();
+			if (isCell(cells, x, z) && random.nextInt(3) == 0) {
+				island.set(island.column(x, cellFloor(cells, x, z), z), Blocks.SEA_LANTERN.defaultBlockState());
+			}
+		}
+		// Who lives there: a school of tropical fish, cod, a squid or two, and sometimes a Coral dragon.
+		List<int[]> deep = cells.stream().filter(cell -> level - cell[2] >= 3).toList();
+		List<int[]> water = deep.isEmpty() ? cells : deep;
+		for (int i = 4 + random.nextInt(4); i > 0; i--) {
+			swimmer(island, EntityTypes.TROPICAL_FISH, water.get(random.nextInt(water.size())), level, random);
+		}
+		for (int i = 2 + random.nextInt(3); i > 0; i--) {
+			swimmer(island, EntityTypes.COD, water.get(random.nextInt(water.size())), level, random);
+		}
+		for (int i = random.nextInt(3); i > 0; i--) {
+			swimmer(island, random.nextInt(3) == 0 ? EntityTypes.GLOW_SQUID : EntityTypes.SQUID, water.get(random.nextInt(water.size())), level, random);
+		}
+		if (random.nextInt(3) == 0) {
+			DragonEntity dragon = Dragons.TYPES.get(DragonElement.CORAL).create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
+			if (dragon != null) {
+				BlockPos at = island.column(deepest[0], level - 1, deepest[1]);
+				dragon.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
+				dragon.setIslandHome(island.column(0, level, 0), false);
+				island.level.addFreshEntity(dragon);
+			}
+		}
+	}
+
+	/**
+	 * Leaks, because an ocean in the sky can't quite hold itself in: the sea spills over the beach through a few
+	 * channels and pours off the edge, springs burst from cracks in the island's sides, and the sea streams out of
+	 * holes in its floor and pours from the island's underside. It never runs dry (its water renews itself, as an
+	 * ocean's does), and the waterfalls it trails into the sky below can be seen from far off.
+	 */
+	private static void leaks(Island island, RandomSource random) {
+		List<int[]> sea = island.sea;
+		int level = island.seaLevel;
+		if (sea.isEmpty()) {
+			return;
+		}
+		// Overflows: a channel cut through the beach from the sea's edge to the island's, where it pours off.
+		List<int[]> shore = new ArrayList<>(sea.stream().filter(cell -> Direction.Plane.HORIZONTAL.stream()
+			.anyMatch(side -> !isCell(sea, cell[0] + side.getStepX(), cell[1] + side.getStepZ()))).toList());
+		java.util.Collections.shuffle(shore, new java.util.Random(random.nextLong()));
+		int channels = 2 + random.nextInt(2);
+		for (int[] cell : shore) {
+			if (channels == 0) {
+				break;
+			}
+			for (Direction out : Direction.Plane.HORIZONTAL) {
+				List<int[]> path = new ArrayList<>();
+				int x = cell[0] + out.getStepX(), z = cell[1] + out.getStepZ();
+				boolean clear = true;
+				while (island.has(x, z) && !isCell(sea, x, z) && path.size() < 12 && clear) {
+					BlockPos above = island.ground(x, z).above();
+					clear = island.isAir(above) || island.get(above).canBeReplaced(); // never through a tree or the lighthouse
+					path.add(new int[] {x, z});
+					x += out.getStepX();
+					z += out.getStepZ();
+				}
+				if (!clear || path.isEmpty() || island.has(x, z)) {
+					continue; // it has to reach the edge, and only through open beach
+				}
+				for (int[] step : path) {
+					for (int y = level + 1; y <= island.surface(step[0], step[1]) + 1; y++) {
+						island.set(island.column(step[0], y, step[1]), Blocks.AIR.defaultBlockState());
+					}
+					if (island.isAir(island.column(step[0], level - 1, step[1]))) {
+						island.set(island.column(step[0], level - 1, step[1]), Blocks.SANDSTONE.defaultBlockState());
+					}
+					island.set(island.column(step[0], level, step[1]), Blocks.WATER.defaultBlockState());
+					island.setSurface(step[0], step[1], level);
+				}
+				int[] lip = path.get(path.size() - 1);
+				island.level.scheduleTick(island.column(lip[0], level, lip[1]), Fluids.WATER, 0); // and over the edge it goes
+				channels--;
+				break;
+			}
+		}
+		// Springs bursting from cracks in the island's sides.
+		List<int[]> rim = new ArrayList<>();
+		for (int dx = -REACH; dx <= REACH; dx++) {
+			for (int dz = -REACH; dz <= REACH; dz++) {
+				if (island.isRim(dx, dz)) {
+					rim.add(new int[] {dx, dz});
+				}
+			}
+		}
+		for (int springs = 2 + random.nextInt(2), attempt = 0; springs > 0 && attempt < 30 && !rim.isEmpty(); attempt++) {
+			int[] spot = rim.get(random.nextInt(rim.size()));
+			int y = island.surface(spot[0], spot[1]) - 2 - random.nextInt(3);
+			BlockPos crack = island.column(spot[0], y, spot[1]);
+			if (y <= island.bottom(spot[0], spot[1]) + 1 || island.isAir(crack) || island.get(crack).is(Blocks.WATER)) {
+				continue;
+			}
+			island.set(crack, Blocks.WATER.defaultBlockState());
+			island.level.scheduleTick(crack, Fluids.WATER, 0);
+			springs--;
+		}
+		// Holes in the sea floor, and the sea streaming out of the bottom of the island.
+		List<int[]> deep = new ArrayList<>(sea.stream().filter(cell -> level - cell[2] >= 2
+			&& !island.get(island.column(cell[0], cell[2], cell[1])).is(Blocks.CHEST)).toList());
+		java.util.Collections.shuffle(deep, new java.util.Random(random.nextLong()));
+		for (int[] cell : deep.subList(0, Math.min(deep.size(), 2 + random.nextInt(2)))) {
+			int bottom = island.bottom(cell[0], cell[1]);
+			for (int y = cell[2]; y >= bottom; y--) {
+				island.set(island.column(cell[0], y, cell[1]), Blocks.WATER.defaultBlockState());
+			}
+			for (int y = bottom - 1; y >= bottom - 4; y--) {
+				island.set(island.column(cell[0], y, cell[1]), Blocks.AIR.defaultBlockState()); // nothing hanging there to plug it
+			}
+			island.level.scheduleTick(island.column(cell[0], bottom, cell[1]), Fluids.WATER, 0);
+		}
+	}
+
+	private static int cellFloor(List<int[]> cells, int x, int z) {
+		for (int[] cell : cells) {
+			if (cell[0] == x && cell[1] == z) {
+				return cell[2];
+			}
+		}
+		return Integer.MIN_VALUE;
+	}
+
+	/** A sea creature somewhere in the water of a sea cell, staying put (it's far from any other sea). */
+	private static void swimmer(Island island, EntityType<? extends Mob> type, int[] cell, int level, RandomSource random) {
+		int y = cell[2] + 1 + random.nextInt(Math.max(1, level - cell[2] - 1));
+		BlockPos at = island.column(cell[0], y, cell[1]);
+		if (!island.get(at).is(Blocks.WATER) && !island.get(at).getFluidState().is(Fluids.WATER)) {
+			return;
+		}
+		spawnVillager(island, type, at, random);
+	}
+
+	/**
+	 * A little striped lighthouse on an ocean island's beach: a red and white tower with a lamp of sea lantern in a
+	 * glass room on top, under a dark prismarine cap.
+	 */
+	private static void lighthouse(Island island, BlockPos ground, RandomSource random) {
+		int height = 6 + random.nextInt(2);
+		for (int y = 1; y <= height; y++) {
+			island.set(ground.above(y), ((y - 1) / 2 % 2 == 0 ? Blocks.CONCRETE.white() : Blocks.CONCRETE.red()).defaultBlockState());
+		}
+		for (Direction side : Direction.Plane.HORIZONTAL) {
+			if (island.isAir(ground.above().relative(side))) {
+				island.set(ground.above().relative(side), Blocks.STONE_BRICK_STAIRS.defaultBlockState()
+					.setValue(BlockStateProperties.HORIZONTAL_FACING, side.getOpposite()));
+			}
+			island.set(ground.above(height + 1).relative(side), Blocks.GLASS.defaultBlockState());
+			island.set(ground.above(height + 2).relative(side), Blocks.DARK_PRISMARINE_SLAB.defaultBlockState());
+		}
+		island.set(ground.above(height + 1), Blocks.SEA_LANTERN.defaultBlockState());
+		island.set(ground.above(height + 2), Blocks.DARK_PRISMARINE.defaultBlockState());
+		island.set(ground.above(height + 3), Blocks.LIGHTNING_ROD.weathering().oxidized().defaultBlockState()); // green from the sea air
+	}
+
 	private static boolean isCell(List<int[]> cells, int x, int z) {
 		for (int[] cell : cells) {
 			if (cell[0] == x && cell[1] == z) {
@@ -1749,7 +2087,7 @@ public record SkyIslandFeature() implements Feature {
 			case FROST -> r < 0.6F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.SNOW_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
 			case VERDANT -> r < 0.5F ? pillar(Blocks.HAY_BLOCK, random) : r < 0.85F ? Blocks.MOSS_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
 			// Driftwood and dried kelp.
-			case LAGOON -> r < 0.45F ? pillar(Blocks.STRIPPED_OAK_LOG, random) : r < 0.85F ? Blocks.DRIED_KELP_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
+			case LAGOON, OCEAN -> r < 0.45F ? pillar(Blocks.STRIPPED_OAK_LOG, random) : r < 0.85F ? Blocks.DRIED_KELP_BLOCK.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
 			case CRYSTAL -> r < 0.4F ? Blocks.AMETHYST_BLOCK.defaultBlockState() : r < 0.8F ? Blocks.CALCITE.defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
 			case GLOOM -> r < 0.5F ? pillar(Blocks.BONE_BLOCK, random) : r < 0.8F ? Blocks.COBBLED_DEEPSLATE.defaultBlockState() : Blocks.PALE_MOSS_BLOCK.defaultBlockState();
 			case CANYON -> r < 0.4F ? Blocks.TERRACOTTA.defaultBlockState() : r < 0.75F ? Blocks.DYED_TERRACOTTA.orange().defaultBlockState() : pillar(Blocks.BONE_BLOCK, random);
@@ -1766,7 +2104,7 @@ public record SkyIslandFeature() implements Feature {
 			case EMBER -> first ? Blocks.BLACKSTONE : Blocks.COARSE_DIRT;
 			case FROST -> first ? Blocks.SNOW_BLOCK : Blocks.COARSE_DIRT;
 			case VERDANT -> first ? Blocks.MOSS_BLOCK : Blocks.ROOTED_DIRT;
-			case LAGOON -> first ? Blocks.SAND : Blocks.CLAY;
+			case LAGOON, OCEAN -> first ? Blocks.SAND : Blocks.CLAY;
 			case CRYSTAL -> first ? Blocks.CALCITE : Blocks.AMETHYST_BLOCK;
 			case GLOOM -> first ? Blocks.SCULK : Blocks.PODZOL;
 			case CANYON -> first ? Blocks.RED_SAND : Blocks.COARSE_DIRT;

@@ -1,8 +1,17 @@
-Shrink to the size of a bug, raise and ride elemental dragons, and raid pillager outposts on floating sky islands.
+Shrink to the size of a bug, raise and ride elemental dragons, raid pillager outposts on floating sky islands, and rise through the storm into the Overcloud.
 
 # Wonder Realms
 
-**Three adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
+**Four adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Then rise through the storm into the Overcloud, a whole world above the sky. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
+
+## ✨ New in 2.0
+
+- **The Overcloud:** a new dimension above the sky! Floating continents drift over an endless sea of clouds, in four biomes: **Sunlit Meadows**, **Storm Heights**, **Crystal Reaches** and **Dragon Peaks**. Sky islands, dragons and sky whales are everywhere.
+- **The Storm Eye:** the way up. The Storm Leviathan drops one, or craft one from four Elder Scales around a Heart of the Sea. Hold it at y 300 or higher and the storm lifts you, and your dragon, airship or whale, into the Overcloud.
+- **Clouds:** soft blocks that break any fall. Sneak to sink through them, and sink out of the bottom of the cloud sea to drift back down to the Overworld.
+- **Dragons rear back** on their hind legs, wings flung wide, and roar whenever they use their power.
+- **Ocean islands:** a sea in the sky! A ring of beach round a little ocean with a coral reef, kelp, fish and a lighthouse, and sunken treasure at the bottom, often with a Heart of the Sea. And it leaks, pouring waterfalls out of its sides and underside into the sky below.
+- **Sixteen new dragons:** eight that finally live on the ground, in the Overworld's swamps, mushroom fields, cherry groves, mountains, deserts, jungles, beaches and the Deep Dark (**Slime, Mushroom, Blossom, Iron, Bone, Jungle, Echo and Coral**), and eight in the Overcloud (**Sun, Moon, Star, Aurora, Phoenix, Nimbus, Gold and Pearl**). Each has its own breath, gift, power and egg: put foes to sleep, trap them in bubbles, bake sand into glass, build clouds in midair, blink across the sky, or ride a phoenix that saves you from death.
 
 ## ✨ New in 1.4.0+
 
@@ -139,6 +148,38 @@ Love carving but don't want to shrink? Hold a **Pixel Chisel** and you can carve
 
 Fire breath never sets your blocks on fire, storm lightning won't burn your house down, and an Earth dragon only digs when you're riding it and aiming its breath.
 
+### The sixteen new dragons (2.0)
+
+#### Dragons of the Overworld's wilds
+
+They live on the ground, each in its own biomes, appearing as new land is explored. They wander in peace and only fight back if you attack them.
+
+| Dragon | Lives in | Breath | Gift | Power (R) | Favourite food |
+| --- | --- | --- | --- | --- | --- |
+| 🟢 **Slime** | Swamps | Goo that bounces foes up and gums their feet | **Bouncy**: no fall damage, and higher jumps | **Boing!** Every foe bounces sky-high | Slimeballs |
+| 🍄 **Mushroom** | Mushroom fields, dark forests | Dizzying spores. Ridden, it sprouts mushrooms and grows them huge | Shrugs off poison, hunger, nausea and weakness | **Fairy Ring**: mushrooms spring up all around, foes reel, riders feast | Mushrooms |
+| 🌸 **Blossom** | Cherry groves, flower forests, meadows | Petals that calm foes and make animals fall in love | Baby animals near it grow up fast | **Petal Storm**: heals friends, calms foes, and animals fall in love | Pink petals, apples |
+| ⚙️ **Iron** | Windswept hills, stony peaks | A heavy blast of iron filings | Plated hide; its rider gets Resistance | **Iron Guard**: an iron golem fights beside you for half a minute | Iron ingots or nuggets |
+| 💀 **Bone** | Deserts, badlands, the pale garden | Bone shards that weaken foes | The undead leave its rider alone | **Grave Howl**: the undead crumble, and every foe is left weak | Bones |
+| 🌿 **Jungle** | Jungles | A lash of vines that drags foes in and snares them | Its rider strikes harder (Strength) | **Vine Snare**: every foe is yanked in and tied up | Melon slices, cocoa beans |
+| 🔊 **Echo** | Lairs in the Deep Dark, and gloom sky islands | A sonic pulse that no armor stops, leaving foes in darkness | Echolocation: monsters near its rider glow | **Sonic Boom**: the warden's own blast at every foe | Sculk, echo shards |
+| 🫧 **Coral** | Beaches | Bubbles that float foes helplessly away | Swims as fast as it flies; its rider swims like a dolphin | **Bubble Trap**: every foe floats off in a bubble | Fish |
+
+#### Dragons of the Overcloud
+
+| Dragon | Lives in | Breath | Gift | Power (R) | Favourite food |
+| --- | --- | --- | --- | --- | --- |
+| ☀️ **Sun** | Sunlit Meadows | A sunbeam that blinds foes and burns the undead. Ridden, it bakes sand into glass, clay into terracotta and more | Golden hearts, topped up by the sun | **Solar Flare**: a blinding flash that sets the undead ablaze | Sunflowers |
+| 🌙 **Moon** | Crystal Reaches | Moon dust that sends foes to sleep | Slow falling, as if on the moon | **Lullaby**: every foe falls asleep | Cookies |
+| ⭐ **Star** | Crystal Reaches, Dragon Peaks | Stardust that lights foes up and bursts | Lucky star: more experience from kills | **Meteor Shower**: falling stars strike every foe | Glow berries, glowstone dust |
+| 🌌 **Aurora** | Crystal Reaches | Shimmering light that heals friends and lights up foes | Two extra hearts | **Aurora Veil**: heals and shields every friend around | Fish |
+| 🔥 **Phoenix** | Dragon Peaks | Fire that heals the phoenix as it burns | It can't burn, and it saves its rider from death (every 5 minutes) | **Rebirth Blaze**: a ring of fire, and the phoenix and its riders rise renewed | Blaze powder |
+| 🌧️ **Nimbus** | Storm Heights, Sunlit Meadows | A cloudburst that blinds foes. Ridden, it builds clouds you can walk on, even in midair | Arrows can't touch its rider | **Rain Cloud**: a raincloud bursts over every foe | Snowballs |
+| 💰 **Gold** | Dragon Peaks | Dazzling gold dust that throws foes back | Treasure sense: unopened chests nearby sparkle | **Golden Hoard**: golden armor for the dragon and its riders | Gold nuggets or ingots |
+| 🦪 **Pearl** | Storm Heights, Crystal Reaches | A shimmer that blinks foes away | It blinks out of danger, and endermen leave its rider alone | **Blink**: teleport across the sky | Ender pearls |
+
+Every dragon eats meat as well as its favourite food.
+
 ### Where dragons live
 
 Wild dragons live **only on sky islands**. They guard their roosts, or carry pillagers at sky outposts. They never just appear around the world, so meeting one is always an event. Wild adults defend their territory and will come for you if you get close.
@@ -249,7 +290,7 @@ Bring the End's **Dragon Egg** home and feed it **chorus fruit**. Every fruit is
 
 Floating islands drift **between y 180 and 230** above every overworld biome, about a hundred blocks apart. Look up as you explore: some islands have a spring that spills a **waterfall all the way down to the ground**, Ember islands send up **columns of smoke**, and at night glow berries give them away.
 
-### Twelve kinds of island
+### Thirteen kinds of island
 
 Every island is different: a few ragged lobes of land with rocky spikes hanging down into the sky, packed with ore, with **diamonds toward the tips**. Each has a theme:
 
@@ -267,6 +308,7 @@ Every island is different: a few ragged lobes of land with rocky spikes hanging 
 | 🌈 **Rainbow** | A stained-glass rainbow arching over the island, prisms of coloured glass, flowering azalea, flowers, and rock in bands of every colour, full of gems |
 | ☁️ **Cloud** | Lumpy white ground of wool and snow, a windmill, little clouds drifting round it, and rain streaking down from beneath |
 | 🌻 **Hive** | A meadow thick with every flower, oaks and birches hung with bee nests, a giant beehive with treasure inside, honeycomb beneath and honey dripping into the sky |
+| 🌊 **Ocean** | A sea in the sky: a beach ring round a coral reef and kelp forest full of fish, palm trees, a little lighthouse, **sunken treasure** at the bottom (often a Heart of the Sea), and leaks everywhere: the sea spills over the beach and pours out of the island's sides and underside in waterfalls |
 
 There are four kinds of island:
 
@@ -360,6 +402,31 @@ The pillagers have airships too. A pillager outpost on the ground sends one up n
 
 ---
 
+## ⛈️ The Overcloud
+
+High above the Overworld, past the clouds and through the storm, lies a whole new world: **floating continents over an endless sea of clouds**.
+
+### Getting there
+
+You need a **Storm Eye**. Defeat the Storm Leviathan and it drops one, or craft one from **four Elder Scales around a Heart of the Sea**. Hold it in either hand **at y 300 or higher in the Overworld** and the storm lifts you up into the Overcloud. Your dragon, airship or sky whale comes with you, along with everyone riding on it. From y 200 up, the eye tugs upward and tells you how much higher to go. It isn't used up.
+
+### The cloud sea
+
+The Overcloud's sea of clouds is made of **Cloud** blocks: they hold you up, and **landing on them never hurts**, from any height. **Sneak to sink through.** Sink all the way out of the bottom and you fall back into the Overworld's sky with Slow Falling, so you drift down safely. Your mount drifts too. Take some clouds home for a soft landing pad.
+
+### Four biomes
+
+- 🌼 **Sunlit Meadows:** rolling meadows of flowers and pumpkins, with sheep, cows, chickens and rabbits
+- ⚡ **Storm Heights:** wind-bent heights under a grey sky crackling with sparks, where Storm dragons nest
+- 💎 **Crystal Reaches:** cherry groves and amethyst geodes in the cliffs, home to Crystal and Frost dragons
+- 🔥 **Dragon Peaks:** warm peaks under a sunset haze, where Ember, Earth, Honey, Verdant, Air and Rainbow dragons gather
+
+### Sky islands everywhere
+
+Every kind of sky island floats in the Overcloud too, about three times as often as in the Overworld's sky, and more of them are dragon roosts, sky villages and **Sky Citadels** with their Elder Dragons. Sky whales swim at every height.
+
+---
+
 ## 🏆 Advancements
 
 The **Wonder Realms** advancement tab tracks your adventures:
@@ -367,6 +434,8 @@ The **Wonder Realms** advancement tab tracks your adventures:
 - **Tiny Worlds:** Honey, I Shrunk Myself · Morning Dew · Small Business · Nine Pixels Make a Gem · Pixel Perfect · Giant Slayer · Honey, I Shrunk the Mobs · Tiny Terror · Sculptor · Beetle Rider · Dragonfly Rider · Leap of Faith
 - **Dragons:** Here Be Dragons · Hatchling · Dragon Tamer · Dragon Rider · Touch the Sky · Liberator · The Dragon Reborn · Knight of the Sky · Unbreakable · Here, Dragon! · Green Thumb · Room for Two · Dragon Collector · Packed for the Journey · Deep Dive · Shine Bright · Unleashed · Scale Collector · Scaled Up · The Elder Awakens · Dragonslayer · Heart of a Dragon · Ancient Armor · Elemental Edge · Tunnel Vision · Liquid Gold · Every Colour · Gone with the Wind · Wings of a Dragon
 - **Sky:** Up, Up and Away · Sky Pirate · Paint the Sky · Broadside! · Shot Down · Whale of a Time · Captain of the Clouds · Jar of Stars · Village in the Clouds · Little Whale · Here Comes the Storm · Leviathan Slayer
+- **Overcloud:** Eye of the Storm · Above the Storm
+- **2.0 dragons:** Dragons of the Wild · Lords of the Overcloud · Boing! · Spring Fever · Iron Ally · Bubble Trouble · Sunbaked · Sweet Dreams · Head in the Clouds · Second Life · Now You See Me
 
 ---
 
@@ -377,6 +446,15 @@ Explore new parts of your world and look up between y 180 and 230. Waterfalls po
 
 **How do I get up there?**
 Build an airship, glide in with an elytra, or build a tower. Once you have a dragon, it can fly you. Or hold up a fish and hitch a ride on a passing sky whale.
+
+**How do I get to the Overcloud?**
+Get a Storm Eye (defeat the Storm Leviathan, or craft one from four Elder Scales around a Heart of the Sea), then hold it at y 300 or higher in the Overworld.
+
+**How do I get home from the Overcloud?**
+Sneak on the clouds to sink through the cloud sea. Fall out of the bottom and you drift back down into the Overworld.
+
+**Where do the new dragons live?**
+The Overworld's eight live on the ground in their biomes: Slime dragons in swamps, Mushroom dragons in mushroom fields and dark forests, Blossom dragons in cherry groves, Iron dragons in windswept hills and stony peaks, Bone dragons in deserts and badlands, Jungle dragons in jungles, Coral dragons on beaches, and Echo dragons in lairs in the Deep Dark (and on gloom sky islands). They appear in land you haven't explored yet. The other eight live in the Overcloud. And they all guard roosts on sky islands too: the Overworld's eight on its sky islands, and every kind on the Overcloud's.
 
 **How do I get a dragon egg?**
 Defeat a wild dragon at a roost or a sky outpost. After that, your own grown dragon lays eggs.
@@ -394,7 +472,7 @@ They're still captives. Defeat every pillager around the outpost first.
 Wait out the five minutes, or drink a Growth Draught.
 
 **Does it work in my existing world?**
-Yes. Sky islands only appear in parts of the world you haven't explored yet.
+Yes. Sky islands only appear in parts of the world you haven't explored yet, and the Overcloud is there to find in any world.
 
 **Does it work in multiplayer?**
 It's built for it: install it on the server and on every player's game.

@@ -187,6 +187,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private static final double CRYSTAL_ARMOR = 6;
 	/** An Earth dragon's rocky hide: a little armor, and it's hard to knock about. */
 	private static final double EARTH_ARMOR = 4, EARTH_KNOCKBACK_RESISTANCE = 0.5;
+	/** An Iron dragon's plated hide: more armor than any other dragon's, and very hard to knock about. */
+	private static final double IRON_ARMOR = 8, IRON_KNOCKBACK_RESISTANCE = 0.6;
 	/** How many bees a Honey dragon's Swarm calls up, and how long they stay (ticks). */
 	private static final int SWARM_SIZE = 6, SWARM_LIFETIME = 600;
 	/** The colours of a Rainbow dragon's breath, red to violet, one for each stretch of the stream. */
@@ -211,7 +213,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private static final double ELDER_PET_HEALTH = 120;
 	/** How long a dragon's power takes to recharge (an Elder's recharges faster), and how far it reaches. */
 	private static final int POWER_COOLDOWN = 20 * 30, ELDER_POWER_COOLDOWN = 20 * 20;
-	private static final double POWER_RADIUS = 10, STORM_POWER_RADIUS = 16;
+	static final double POWER_RADIUS = 10, STORM_POWER_RADIUS = 16;
 	/** A tamed, grown dragon sheds a scale every so often (between this and twice this). */
 	private static final int SHED_INTERVAL = 20 * 60 * 6;
 
@@ -220,6 +222,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private static final RawAnimation FLY = RawAnimation.begin().thenLoop("move.fly");
 	private static final RawAnimation SIT = RawAnimation.begin().thenLoop("misc.sit");
 	private static final RawAnimation BREATH = RawAnimation.begin().thenPlay("attack.breath");
+	/** Rearing back to unleash its power (in the air, it ends with its wings still spread). */
+	private static final RawAnimation REAR = RawAnimation.begin().thenPlay("attack.power");
+	private static final RawAnimation REAR_IN_FLIGHT = RawAnimation.begin().thenPlay("attack.power_air");
 
 	private final DragonElement element;
 	private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -240,6 +245,10 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private int shedTimer = SHED_INTERVAL;
 	/** The bees a Honey dragon's Swarm called up; they buzz off again after half a minute. */
 	private final List<Bee> swarm = new ArrayList<>();
+	/** Helpers a power called up (an Iron dragon's golem), which go again after a while (see {@link DragonKinds}). */
+	final List<Mob> allies = new ArrayList<>();
+	/** Ticks until a Phoenix dragon can save its rider from death again. */
+	private int rebirthCooldown;
 	private final SimpleContainer saddlebags = new SimpleContainer(BAG_SLOTS) {
 		@Override
 		public boolean stillValid(Player player) {
@@ -379,11 +388,13 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			flying.addTransientModifier(new AttributeModifier(id, STORM_SPEED_BONUS, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
 		}
 		AttributeInstance steady = this.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
-		if (this.element == DragonElement.EARTH && protection != null && steady != null) {
+		if ((this.element == DragonElement.EARTH || this.element == DragonElement.IRON) && protection != null && steady != null) {
+			boolean iron = this.element == DragonElement.IRON;
 			protection.removeModifier(id);
-			protection.addTransientModifier(new AttributeModifier(id, EARTH_ARMOR, AttributeModifier.Operation.ADD_VALUE));
+			protection.addTransientModifier(new AttributeModifier(id, iron ? IRON_ARMOR : EARTH_ARMOR, AttributeModifier.Operation.ADD_VALUE));
 			steady.removeModifier(id);
-			steady.addTransientModifier(new AttributeModifier(id, EARTH_KNOCKBACK_RESISTANCE, AttributeModifier.Operation.ADD_VALUE));
+			steady.addTransientModifier(new AttributeModifier(id, iron ? IRON_KNOCKBACK_RESISTANCE : EARTH_KNOCKBACK_RESISTANCE,
+				AttributeModifier.Operation.ADD_VALUE));
 		}
 	}
 
@@ -483,6 +494,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			output.putLong("island_home", this.home.asLong());
 		}
 		output.putBoolean("elder", this.isElder());
+		if (this.rebirthCooldown > 0) {
+			output.putInt("rebirth_cooldown", this.rebirthCooldown);
+		}
 		output.putBoolean("saddlebags", this.hasSaddlebags());
 		if (this.hasSaddlebags()) {
 			NonNullList<ItemStack> items = NonNullList.withSize(BAG_SLOTS, ItemStack.EMPTY);
@@ -508,6 +522,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.home != null && !this.captive && !this.isTame()) {
 			this.setHomeTo(this.home, ROOST_RADIUS);
 		}
+		this.rebirthCooldown = input.getIntOr("rebirth_cooldown", 0);
 		this.entityData.set(BAGS, input.getBooleanOr("saddlebags", false));
 		input.child("saddlebag_items").ifPresent(bags -> {
 			NonNullList<ItemStack> items = NonNullList.withSize(BAG_SLOTS, ItemStack.EMPTY);
@@ -534,9 +549,10 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
-		// Wild adults guard their island: come within a dozen blocks (or anywhere near a pillager's dragon) and they come for you.
+		// Wild adults guard their island: come within a dozen blocks (or anywhere near a pillager's dragon) and they come for
+		// you. So do the Overcloud's. But the dragons wandering the Overworld's own lands only fight back if attacked.
 		this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Player.class, 20, true, false,
-			(target, level) -> !this.isTame() && this.isGrown() && !this.isFreed()
+			(target, level) -> !this.isTame() && this.isGrown() && !this.isFreed() && (this.home != null || level.dimension() != Level.OVERWORLD)
 				&& this.distanceToSqr(target) < (this.isRaiderMounted() ? RAIDER_SIGHT * RAIDER_SIGHT : TERRITORY * TERRITORY)));
 	}
 
@@ -614,6 +630,21 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.element == DragonElement.FROST && this.tickCount % 4 == 0 && this.onGround() && !this.isFlying()) {
 			this.freezeWaterUnderfoot(level);
 		}
+		if (this.rebirthCooldown > 0) {
+			this.rebirthCooldown--;
+		}
+		if (this.element.isNewKind()) {
+			DragonKinds.tick(this, level);
+		}
+	}
+
+	/** Whether a Phoenix dragon is ready to save its rider from death. */
+	boolean rebirthReady() {
+		return this.rebirthCooldown <= 0;
+	}
+
+	void useRebirth() {
+		this.rebirthCooldown = DragonKinds.REBIRTH_COOLDOWN;
 	}
 
 	/** Each kind shares a gift with whoever rides it: no burning, healing, breathing underwater, or seeing in the dark. */
@@ -645,6 +676,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 				rider.heal(1F);
 				((ServerLevel) this.level()).sendParticles(ParticleTypes.HAPPY_VILLAGER, rider.getX(), rider.getY() + 1, rider.getZ(), 3, 0.3, 0.3, 0.3, 0);
 			}
+			if (this.element.isNewKind()) {
+				DragonKinds.gift(this, (ServerLevel) this.level(), rider);
+			}
 		}
 	}
 
@@ -669,8 +703,17 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	}
 
 	@Override
+	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+		boolean hurt = super.hurtServer(level, source, amount);
+		if (hurt && this.element == DragonElement.PEARL && this.isAlive()) {
+			DragonKinds.dodge(this, level); // a Pearl dragon sometimes blinks out of reach
+		}
+		return hurt;
+	}
+
+	@Override
 	public boolean canBreatheUnderwater() {
-		return this.element == DragonElement.TIDE || super.canBreatheUnderwater();
+		return this.element.swims() || super.canBreatheUnderwater();
 	}
 
 	// ---- Interaction ----------------------------------------------------------------------------------------
@@ -933,8 +976,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.yBodyRot = this.getYRot();
 		this.yHeadRot = this.getYRot();
 		// Jump, or look up while moving forward, to take off. Come down looking level or lower to land.
-		// In water, a Tide dragon swims off wherever its rider looks.
-		boolean swim = this.element == DragonElement.TIDE && this.isInWater() && input.z > 0;
+		// In water, a Tide or Coral dragon swims off wherever its rider looks.
+		boolean swim = this.element.swims() && this.isInWater() && input.z > 0;
 		if (!this.isFlying() && (rider.isJumping() || (input.z > 0 && rider.getXRot() < -25F) || swim)) {
 			this.setFlying(true);
 			if (!swim) {
@@ -986,8 +1029,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		Vec3 side = new Vec3(-look.z, 0, look.x).normalize();
 		double speed = this.getAttributeValue(Attributes.FLYING_SPEED) * 0.6
 			* (1 + Math.max(0, -look.y) * 0.7 - Math.max(0, look.y) * 0.25);
-		if (this.isInWater() && this.element != DragonElement.TIDE) {
-			speed *= WATER_DRAG; // wings are slow strokes underwater: only a Tide dragon swims as fast as it flies
+		if (this.isInWater() && !this.element.swims()) {
+			speed *= WATER_DRAG; // wings are slow strokes underwater: only Tide and Coral dragons swim as fast as they fly
 		}
 		Vec3 target = look.scale(input.z * speed).add(side.scale(-input.x * speed * 0.5));
 		if (rider.isJumping()) {
@@ -1127,16 +1170,16 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 
 	/**
 	 * Builds a pillager riding a wild dragon at {@code spawn}, patrolling the outpost at {@code outpost}. Works
-	 * during world generation.
+	 * during world generation (using only {@code level}'s random: the world's own belongs to the server thread).
 	 */
 	public static DragonEntity spawnRaiderMount(ServerLevelAccessor level, BlockPos spawn, BlockPos outpost) {
 		ServerLevel server = level.getLevel();
 		DragonElement[] wild = DragonElement.WILD;
-		DragonEntity dragon = Dragons.TYPES.get(wild[server.getRandom().nextInt(wild.length)]).create(server, EntitySpawnReason.STRUCTURE);
+		DragonEntity dragon = Dragons.TYPES.get(wild[level.getRandom().nextInt(wild.length)]).create(server, EntitySpawnReason.STRUCTURE);
 		if (dragon == null) {
 			return null;
 		}
-		dragon.snapTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, server.getRandom().nextFloat() * 360F, 0F);
+		dragon.snapTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, level.getRandom().nextFloat() * 360F, 0F);
 		dragon.setIslandHome(outpost, true);
 		Pillager rider = EntityTypes.PILLAGER.create(server, EntitySpawnReason.STRUCTURE);
 		if (rider != null) {
@@ -1173,6 +1216,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			return;
 		}
 		this.powerCooldown = this.isElder() ? ELDER_POWER_COOLDOWN : POWER_COOLDOWN;
+		this.rearBack(level);
 		List<LivingEntity> foes = this.powerTargets(level, rider, this.element == DragonElement.STORM ? STORM_POWER_RADIUS : POWER_RADIUS);
 		double x = this.getX(), y = this.getY() + this.getBbHeight() * 0.5, z = this.getZ();
 		switch (this.element) {
@@ -1342,6 +1386,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 					foe.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 50, 3), this);
 				}
 			}
+			default -> DragonKinds.power(this, level, rider, foes);
 		}
 		rider.sendOverlayMessage(Component.translatable("power.wonderrealms." + this.element.id).withStyle(ChatFormatting.GOLD));
 		if (rider instanceof ServerPlayer serverRider) {
@@ -1349,8 +1394,16 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		}
 	}
 
+	/** It rears back on its hind legs, wings flung wide, and roars: every power begins with this. */
+	protected void rearBack(ServerLevel level) {
+		boolean airborne = this.isFlying() || (this.isVehicle() && !this.onGround());
+		this.triggerAnim("power", airborne ? "rear_in_flight" : "rear");
+		level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, this.getSoundSource(),
+			0.7F, (this.isElder() ? 0.9F : 1.2F) + this.random.nextFloat() * 0.1F);
+	}
+
 	/** Monsters near the dragon, and anything the dragon or its rider is fighting. Never friends. */
-	private List<LivingEntity> powerTargets(ServerLevel level, Player rider, double radius) {
+	List<LivingEntity> powerTargets(ServerLevel level, Player rider, double radius) {
 		LivingEntity owner = this.getOwner();
 		return level.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(radius), foe -> foe != this && foe.isAlive()
 			&& !this.hasPassenger(foe) && !this.isFriend(foe, owner) && foe.distanceToSqr(this) < radius * radius
@@ -1358,14 +1411,14 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 				|| foe instanceof Mob mob && (mob.getTarget() == rider || mob.getTarget() == this)));
 	}
 
-	private void powerHit(ServerLevel level, LivingEntity foe, DamageSource source, float amount) {
+	void powerHit(ServerLevel level, LivingEntity foe, DamageSource source, float amount) {
 		foe.setInvulnerableTime(0);
 		this.creditOwner(foe);
 		foe.hurtServer(level, source, amount);
 	}
 
 	/** Gives the dragon and everyone riding it these effects. */
-	private void shield(MobEffectInstance... effects) {
+	void shield(MobEffectInstance... effects) {
 		for (MobEffectInstance effect : effects) {
 			this.addEffect(new MobEffectInstance(effect), this);
 			for (Entity passenger : this.getPassengers()) {
@@ -1397,6 +1450,11 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 
 	public boolean isBreathing() {
 		return this.breathTicks > 0;
+	}
+
+	/** Whether the breath under way is its rider's, aimed where they look (rather than the dragon's own). */
+	boolean isBreathRidden() {
+		return this.breathRidden;
 	}
 
 	/** Starts a breath along {@code direction}. Server only. A rider's breath follows where they look. */
@@ -1451,14 +1509,16 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			Vec3 at = mouth.add(dir.scale(reach * i / 8.0));
 			double spread = 0.1 + i * 0.1;
 			ParticleOptions particle = this.breathElement() == DragonElement.RAINBOW ? RAINBOW_DUST[(i - 1) % RAINBOW_DUST.length]
-				: this.breathElement().breathParticle;
+				: this.breathElement() == DragonElement.AURORA ? DragonKinds.auroraDust(i - 1) : this.breathElement().breathParticle;
 			level.sendParticles(particle, at.x, at.y, at.z, 3, spread, spread, spread, 0.02);
 		}
 		if (this.breathTicks % BREATH_HIT_INTERVAL != 0) {
 			return;
 		}
 		this.burnEntities(level, mouth, dir, reach);
-		if (hit.getType() == HitResult.Type.BLOCK) {
+		if (this.breathElement().isNewKind()) {
+			DragonKinds.breathBlocks(this, level, hit, mouth.add(dir.scale(reach)));
+		} else if (hit.getType() == HitResult.Type.BLOCK) {
 			this.affectBlocks(level, hit.getBlockPos());
 		}
 	}
@@ -1466,12 +1526,16 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private void burnEntities(ServerLevel level, Vec3 mouth, Vec3 dir, double reach) {
 		LivingEntity owner = this.getOwner();
 		AABB area = new AABB(mouth, mouth.add(dir.scale(reach))).inflate(reach * 0.45);
-		float damage = this.breathDamage();
+		float damage = this.breathDamage() * DragonKinds.breathDamageScale(this.breathElement());
 		List<LivingEntity> hit = level.getEntitiesOfClass(LivingEntity.class, area, e -> e != this && e.isAlive() && !this.hasPassenger(e));
 		for (LivingEntity target : hit) {
 			Vec3 to = target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(mouth);
-			if (to.length() > reach + 0.5 || to.normalize().dot(dir) < BREATH_CONE_COS || this.isFriend(target, owner)) {
+			if (to.length() > reach + 0.5 || to.normalize().dot(dir) < BREATH_CONE_COS) {
 				continue;
+			}
+			boolean friend = this.isFriend(target, owner);
+			if (this.breathElement().isNewKind() ? DragonKinds.breathGentle(this, level, target, friend) : friend) {
+				continue; // never hurts friends (an Aurora dragon's light heals them), nor a Blossom dragon's petals animals
 			}
 			if (this.breathElement() == DragonElement.RAINBOW && target instanceof Sheep sheep) {
 				// Sheep aren't hurt by a rainbow: they just come out a new colour.
@@ -1482,7 +1546,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			}
 			target.setInvulnerableTime(0); // a steady stream, not one blow
 			this.creditOwner(target);
-			if (!target.hurtServer(level, this.damageSources().mobAttack(this), damage)) {
+			if (!target.hurtServer(level, DragonKinds.breathSource(this), damage)) {
 				continue;
 			}
 			switch (this.breathElement()) {
@@ -1545,12 +1609,13 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 						target.hurtServer(level, this.damageSources().lightningBolt(), 3F);
 					}
 				}
+				default -> DragonKinds.breathHit(this, level, target, dir);
 			}
 		}
 	}
 
 	/** What the breath does to the world: frost freezes water (and lava), fire melts ice and snow and lights fires. */
-	private void affectBlocks(ServerLevel level, BlockPos center) {
+	void affectBlocks(ServerLevel level, BlockPos center) {
 		if (this.breathElement() == DragonElement.EARTH) {
 			this.dig(level, center);
 			return;
@@ -1572,7 +1637,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 						level.levelEvent(1501, pos, 0); // hiss and smoke
 					}
 				}
-				case EMBER -> {
+				case EMBER, PHOENIX -> {
 					if (state.getBlock() instanceof SnowLayerBlock || state.is(Blocks.POWDER_SNOW)) {
 						level.removeBlock(pos, false);
 					} else if (state.is(Blocks.ICE) || state.is(Blocks.FROSTED_ICE)) {
@@ -1726,7 +1791,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	}
 
 	/** Whoever's riding (or else the owner) earned an advancement with this dragon's breath. */
-	private void awardBreath(String advancement) {
+	void awardBreath(String advancement) {
 		if (this.getControllingPassenger() instanceof ServerPlayer rider) {
 			WonderAdvancements.award(rider, advancement);
 		} else if (this.getOwner() instanceof ServerPlayer owner) {
@@ -1743,14 +1808,14 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	}
 
 	/** What a tamed dragon kills counts as its owner's kill, experience and all, as a wolf's does. */
-	private void creditOwner(LivingEntity target) {
+	void creditOwner(LivingEntity target) {
 		if (this.getOwner() instanceof Player owner) {
 			target.setLastHurtByPlayer(owner, 100);
 		}
 	}
 
 	/** Never breathe on the owner, the owner's pets, a pillager's allies, or other players unless they're the target. */
-	private boolean isFriend(LivingEntity target, LivingEntity owner) {
+	boolean isFriend(LivingEntity target, LivingEntity owner) {
 		if (this.isRaiderMounted() && target instanceof Raider) {
 			return true;
 		}
@@ -1828,6 +1893,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			}
 			return test.setAndContinue(test.isMoving() ? WALK : IDLE);
 		}));
+		controllers.add(new AnimationController<DragonEntity>("power", 4, test -> PlayState.STOP)
+			.triggerableAnim("rear", REAR)
+			.triggerableAnim("rear_in_flight", REAR_IN_FLIGHT));
 		controllers.add(new AnimationController<DragonEntity>("breath", 2, test -> PlayState.STOP)
 			.triggerableAnim("breath", BREATH));
 	}

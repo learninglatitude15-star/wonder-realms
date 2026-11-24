@@ -1,0 +1,139 @@
+{
+  "criteria": {
+    "sun": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:sun_dragon"
+          }
+        }
+      }
+    },
+    "moon": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:moon_dragon"
+          }
+        }
+      }
+    },
+    "star": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:star_dragon"
+          }
+        }
+      }
+    },
+    "aurora": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:aurora_dragon"
+          }
+        }
+      }
+    },
+    "phoenix": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:phoenix_dragon"
+          }
+        }
+      }
+    },
+    "nimbus": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:nimbus_dragon"
+          }
+        }
+      }
+    },
+    "gold": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:gold_dragon"
+          }
+        }
+      }
+    },
+    "pearl": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:pearl_dragon"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:star_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.overcloud_dragons.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.overcloud_dragons.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "sun"
+    ],
+    [
+      "moon"
+    ],
+    [
+      "star"
+    ],
+    [
+      "aurora"
+    ],
+    [
+      "phoenix"
+    ],
+    [
+      "nimbus"
+    ],
+    [
+      "gold"
+    ],
+    [
+      "pearl"
+    ]
+  ],
+  "parent": "wonderrealms:overcloud"
+}

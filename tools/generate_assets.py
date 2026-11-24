@@ -65,6 +65,8 @@ def main():
             "result": {"id": f"{NS}:{item}", "count": 1},
         })
     save_png(ASSETS / "textures" / "mob_effect" / "shrunken.png", art.shrunken_icon())
+    save_png(ASSETS / "textures" / "mob_effect" / "asleep.png", art.asleep_icon())
+    save_png(ASSETS / "textures" / "mob_effect" / "bouncy.png", art.bouncy_icon())
     save_png(ASSETS / "icon.png", art.bottle_icon(*SHRINKING))
     dump(ASSETS / "lang" / "en_us.json", dict(sorted(lang.items())))
     print("Generated", len(ITEMS), "items, effect icon, recipes and lang")

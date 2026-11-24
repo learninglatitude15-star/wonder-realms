@@ -582,6 +582,56 @@ def shrunken_icon():
     return sprite(SHRUNKEN, {"a": mat((0xb8, 0x98, 0xf8), -0.6, 0.5), "p": mat((0xf4, 0xf4, 0xff), -0.4, 0.2)})
 
 
+def asleep_icon():
+    """The Asleep effect (a Moon dragon's): a pale crescent moon with a big Z and a little z drifting up from it."""
+    rows = []
+    for y in range(18):
+        row = ""
+        for x in range(18):
+            moon = math.hypot(x + 0.5 - 7.2, y + 0.5 - 10) < 6.3 and math.hypot(x + 0.5 - 10.4, y + 0.5 - 7.6) > 5.3
+            row += "m" if moon else "."
+        rows.append(row)
+    for (zx, zy, w) in ((12, 1, 5), (13, 8, 4)):
+        for i in range(w):
+            y = zy + i
+            if i in (0, w - 1):
+                rows[y] = rows[y][:zx] + "z" * w + rows[y][zx + w:]
+            else:
+                x = zx + w - 1 - i
+                rows[y] = rows[y][:x] + "z" + rows[y][x + 1:]
+    return sprite(rows, {"m": mat((0xe6, 0xec, 0xff), -0.55, 0.3), "z": mat((0xb0, 0xc0, 0xff), -0.5, 0.4)})
+
+
+BOUNCY = [
+    "..................",
+    "..................",
+    "..................",
+    "....ssssssssss....",
+    "....sggsssssss....",
+    "....sgcccccccs....",
+    "....scceccceccs...",
+    "....scceccceccs...",
+    "....sccccccccs....",
+    "....sccckkkccs....",
+    "....scccccccss....",
+    "....ssssssssss....",
+    "..................",
+    "..................",
+    ".....llllllll.....",
+    "..................",
+    "..................",
+    "..................",
+]
+
+
+def bouncy_icon():
+    """The Bouncy effect (a Slime dragon's gift): a jelly slime cube, mid-bounce over its shadow, its core showing."""
+    rows = [r[:18] for r in BOUNCY]
+    return sprite(rows, {"s": mat((0x7e, 0xd0, 0x58), -0.6, 0.45), "c": mat((0x5e, 0xb0, 0x40), -0.5, 0.3),
+                         "g": flat((0xe8, 0xff, 0xd8)), "e": flat((0x1a, 0x38, 0x12)), "k": flat((0x2a, 0x5a, 0x1e)),
+                         "l": flat((0x3a, 0x4a, 0x34))}, overlay="cgek")
+
+
 def sky_backdrop():
     """The advancement screen's tile: a deep evening sky with soft clouds, seamless when tiled."""
     sky, cloud = (0x2a, 0x3e, 0x66), (0x50, 0x68, 0x98)

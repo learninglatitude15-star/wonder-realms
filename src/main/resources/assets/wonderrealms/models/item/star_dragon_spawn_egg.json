@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wonderrealms:item/star_dragon_spawn_egg"
+  }
+}

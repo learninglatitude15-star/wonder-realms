@@ -18,6 +18,7 @@ import struct
 import zlib
 from pathlib import Path
 
+import dragon_kinds_art
 import dragon_skins
 from dragon_skins import METALS
 
@@ -59,6 +60,8 @@ PALETTES = {
     # The Elder Dragon of the Sky Citadels: old bronze and gold, ivory horns, blood-red wings and eyes.
     "elder": dict(dark=(0x3a, 0x22, 0x10), base=(0x8a, 0x5a, 0x22), light=(0xe0, 0xb8, 0x60), belly=(0xf0, 0xe0, 0xc0),
                   membrane=(0x7a, 0x1a, 0x1a), horn=(0xf4, 0xec, 0xd8), eye=(0xff, 0x40, 0x30)),
+    # 2.0: eight dragons of the Overworld's wilds and eight of the Overcloud (their markings are in dragon_kinds_art.py).
+    **dragon_kinds_art.PALETTES,
 }
 
 # --- Model: bone -> (parent, pivot, [(name, origin, size, kind, mirror)]) ---------------------------------------
@@ -272,12 +275,53 @@ def animations():
     breath = {"jaw": {"rotation": kf((0, [0, 0, 0]), (0.15, [35, 0, 0]), (0.9, [35, 0, 0]), (1.1, [0, 0, 0]))},
               "head": {"rotation": kf((0, [0, 0, 0]), (0.15, [-8, 0, 0]), (0.9, [-8, 0, 0]), (1.1, [0, 0, 0]))}}
 
+    def rear(in_flight):
+        """Rearing back to unleash its power: up on its hind legs with its forelegs pawing the air, head thrown back and
+        wings flung wide, a beat of the wings and a roar with jaws agape, then back down. On the ground it ends with its
+        wings folded; in the air, with them spread to fly on (and its legs tucked up as they are in flight)."""
+        folded = (FOLDED["wing_left"]["rotation"], FOLDED["wing_left"]["position"], FOLDED["wing_left_tip"]["rotation"],
+                  FOLDED["wing_left_tip"]["position"])
+        start = folded if not in_flight else ([0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0])
+        end = start
+        membrane = [1, 1, 0.34] if not in_flight else [1, 1, 1]
+        wings = both_wings(
+            {"rotation": kf((0, start[0]), (0.3, [0, 0, -40]), (0.55, [0, 0, 22]), (0.8, [0, 0, -40]), (1.05, [0, 0, 0]), (1.6, end[0])),
+             "position": kf((0, start[1]), (0.3, [0, 0, 0]), (1.05, [0, 0, 0]), (1.6, end[1]))},
+            {"scale": kf((0, membrane), (0.25, [1, 1, 1]), (1.15, [1, 1, 1]), (1.6, membrane))},
+            {"rotation": kf((0, start[2]), (0.3, [0, 0, -15]), (0.55, [0, 0, 12]), (0.8, [0, 0, -15]), (1.05, [0, 0, 0]), (1.6, end[2])),
+             "position": kf((0, start[3]), (0.3, [0, 0, 0]), (1.05, [0, 0, 0]), (1.6, end[3]))},
+            {"scale": kf((0, membrane), (0.25, [1, 1, 1]), (1.15, [1, 1, 1]), (1.6, membrane))},
+        )
+        front, back = ([45, 0, 0], [60, 0, 0]) if in_flight else ([0, 0, 0], [0, 0, 0])
+        paw = lambda a, b: {"rotation": kf((0, front), (0.3, [a, 0, 0]), (0.5, [b, 0, 0]), (0.7, [a + 5, 0, 0]), (0.9, [b, 0, 0]),
+                                             (1.1, [a, 0, 0]), (1.45, front), (1.6, front)),
+                              "position": kf((0, [0, 0, 0]), (0.3, [0, 6, 1]), (0.75, [0, 7, 1]), (1.1, [0, 6, 1]), (1.45, [0, 0, 0]),
+                                             (1.6, [0, 0, 0]))}
+        sway = lambda lift, amount: {"rotation": kf((0, [0, 0, 0]), (0.3, [lift, 0, 0]), (0.75, [lift + 3, amount, 0]),
+                                                    (1.1, [lift, -amount, 0]), (1.45, [0, 0, 0]), (1.6, [0, 0, 0]))}
+        return {**wings,
+                "body": {"rotation": kf((0, [0, 0, 0]), (0.3, [-32, 0, 0]), (0.75, [-36, 0, 0]), (1.1, [-30, 0, 0]), (1.45, [0, 0, 0]),
+                                        (1.6, [0, 0, 0])),
+                         "position": kf((0, [0, 0, 0]), (0.3, [0, 4, 2]), (0.75, [0, 5, 2]), (1.1, [0, 4, 2]), (1.45, [0, 0, 0]),
+                                        (1.6, [0, 0, 0]))},
+                "neck": {"rotation": kf((0, [0, 0, 0]), (0.3, [-15, 0, 0]), (0.5, [-22, 0, 0]), (0.75, [-4, 0, 0]), (1.1, [-10, 0, 0]),
+                                        (1.45, [0, 0, 0]), (1.6, [0, 0, 0]))},
+                "head": {"rotation": kf((0, [0, 0, 0]), (0.3, [-15, 0, 0]), (0.5, [-25, 0, 0]), (0.75, [12, 0, 0]), (1.1, [4, 0, 0]),
+                                        (1.45, [0, 0, 0]), (1.6, [0, 0, 0]))},
+                "jaw": {"rotation": kf((0, [0, 0, 0]), (0.45, [0, 0, 0]), (0.62, [40, 0, 0]), (1.05, [38, 0, 0]), (1.3, [0, 0, 0]),
+                                       (1.6, [0, 0, 0]))},
+                "tail": sway(15, 8), "tail2": sway(10, 10), "tail3": sway(6, 14),
+                "leg_front_left": paw(-60, -95), "leg_front_right": paw(-75, -50),
+                "leg_back_left": {"rotation": kf((0, back), (0.3, [8, 0, 0]), (1.1, [8, 0, 0]), (1.45, back), (1.6, back))},
+                "leg_back_right": {"rotation": kf((0, back), (0.3, [8, 0, 0]), (1.1, [8, 0, 0]), (1.45, back), (1.6, back))}}
+
     def anim(bones, length, loop=True):
         return {"loop": loop, "animation_length": length, "bones": bones}
 
     return {"format_version": "1.8.0", "animations": {
         "misc.idle": anim(idle, 4), "move.walk": anim(walk, 1), "move.fly": anim(fly, length),
         "misc.sit": anim(sit, 5), "attack.breath": anim(breath, 1.1, loop=False),
+        "attack.power": anim(rear(False), 1.6, loop=False), "attack.power_air": anim(rear(True), 1.6, loop=False),
     }}
 
 
@@ -302,6 +346,7 @@ SPAWN_EGGS = {
     "rainbow_dragon": ((0xff, 0x50, 0x50), (0x40, 0xa8, 0xff), "Rainbow Dragon Spawn Egg"),
     "air_dragon": ((0xe8, 0xee, 0xf6), (0x60, 0xc8, 0xff), "Air Dragon Spawn Egg"),
     "storm_leviathan": ((0x2a, 0x2e, 0x3a), (0xff, 0xf0, 0x60), "Storm Leviathan Spawn Egg"),
+    **dragon_kinds_art.SPAWN_EGGS,
 }
 
 
@@ -319,7 +364,7 @@ def main():
              "crystal": ("Crystal Dragon", "Crystal Egg"), "shadow": ("Shadow Dragon", "Shadow Egg"), "ender": ("Ender Dragon", None),
              "earth": ("Earth Dragon", "Earth Egg"), "honey": ("Honey Dragon", "Honey Egg"),
              "rainbow": ("Rainbow Dragon", "Rainbow Egg"), "air": ("Air Dragon", "Air Egg"),
-             "elder": ("Elder Dragon", None)}
+             "elder": ("Elder Dragon", None), **dragon_kinds_art.NAMES}
     for element, pal in PALETTES.items():
         skin = dragon_skins.paint_skin(element, pal, placed, TEX)
         # Every combination of armor (or none) and saddle (or none) gets its own skin.

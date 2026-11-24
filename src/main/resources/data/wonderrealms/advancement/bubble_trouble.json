@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:tube_coral"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.bubble_trouble.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.bubble_trouble.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

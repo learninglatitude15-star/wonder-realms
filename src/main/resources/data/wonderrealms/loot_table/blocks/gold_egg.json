@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:gold_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/gold_egg"
+}

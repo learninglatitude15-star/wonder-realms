@@ -19,7 +19,11 @@ DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
 DRAGON_KINDS = ("ember", "frost", "storm", "verdant", "tide", "crystal", "shadow", "earth", "honey", "rainbow", "air", "ender")
-DRAGONS = [f"{NS}:{element}_dragon" for element in DRAGON_KINDS]
+# 2.0: the dragons of the Overworld's wilds, and of the Overcloud.
+WILD_KINDS = ("slime", "mushroom", "blossom", "iron", "bone", "jungle", "echo", "coral")
+OVERCLOUD_KINDS = ("sun", "moon", "star", "aurora", "phoenix", "nimbus", "gold", "pearl")
+ALL_KINDS = DRAGON_KINDS + WILD_KINDS + OVERCLOUD_KINDS
+DRAGONS = [f"{NS}:{element}_dragon" for element in ALL_KINDS]
 
 # --- Text ------------------------------------------------------------------------------------------------------
 
@@ -30,6 +34,9 @@ TEXT = {
     "message.wonderrealms.airship_fuel": "Fuel: %sm %ss",
     "message.wonderrealms.airship_no_fuel": "Out of fuel! Use coal on the airship.",
     "message.wonderrealms.outpost_held": "The pillagers still hold this outpost. Drive them out first!",
+    "message.wonderrealms.overcloud_rise": "The storm parts, and you rise above the sky!",
+    "message.wonderrealms.overcloud_fall": "You fall through the clouds, back to the world below.",
+    "message.wonderrealms.overcloud_pull": "The Storm Eye tugs upward... %s blocks to the storm",
     "message.wonderrealms.too_young": "This dragon is too young to ride. Feed it to help it grow.",
     "message.wonderrealms.dragon_sits": "Your dragon settles down to wait.",
     "message.wonderrealms.dragon_follows": "Your dragon follows you.",
@@ -58,12 +65,34 @@ TEXT = {
     "power.wonderrealms.rainbow": "Rainbow Burst!",
     "power.wonderrealms.air": "Tornado!",
     "power.wonderrealms.ender": "Void Rift!",
+    "power.wonderrealms.slime": "Boing!",
+    "power.wonderrealms.mushroom": "Fairy Ring!",
+    "power.wonderrealms.blossom": "Petal Storm!",
+    "power.wonderrealms.iron": "Iron Guard!",
+    "power.wonderrealms.bone": "Grave Howl!",
+    "power.wonderrealms.jungle": "Vine Snare!",
+    "power.wonderrealms.echo": "Sonic Boom!",
+    "power.wonderrealms.coral": "Bubble Trap!",
+    "power.wonderrealms.sun": "Solar Flare!",
+    "power.wonderrealms.moon": "Lullaby!",
+    "power.wonderrealms.star": "Meteor Shower!",
+    "power.wonderrealms.aurora": "Aurora Veil!",
+    "power.wonderrealms.phoenix": "Rebirth Blaze!",
+    "power.wonderrealms.nimbus": "Rain Cloud!",
+    "power.wonderrealms.gold": "Golden Hoard!",
+    "power.wonderrealms.pearl": "Blink!",
+    "effect.wonderrealms.asleep": "Asleep",
+    "effect.wonderrealms.bouncy": "Bouncy",
 }
 
 TOOLTIPS = {
     "shrinking_draught": ["Shrinks you to a tenth of your size for five minutes.",
                           "Tiny, you climb walls, spot dewdrops and can carve single pixels."],
     "growth_draught": ["Brings you back to your full size."],
+    "storm_eye": ["Hold it high above the world, at y 300 or more, and the storm",
+                  "lifts you (and your dragon or airship) into the Overcloud."],
+    "cloud": ["Soft underfoot. Sneak to sink through.",
+              "Sink through the Overcloud's sea of clouds to fall back home."],
     "dewdrop": ["Only tiny eyes can find these in the grass.",
                 "Pixel Miners pay well for them."],
     "gem_pixel": ["Nine of them craft into a whole gem."],
@@ -126,9 +155,9 @@ ADVANCEMENTS = {
     "giant_slayer": ("shrink", "minecraft:spider_eye", "Giant Slayer", "Defeat a bug while you're tiny", "goal", None),
 
     # Dragons
-    "find_egg": ("root", f"{NS}:ember_egg", "Here Be Dragons", "Win a dragon egg from a sky island dragon", "task",
+    "find_egg": ("root", f"{NS}:ember_egg", "Here Be Dragons", "Win a dragon egg from a wild dragon", "task",
                  {"egg": {"trigger": "minecraft:inventory_changed",
-                          "conditions": {"items": [{"items": [f"{NS}:{kind}_egg" for kind in DRAGON_KINDS if kind != "ender"]}]}}}),
+                          "conditions": {"items": [{"items": [f"{NS}:{kind}_egg" for kind in ALL_KINDS if kind != "ender"]}]}}}),
     "hatch_dragon": ("find_egg", f"{NS}:frost_egg", "Hatchling", "Hatch a dragon egg", "task", None),
     "hatch_ender_dragon": ("hatch_dragon", "minecraft:dragon_egg", "The Dragon Reborn",
                            "Hatch an Ender Dragon by feeding the End's Dragon Egg chorus fruit", "challenge", None),
@@ -200,12 +229,35 @@ ADVANCEMENTS = {
     "whale_calf": ("sky_whale", "minecraft:salmon", "Little Whale", "Feed a fish to a sky whale calf", "task", None),
     "leviathan_sighted": ("sky_whale", "minecraft:lightning_rod", "Here Comes the Storm", "Meet the Storm Leviathan in a thunderstorm", "task", None),
     "storm_leviathan": ("leviathan_sighted", "minecraft:trident", "Leviathan Slayer", "Defeat the Storm Leviathan", "challenge", None),
+    # The Overcloud
+    "storm_eye": ("root", f"{NS}:storm_eye", "Eye of the Storm", "Get a Storm Eye, from the Storm Leviathan or made from Elder Scales",
+                  "task", {"eye": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": f"{NS}:storm_eye"}]}}}),
+    "overcloud": ("storm_eye", f"{NS}:cloud", "Above the Storm", "Rise through the storm into the Overcloud", "goal", None),
+    # 2.0: sixteen new dragons
+    "wild_dragons": ("tame_dragon", f"{NS}:mushroom_egg", "Dragons of the Wild",
+                     "Tame every dragon of the Overworld's wilds: Slime, Mushroom, Blossom, Iron, Bone, Jungle, Echo and Coral", "challenge",
+                     {kind: {"trigger": "minecraft:tame_animal", "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{kind}_dragon"})}}
+                      for kind in WILD_KINDS}),
+    "overcloud_dragons": ("overcloud", f"{NS}:star_egg", "Lords of the Overcloud",
+                          "Tame every dragon of the Overcloud: Sun, Moon, Star, Aurora, Phoenix, Nimbus, Gold and Pearl", "challenge",
+                          {kind: {"trigger": "minecraft:tame_animal", "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{kind}_dragon"})}}
+                           for kind in OVERCLOUD_KINDS}),
+    "boing": ("tame_dragon", "minecraft:slime_ball", "Boing!", "Bounce a mob into the air with a Slime dragon", "task", None),
+    "spring_fever": ("tame_dragon", "minecraft:pink_petals", "Spring Fever", "Make animals fall in love with a Blossom dragon's petals",
+                     "task", None),
+    "iron_ally": ("dragon_power", "minecraft:iron_block", "Iron Ally", "Call up an iron golem with an Iron dragon's power", "task", None),
+    "bubble_trouble": ("tame_dragon", "minecraft:tube_coral", "Bubble Trouble", "Trap a mob in a bubble with a Coral dragon", "task", None),
+    "sunbaked": ("tame_dragon", "minecraft:glass", "Sunbaked", "Bake sand into glass with a Sun dragon's breath", "task", None),
+    "sweet_dreams": ("tame_dragon", "minecraft:red_bed", "Sweet Dreams", "Send a mob to sleep with a Moon dragon", "task", None),
+    "cloud_builder": ("tame_dragon", f"{NS}:cloud", "Head in the Clouds", "Build clouds with a Nimbus dragon's breath", "task", None),
+    "second_life": ("tame_dragon", "minecraft:totem_of_undying", "Second Life", "Be saved from death by your Phoenix dragon", "goal", None),
+    "blink": ("dragon_power", "minecraft:ender_pearl", "Now You See Me", "Blink across the sky with a Pearl dragon's power", "task", None),
     "elder_blade": ("elder_slayer", f"{NS}:elder_blade", "Elemental Edge", "Forge the Elder Blade from Elder Scales", "challenge",
                     {"blade": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": f"{NS}:elder_blade"}]}}}),
 }
 
 # Advancements whose criteria must all be met, rather than any one of them.
-ALL_REQUIRED = {"all_dragons"}
+ALL_REQUIRED = {"all_dragons", "wild_dragons", "overcloud_dragons"}
 
 
 def advancement(key, parent, icon, title, description, frame, criteria):
@@ -279,6 +331,16 @@ LOOT = {
              item(f"{NS}:diamond_dragon_armor", 1)),
         pool(1, item("saddle")),
         pool(1, item("enchanted_golden_apple"), empty(12))),
+    # An ocean island's sunken treasure, half buried at the bottom of its sea: a sailor's hoard, often a Heart of the Sea.
+    "sunken_treasure": chest("sunken_treasure",
+        pool((4, 7),
+             item("gold_ingot", 12, (2, 6)), item("gold_nugget", 12, (4, 12)), item("emerald", 10, (2, 6)), item("diamond", 5, (1, 3)),
+             item("iron_ingot", 10, (2, 6)), item("prismarine_shard", 12, (3, 9)), item("prismarine_crystals", 10, (2, 7)),
+             item("nautilus_shell", 8, (1, 3)), item("cod", 6, (2, 6)), item("tropical_fish", 4, (1, 3)), item("sponge", 3, (1, 2)),
+             item("compass", 3), item("book", 4, enchant=True), item("golden_apple", 4)),
+        pool(1, item("heart_of_the_sea"), empty(2)),
+        pool(1, item("trident"), empty(12)),
+        pool(1, item("turtle_helmet"), empty(8))),
     # A sky outpost's lookout: pillager supplies, and sometimes a spare airship.
     "sky_outpost": chest("sky_outpost",
         pool(1, item("crossbow"), empty(1)),
@@ -324,12 +386,24 @@ def main():
     for name, table in LOOT.items():
         dump(DATA / "loot_table" / "chests" / f"{name}.json", table)
     # Blocks that drop themselves: every dragon egg (mined with a pickaxe, carefully) and the Firefly Jar.
-    for block in [f"{kind}_egg" for kind in DRAGON_KINDS if kind != "ender"] + ["firefly_jar"]:
+    for block in [f"{kind}_egg" for kind in ALL_KINDS if kind != "ender"] + ["firefly_jar"]:
         pool = {"rolls": 1, "entries": [{"type": "minecraft:item", "name": f"{NS}:{block}"}]}
         if block == "firefly_jar":
             pool["conditions"] = [{"condition": "minecraft:survives_explosion"}]
         dump(DATA / "loot_table" / "blocks" / f"{block}.json", {"type": "minecraft:block", "pools": [pool], "random_sequence": f"{NS}:blocks/{block}"})
     dump(DATA / "tags" / "entity_type" / "dragons.json", {"values": DRAGONS})
+    # The Echo dragon's lairs: on cave floors in the Deep Dark (the feature type is registered in Dragons).
+    dump(DATA / "worldgen" / "feature" / "echo_lair.json", {"type": f"{NS}:echo_lair"})
+    dump(DATA / "worldgen" / "placed_feature" / "echo_lair.json", {"feature": f"{NS}:echo_lair", "placement": [
+        {"type": "minecraft:rarity_filter", "chance": 5},
+        {"type": "minecraft:in_square"},
+        {"type": "minecraft:height_range", "height": {"type": "minecraft:uniform", "min_inclusive": {"above_bottom": 6},
+                                                      "max_inclusive": {"absolute": 0}}},
+        {"type": "minecraft:environment_scan", "direction_of_search": "down", "max_steps": 24,
+         "target_condition": {"type": "minecraft:solid"},
+         "allowed_search_condition": {"type": "minecraft:matching_block_tag", "tag": "minecraft:air"}},
+        {"type": "minecraft:offset", "x": 0, "y": 1, "z": 0},
+        {"type": "minecraft:biome"}]})
 
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
     print(f"Wrote {len(ADVANCEMENTS)} advancements, {len(LOOT)} loot tables, the dragon tag and {len(lang)} lang entries")

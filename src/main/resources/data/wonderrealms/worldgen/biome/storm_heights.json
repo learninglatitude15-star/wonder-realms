@@ -1,0 +1,86 @@
+{
+  "attributes": {
+    "minecraft:gameplay/natural_mob_spawns": {
+      "argument": {
+        "spawn_costs": {},
+        "spawns_by_category": {
+          "creature": [
+            {
+              "type": "minecraft:goat",
+              "count": {
+                "type": "minecraft:uniform",
+                "min_inclusive": 1,
+                "max_inclusive": 3
+              },
+              "weight": 6
+            },
+            {
+              "type": "wonderrealms:storm_dragon",
+              "count": 1,
+              "weight": 3
+            },
+            {
+              "type": "wonderrealms:nimbus_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:pearl_dragon",
+              "count": 1,
+              "weight": 2
+            }
+          ]
+        }
+      },
+      "modifier": "overlay"
+    },
+    "minecraft:visual/fog_color": "#9aa6c4",
+    "minecraft:visual/sky_color": "#6b78a6",
+    "minecraft:visual/ambient_particles": {
+      "argument": [
+        {
+          "particle": {
+            "type": "minecraft:electric_spark"
+          },
+          "probability": 0.0015
+        }
+      ],
+      "modifier": "append"
+    }
+  },
+  "carvers": [],
+  "downfall": 0.9,
+  "effects": {
+    "water_color": "#3d57a3"
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [
+      "wonderrealms:overcloud_island"
+    ],
+    [],
+    [
+      "minecraft:ore_coal_upper",
+      "minecraft:ore_iron_upper",
+      "minecraft:ore_copper",
+      "minecraft:ore_emerald",
+      "minecraft:ore_diamond"
+    ],
+    [],
+    [
+      "minecraft:spring_water"
+    ],
+    [
+      "minecraft:glow_lichen",
+      "minecraft:trees_windswept_hills",
+      "minecraft:patch_grass_normal",
+      "minecraft:patch_dead_bush"
+    ],
+    []
+  ],
+  "has_precipitation": true,
+  "temperature": 0.2
+}

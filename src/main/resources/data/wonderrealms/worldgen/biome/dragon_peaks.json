@@ -1,0 +1,115 @@
+{
+  "attributes": {
+    "minecraft:gameplay/natural_mob_spawns": {
+      "argument": {
+        "spawn_costs": {},
+        "spawns_by_category": {
+          "creature": [
+            {
+              "type": "minecraft:llama",
+              "count": {
+                "type": "minecraft:uniform",
+                "min_inclusive": 2,
+                "max_inclusive": 4
+              },
+              "weight": 3
+            },
+            {
+              "type": "wonderrealms:ember_dragon",
+              "count": 1,
+              "weight": 3
+            },
+            {
+              "type": "wonderrealms:earth_dragon",
+              "count": 1,
+              "weight": 3
+            },
+            {
+              "type": "wonderrealms:honey_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:verdant_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:air_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:rainbow_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:phoenix_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:gold_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:star_dragon",
+              "count": 1,
+              "weight": 1
+            }
+          ]
+        }
+      },
+      "modifier": "overlay"
+    },
+    "minecraft:visual/fog_color": "#ffd9b8",
+    "minecraft:visual/sky_color": "#9fc1ff",
+    "minecraft:visual/ambient_particles": {
+      "argument": [
+        {
+          "particle": {
+            "type": "minecraft:white_ash"
+          },
+          "probability": 0.0015
+        }
+      ],
+      "modifier": "append"
+    }
+  },
+  "carvers": [],
+  "downfall": 0.2,
+  "effects": {
+    "water_color": "#4fb0d0"
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [
+      "wonderrealms:overcloud_island"
+    ],
+    [],
+    [
+      "minecraft:ore_coal_upper",
+      "minecraft:ore_iron_upper",
+      "minecraft:ore_copper",
+      "minecraft:ore_emerald",
+      "minecraft:ore_diamond"
+    ],
+    [],
+    [
+      "minecraft:spring_water"
+    ],
+    [
+      "minecraft:trees_savanna",
+      "minecraft:flower_meadow",
+      "minecraft:patch_grass_savanna"
+    ],
+    []
+  ],
+  "has_precipitation": false,
+  "temperature": 1.0
+}

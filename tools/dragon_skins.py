@@ -6,7 +6,9 @@ side, and the top and bottom faces have the back (+Z) end on their first row. Mi
 come out as mirror images, so everything is painted for the left side.
 """
 import math
+from types import SimpleNamespace
 
+import dragon_kinds_art as kinds
 from texkit import (bayer, blank, egg_mask, fbm, h2, honeycomb, mix, outline, scale_cell, scale_gap, scale_light,
                     sphere_light, tone, voronoi)
 
@@ -220,6 +222,10 @@ class Skin:
         elif e == "shadow" and rim:
             c = mix(c, (0x3a, 0x22, 0x5a), 0.35)
 
+        if e in kinds.PALETTES:  # the 2.0 dragons' own markings
+            c = kinds.scales(self, c, SimpleNamespace(name=name, face=face, along=along, down=down, across=across, fw=fw, fh=fh,
+                                                     px=px, py=py, a=a, b=b, rim=rim, level=level))
+
         # Countershading: the lower flanks fade into the belly colour.
         if down is not None and face in ("east", "west") and name in ("body", "neck", "tail1", "tail2", "tail3"):
             t = (down / max(1, fh - 1) - 0.72) / 0.28
@@ -235,6 +241,8 @@ class Skin:
         c = shade_pick(self.belly, level, px, py)
         if self.element == "ember" and along % 3 == 2 and h2(px, py, 3) > 0.6:
             c = MAGMA[2]
+        elif self.element in kinds.PALETTES:
+            c = kinds.belly(self, c, along, across, fw, px, py)
         return c
 
     def chest_texel(self, xx, yy, fw, fh, px, py):
@@ -256,6 +264,8 @@ class Skin:
             c = MAGMA[2]  # smouldering tips
         elif self.element == "storm" and (face == "top" or yy == 0):
             c = (0xff, 0xff, 0xc8)
+        elif self.element in kinds.PALETTES:
+            c = kinds.horn(self, c, face, yy, fh)
         return c
 
     def eye_texel(self, along, down):
@@ -394,6 +404,8 @@ class Skin:
             c = (0xf4, 0xfc, 0xff)
         elif e == "ember" and (part == "rim" or t >= back - 2) and h2(g, t, 13) > 0.5:
             c = MAGMA[2]
+        elif e in kinds.PALETTES:
+            c = kinds.membrane(self, c, g, t, part, level)
         return c
 
 
@@ -474,6 +486,8 @@ def paint_skin(element, pal, placed, tex):
         img = _stamp_bolts(img, placed, skin)
     elif element == "shadow":
         img = _stamp_runes(img, placed, skin)
+    elif element in kinds.PALETTES:
+        img = kinds.stamps(img, placed, skin, box_faces)
     return img
 
 
@@ -687,7 +701,9 @@ def egg_texture(element, pal, stage):
                 r = skin_ramp(tone(pal["stripe"], -0.3), pal["stripe"], tone(pal["stripe"], 0.5))
             c = shade_pick(r, level, x, y, dither=0.35)
             spot = fbm(x + 40, y, seed + 5, 3)
-            if element == "earth":
+            if element in kinds.PALETTES:
+                c = kinds.egg(element, pal, c, x, y, level, shell, spot)
+            elif element == "earth":
                 d1, d2, _ = voronoi(x + 0.5, y + 0.5, seed, 4.5)
                 if d2 - d1 < 0.8:
                     c = shell[0]

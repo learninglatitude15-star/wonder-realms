@@ -13,7 +13,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 
 /**
- * Draws a dragon. All twelve kinds, and the Elder Dragon, share one model and set of animations. Each has a skin for
+ * Draws a dragon. Every kind, and the Elder Dragon, shares one model and set of animations. Each has a skin for
  * every combination of armor (none, iron, gold, diamond, netherite, elder) and tack (none, a saddle, or a saddle with
  * saddlebags). The saddlebags are cubes in the model that only the "bags" skins paint; the rest leave them clear.
  */

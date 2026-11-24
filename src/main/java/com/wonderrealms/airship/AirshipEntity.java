@@ -274,7 +274,8 @@ public class AirshipEntity extends Entity implements GeoEntity {
 
 	/**
 	 * Builds a pillager airship over {@code pos}: a pilot plus crew, with a couple of minutes' fuel left in the
-	 * tanks for whoever takes it from them. Works during world generation too.
+	 * tanks for whoever takes it from them. Works during world generation too, where it must only use {@code level}'s
+	 * own random: the world's is the server thread's alone, and worldgen runs on other threads.
 	 */
 	public static AirshipEntity spawnRaiderShip(ServerLevelAccessor level, BlockPos pos, int crew) {
 		ServerLevel server = level.getLevel();
@@ -282,12 +283,12 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		if (ship == null) {
 			return null;
 		}
-		ship.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, server.getRandom().nextFloat() * 360F, 0F);
+		ship.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.getRandom().nextFloat() * 360F, 0F);
 		ship.home = pos.immutable();
 		ship.setFuel(LOOT_FUEL);
-		ship.stockPlunder(server.getRandom());
+		ship.stockPlunder(level.getRandom());
 		// Pillagers fly dark balloons, and every one of their ships carries a cannon.
-		ship.entityData.set(COLOR, PILLAGER_COLORS[server.getRandom().nextInt(PILLAGER_COLORS.length)].getId());
+		ship.entityData.set(COLOR, PILLAGER_COLORS[level.getRandom().nextInt(PILLAGER_COLORS.length)].getId());
 		ship.entityData.set(CANNON, true);
 		for (int i = 0; i < crew; i++) {
 			Pillager pillager = EntityTypes.PILLAGER.create(server, EntitySpawnReason.STRUCTURE);
@@ -316,9 +317,9 @@ public class AirshipEntity extends Entity implements GeoEntity {
 		if (ship == null) {
 			return null;
 		}
-		ship.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, server.getRandom().nextFloat() * 360F, 0F);
+		ship.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.getRandom().nextFloat() * 360F, 0F);
 		ship.setFuel(LOOT_FUEL);
-		ship.entityData.set(COLOR, VILLAGE_COLORS[server.getRandom().nextInt(VILLAGE_COLORS.length)].getId());
+		ship.entityData.set(COLOR, VILLAGE_COLORS[level.getRandom().nextInt(VILLAGE_COLORS.length)].getId());
 		level.addFreshEntity(ship);
 		return ship;
 	}

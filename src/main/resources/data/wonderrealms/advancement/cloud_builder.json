@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:cloud"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.cloud_builder.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.cloud_builder.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

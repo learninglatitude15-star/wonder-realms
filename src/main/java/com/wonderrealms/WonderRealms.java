@@ -28,5 +28,6 @@ public class WonderRealms implements ModInitializer {
 		com.wonderrealms.pixel.PixelMining.init();
 		com.wonderrealms.airship.Airships.init();
 		com.wonderrealms.sky.SkyIslands.init();
+		com.wonderrealms.overcloud.Overcloud.init();
 	}
 }

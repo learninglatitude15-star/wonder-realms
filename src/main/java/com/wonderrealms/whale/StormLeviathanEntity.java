@@ -7,6 +7,7 @@ import com.geckolib.animation.AnimationController;
 import com.geckolib.animation.RawAnimation;
 import com.geckolib.util.GeckoLibUtil;
 import com.wonderrealms.WonderAdvancements;
+import com.wonderrealms.overcloud.Overcloud;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -281,6 +282,7 @@ public class StormLeviathanEntity extends Monster implements GeoEntity {
 		this.spawnAtLocation(level, new ItemStack(Items.NAUTILUS_SHELL, 3 + this.random.nextInt(4)));
 		this.spawnAtLocation(level, new ItemStack(Items.DIAMOND, 2 + this.random.nextInt(4)));
 		this.spawnAtLocation(level, new ItemStack(Items.PRISMARINE_CRYSTALS, 4 + this.random.nextInt(5)));
+		this.spawnAtLocation(level, new ItemStack(Overcloud.STORM_EYE)); // the way up into the Overcloud
 	}
 
 	// ---- Sounds and animation -------------------------------------------------------------------------------

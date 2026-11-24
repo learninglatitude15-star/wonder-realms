@@ -1,0 +1,139 @@
+{
+  "criteria": {
+    "slime": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:slime_dragon"
+          }
+        }
+      }
+    },
+    "mushroom": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:mushroom_dragon"
+          }
+        }
+      }
+    },
+    "blossom": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:blossom_dragon"
+          }
+        }
+      }
+    },
+    "iron": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:iron_dragon"
+          }
+        }
+      }
+    },
+    "bone": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:bone_dragon"
+          }
+        }
+      }
+    },
+    "jungle": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:jungle_dragon"
+          }
+        }
+      }
+    },
+    "echo": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:echo_dragon"
+          }
+        }
+      }
+    },
+    "coral": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:coral_dragon"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:mushroom_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.wild_dragons.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.wild_dragons.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "slime"
+    ],
+    [
+      "mushroom"
+    ],
+    [
+      "blossom"
+    ],
+    [
+      "iron"
+    ],
+    [
+      "bone"
+    ],
+    [
+      "jungle"
+    ],
+    [
+      "echo"
+    ],
+    [
+      "coral"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

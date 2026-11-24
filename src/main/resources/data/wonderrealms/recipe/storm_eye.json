@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " S ",
+    "SHS",
+    " S "
+  ],
+  "key": {
+    "S": "wonderrealms:elder_scale",
+    "H": "minecraft:heart_of_the_sea"
+  },
+  "result": {
+    "id": "wonderrealms:storm_eye",
+    "count": 1
+  }
+}

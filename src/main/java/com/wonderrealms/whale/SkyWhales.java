@@ -1,6 +1,7 @@
 package com.wonderrealms.whale;
 
 import com.wonderrealms.WonderRealms;
+import com.wonderrealms.overcloud.Overcloud;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
@@ -80,7 +81,8 @@ public final class SkyWhales {
 		}
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			ServerLevel level = player.level();
-			if (player.isSpectator() || level.dimension() != Level.OVERWORLD || player.getY() < SKY_Y) {
+			boolean overcloud = level.dimension() == Overcloud.LEVEL; // the whales' own sky: they swim at every height there
+			if (player.isSpectator() || !overcloud && (level.dimension() != Level.OVERWORLD || player.getY() < SKY_Y)) {
 				continue;
 			}
 			RandomSource random = level.getRandom();

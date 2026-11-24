@@ -131,6 +131,7 @@ public class ElderDragonEntity extends DragonEntity {
 
 	/** It changes element: a roar that throws back and hurts everyone close by, and its scales flare with the new element. */
 	private void roar(ServerLevel level) {
+		this.triggerAnim("power", this.onGround() ? "rear" : "rear_in_flight"); // it rears up as it roars
 		this.bossBar.setColor(PHASE_COLORS[this.phase]);
 		Vec3 middle = this.position().add(0, this.getBbHeight() * 0.5, 0);
 		level.playSound(null, middle.x, middle.y, middle.z, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 4F, 0.6F);

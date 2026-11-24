@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "wonderrealms:blocks/cloud",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:cloud"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ]
+}

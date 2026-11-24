@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:cloud"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.overcloud.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.overcloud.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:storm_eye"
+}
