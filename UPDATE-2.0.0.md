@@ -107,6 +107,11 @@ A new kind of sky island: **a sea in the sky**.
   ocean's does.) Look for the waterfalls and you'll spot an ocean island from far away
 - They float in the Overworld's sky and the Overcloud's alike
 
+## 🔧 Fixes
+
+- The game could crash while flying through new land in the Overcloud ("Accessing LegacyRandomSource from multiple
+  threads"): building pillager airships, their dragon mounts and village airships borrowed the world's own random
+
 ## 🏆 Advancements
 
 - **Eye of the Storm**: get a Storm Eye

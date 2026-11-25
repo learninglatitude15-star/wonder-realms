@@ -25,6 +25,7 @@ A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) w
 - **Ocean islands**: a sea in the sky, with a coral reef, kelp, fish, a lighthouse, and sunken treasure at the bottom
   (often a Heart of the Sea). It leaks, pouring waterfalls into the sky below.
 - **Dragons rear back** on their hind legs, wings flung wide, and roar when they use their power. See [the changelog](UPDATE-2.0.0.md).
+- **2.0.1** fixes pillager outposts, whose dragons could never be freed. See [the 2.0.1 changelog](UPDATE-2.0.1.md).
 
 ## What's new in 1.4.0+
 
@@ -333,8 +334,10 @@ There are four kinds of island:
   **Elder Dragon** guards the richest hoard in the sky (look for enchanted gear, netherite scrap, and maybe an
   elytra).
 
-**Conquering an outpost.** Once every pillager within about 48 blocks is gone (including the dragon riders and the
-airship crew), their dragons are free. Freed dragons stop fighting, fly back to the island, and are easy to tame.
+**Conquering an outpost.** Once every pillager on the outpost's island and in the air round it is gone (within about
+32 blocks, and 20 up or down, so another island's pillagers don't count; the dragon riders and the airship crew do),
+their dragons are free. Try to tame one too soon and it tells you how many are left, and they glow so you can find
+them. Freed dragons stop fighting, fly back to the island, and are easy to tame.
 
 ## Airships
 

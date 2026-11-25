@@ -159,7 +159,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	/** A pillager's dragon spots players this far off. */
 	private static final double RAIDER_SIGHT = 32;
 	/** How far around its outpost pillagers must be cleared before a captive dragon can be tamed. */
-	private static final double OUTPOST_RADIUS = 48;
+	private static final double OUTPOST_REACH = 32, OUTPOST_HEIGHT = 20;
 	/** A roost guardian wanders this far from its nest, and flies back if it ends up farther than the leash. */
 	private static final int ROOST_RADIUS = 8;
 	private static final double HOME_LEASH = 20;
@@ -238,7 +238,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	/** Raised by pillagers: can't be tamed until their outpost is conquered. */
 	private boolean captive;
 	private boolean conquered;
-	private long conqueredCheckedAt = Long.MIN_VALUE;
+	/** When the outpost was last checked. It starts far enough back that the first check happens at once (not at
+	 * Long.MIN_VALUE: "now" minus that overflows to a negative number, so the outpost would never be checked again). */
+	private long conqueredCheckedAt = -1000;
 	/** Ticks left on a whistle's call to come. */
 	private int callTicks;
 	private int powerCooldown;
@@ -736,10 +738,18 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 				return super.mobInteract(player, hand);
 			}
 			if (server && this.captive && !this.outpostConquered()) {
-				// Pillagers' dragons won't be won over while their masters still hold the outpost.
-				this.level().broadcastEntityEvent(this, (byte) 6);
-				player.sendOverlayMessage(Component.translatable("message.wonderrealms.outpost_held").withStyle(ChatFormatting.RED));
-				return InteractionResult.SUCCESS;
+				// Pillagers' dragons won't be won over while their masters still hold the outpost: those left light up,
+				// so they can be found. (If the last of them only just fell, the dragon's free already.)
+				List<Raider> holders = this.outpostHolders();
+				if (!holders.isEmpty()) {
+					for (Raider holder : holders) {
+						holder.addEffect(new MobEffectInstance(MobEffects.GLOWING, 200, 0), player);
+					}
+					this.level().broadcastEntityEvent(this, (byte) 6);
+					player.sendOverlayMessage(Component.translatable("message.wonderrealms.outpost_held", holders.size()).withStyle(ChatFormatting.RED));
+					return InteractionResult.SUCCESS;
+				}
+				this.conquered = true;
 			}
 			if (server) {
 				stack.consume(1, player);
@@ -1153,10 +1163,18 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		long now = this.level().getGameTime();
 		if (now - this.conqueredCheckedAt >= 40) {
 			this.conqueredCheckedAt = now;
-			BlockPos around = this.home != null ? this.home : this.blockPosition();
-			this.conquered = this.level().getEntitiesOfClass(Raider.class, new AABB(around).inflate(OUTPOST_RADIUS), Raider::isAlive).isEmpty();
+			this.conquered = this.outpostHolders().isEmpty();
 		}
 		return this.conquered;
+	}
+
+	/**
+	 * The pillagers (and their allies) still holding the outpost this dragon guarded: on its island and in the air
+	 * round it, the dragon riders and airship crew included, but not those of some other island above, below or near.
+	 */
+	private List<Raider> outpostHolders() {
+		BlockPos around = this.home != null ? this.home : this.blockPosition();
+		return this.level().getEntitiesOfClass(Raider.class, new AABB(around).inflate(OUTPOST_REACH, OUTPOST_HEIGHT, OUTPOST_REACH), Raider::isAlive);
 	}
 
 	/** Pillagers' dragons are on the pillagers' side. */

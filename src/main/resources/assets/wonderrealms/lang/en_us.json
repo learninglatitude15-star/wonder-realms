@@ -285,7 +285,7 @@
   "message.wonderrealms.dragonfly_too_big": "You're far too big to ride a dragonfly. Shrink first!",
   "message.wonderrealms.grasshopper_too_big": "You're far too big to ride a grasshopper. Shrink first!",
   "message.wonderrealms.heart_too_young": "Your dragon must be fully grown to take a Dragon Heart.",
-  "message.wonderrealms.outpost_held": "The pillagers still hold this outpost. Drive them out first!",
+  "message.wonderrealms.outpost_held": "The pillagers still hold this outpost: %s left (glowing now). Drive them out first!",
   "message.wonderrealms.overcloud_fall": "You fall through the clouds, back to the world below.",
   "message.wonderrealms.overcloud_pull": "The Storm Eye tugs upward... %s blocks to the storm",
   "message.wonderrealms.overcloud_rise": "The storm parts, and you rise above the sky!",

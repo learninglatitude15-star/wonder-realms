@@ -12,6 +12,7 @@ Shrink to the size of a bug, raise and ride elemental dragons, raid pillager out
 - **Dragons rear back** on their hind legs, wings flung wide, and roar whenever they use their power.
 - **Ocean islands:** a sea in the sky! A ring of beach round a little ocean with a coral reef, kelp, fish and a lighthouse, and sunken treasure at the bottom, often with a Heart of the Sea. And it leaks, pouring waterfalls out of its sides and underside into the sky below.
 - **Sixteen new dragons:** eight that finally live on the ground, in the Overworld's swamps, mushroom fields, cherry groves, mountains, deserts, jungles, beaches and the Deep Dark (**Slime, Mushroom, Blossom, Iron, Bone, Jungle, Echo and Coral**), and eight in the Overcloud (**Sun, Moon, Star, Aurora, Phoenix, Nimbus, Gold and Pearl**). Each has its own breath, gift, power and egg: put foes to sleep, trap them in bubbles, bake sand into glass, build clouds in midair, blink across the sky, or ride a phoenix that saves you from death.
+- **Fixed in 2.0.1:** pillagers' dragons can be freed again. Clear an outpost of its pillagers and its dragons are yours to tame (try too soon and the ones left glow, so you can find them).
 
 ## ✨ New in 1.4.0+
 
@@ -341,7 +342,7 @@ Wear **Dragon Wings** in your chest slot and glide, just like an elytra (firewor
 
 ### Conquering an outpost
 
-The pillagers' dragons are captives. They can't be tamed while their masters hold the outpost. Clear out **every pillager** within about 48 blocks, including the dragon riders and the airship crew, and the dragons are free. Freed dragons stop fighting, fly back to the island, and take to you quickly.
+The pillagers' dragons are captives. They can't be tamed while their masters hold the outpost. Clear out **every pillager** on the outpost's island and in the air around it, including the dragon riders and the airship crew, and the dragons are free. Try to tame one too soon and it tells you how many pillagers are left, and makes them glow so you can find them. Freed dragons stop fighting, fly back to the island, and take to you quickly.
 
 ---
 
@@ -486,4 +487,4 @@ It's built for it: install it on the server and on every player's game.
 - **Fabric API**
 - **GeckoLib** 5.5.6 or newer
 
-Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all twelve dragons, the Elder Dragon, the Storm Leviathan, the Pixel Miner, the rhino beetle, the dragonfly, the grasshopper, the firefly and the sky whale.
+Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all twenty-eight dragons, the Elder Dragon, the Storm Leviathan, the Pixel Miner, the rhino beetle, the dragonfly, the grasshopper, the firefly and the sky whale.

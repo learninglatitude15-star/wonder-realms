@@ -33,7 +33,7 @@ TEXT = {
     "container.wonderrealms.saddlebags": "Saddlebags",
     "message.wonderrealms.airship_fuel": "Fuel: %sm %ss",
     "message.wonderrealms.airship_no_fuel": "Out of fuel! Use coal on the airship.",
-    "message.wonderrealms.outpost_held": "The pillagers still hold this outpost. Drive them out first!",
+    "message.wonderrealms.outpost_held": "The pillagers still hold this outpost: %s left (glowing now). Drive them out first!",
     "message.wonderrealms.overcloud_rise": "The storm parts, and you rise above the sky!",
     "message.wonderrealms.overcloud_fall": "You fall through the clouds, back to the world below.",
     "message.wonderrealms.overcloud_pull": "The Storm Eye tugs upward... %s blocks to the storm",
