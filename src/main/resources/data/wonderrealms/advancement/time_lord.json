@@ -1,0 +1,25 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:time_clock"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.time_lord.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.time_lord.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

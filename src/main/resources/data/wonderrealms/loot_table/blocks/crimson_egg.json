@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:crimson_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/crimson_egg"
+}

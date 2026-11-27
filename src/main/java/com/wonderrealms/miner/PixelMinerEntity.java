@@ -56,6 +56,8 @@ public class PixelMinerEntity extends PathfinderMob implements GeoEntity {
 
 	public PixelMinerEntity(EntityType<? extends PixelMinerEntity> type, Level level) {
 		super(type, level);
+		// Size its hitbox by its scale attribute as its model is sized (a fresh one isn't, until something changes it).
+		this.refreshDimensions();
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

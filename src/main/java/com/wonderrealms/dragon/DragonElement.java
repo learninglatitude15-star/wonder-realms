@@ -1,6 +1,7 @@
 package com.wonderrealms.dragon;
 
 import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.DustColorTransitionOptions;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
@@ -65,6 +66,12 @@ public enum DragonElement {
 	ECHO("echo", "Echo Dragon", "Echo Egg", ParticleTypes.SCULK_SOUL, SoundEvents.WARDEN_SONIC_CHARGE, 5),
 	/** Bubbles that float foes helplessly away. Swims as fast as it flies; its rider swims like a dolphin. Eats fish. Beaches. */
 	CORAL("coral", "Coral Dragon", "Coral Egg", ParticleTypes.BUBBLE_POP, SoundEvents.BUBBLE_COLUMN_UPWARDS_INSIDE, 0),
+	/**
+	 * Since 2.1. Its scales take on the colour of whatever it stands on, and when it keeps still it can't be told from
+	 * the ground. A dazzling spray of colours that leaves foes blinded and baffled. Monsters only notice its rider up
+	 * close. Its power disguises it as a different kind of dragon. Eats spider eyes or sweet berries. Savannas, birch forests.
+	 */
+	CHAMELEON("chameleon", "Chameleon Dragon", "Chameleon Egg", new DustColorTransitionOptions(0x7CD64A, 0xFF6FB4, 1.4F), SoundEvents.FROG_TONGUE, 0),
 
 	// The dragons of the Overcloud.
 	/** A sunbeam that blinds foes, burns the undead and, when ridden, bakes sand into glass. Golden hearts for its rider. Eats sunflowers. */
@@ -82,7 +89,74 @@ public enum DragonElement {
 	/** Dazzling gold dust that throws foes back. Its rider can sense treasure. Eats gold. */
 	GOLD("gold", "Gold Dragon", "Gold Egg", ParticleTypes.WAX_ON, SoundEvents.NOTE_BLOCK_BELL.value(), 3),
 	/** A shimmer that blinks foes away; it blinks out of danger too, and can blink its riders across the sky. Eats ender pearls. */
-	PEARL("pearl", "Pearl Dragon", "Pearl Egg", ParticleTypes.PORTAL, SoundEvents.CHORUS_FRUIT_TELEPORT, 4);
+	PEARL("pearl", "Pearl Dragon", "Pearl Egg", ParticleTypes.PORTAL, SoundEvents.CHORUS_FRUIT_TELEPORT, 4),
+
+	// Since 2.1: thirty more (their ways are in MoreDragons). More of the Overworld's wilds...
+	/** Freezing breath. Its rider never feels the cold. Deep Freeze. Eats fish. Ice spikes, frozen peaks. */
+	ICE("ice", "Ice Dragon", "Ice Egg", ParticleTypes.SNOWFLAKE, SoundEvents.POWDER_SNOW_STEP, 0),
+	/** A flurry of snowballs that knocks foes back. Its rider leaps like a snow hare. Snow Army. Eats pumpkin pie. Snowy plains and taiga. */
+	SNOW("snow", "Snow Dragon", "Snow Egg", ParticleTypes.ITEM_SNOWBALL, SoundEvents.SNOW_GOLEM_SHOOT, 0),
+	/** Ink that blinds. Swims; its rider breathes underwater and sees in the deep. Whirlpool. Eats ink sacs. Lairs on the deep ocean floor. */
+	ABYSS("abyss", "Abyss Dragon", "Abyss Egg", ParticleTypes.SQUID_INK, SoundEvents.SQUID_SQUIRT, 3),
+	/** Glowing spores that light foes up. Its rider sees in the dark. Glow Burst. Eats glow berries. Lairs in lush caves. */
+	GLOW("glow", "Glow Dragon", "Glow Egg", ParticleTypes.GLOW, SoundEvents.GLOW_SQUID_SQUIRT, 10),
+	/** A spray of stone spikes. Anything that hits its rider is spiked back. Stalactite Rain. Eats pointed dripstone. Lairs in dripstone caves. */
+	DRIPSTONE("dripstone", "Dripstone Dragon", "Dripstone Egg", new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DRIPSTONE_BLOCK.defaultBlockState()),
+		SoundEvents.POINTED_DRIPSTONE_LAND, 0),
+	/** Sticky mud that bogs foes down. Its rider's blows slow foes. Mud Slide. Eats mud. Mangrove swamps. */
+	MUD("mud", "Mud Dragon", "Mud Egg", new BlockParticleOption(ParticleTypes.BLOCK, Blocks.MUD.defaultBlockState()), SoundEvents.MUD_STEP, 0),
+	/** Venom that poisons. Its rider's blows poison too. Venom Cloud. Eats poisonous potatoes. Swamps, sparse jungle. */
+	VENOM("venom", "Venom Dragon", "Venom Egg", new DustParticleOptions(0x8CE03C, 1.3F), SoundEvents.SPIDER_AMBIENT, 0),
+	/** A gust of chaff that leaves foes hungry. Villagers give its rider bargains. Harvest Moon. Eats wheat or bread. Plains. */
+	HARVEST("harvest", "Harvest Dragon", "Harvest Egg", new ItemParticleOption(ParticleTypes.ITEM, Items.WHEAT), SoundEvents.CROP_PLANTED, 0),
+	/** A blast of sand that blinds. Its rider's blows blind foes. Sandstorm. Eats cactus. Deserts. */
+	SAND("sand", "Sand Dragon", "Sand Egg", new BlockParticleOption(ParticleTypes.BLOCK, Blocks.SAND.defaultBlockState()), SoundEvents.SAND_FALL, 0),
+	/** A fearsome roar. Creepers and phantoms keep away from its rider. Pounce. Eats fish. Jungles. */
+	TIGER("tiger", "Tiger Dragon", "Tiger Egg", ParticleTypes.CRIT, SoundEvents.RAVAGER_ROAR, 0),
+	/** A snarling bite that weakens. Its rider's wolves fight harder. Howl: wolves join the fight. Eats bones. Taiga. */
+	FANG("fang", "Fang Dragon", "Fang Egg", ParticleTypes.POOF, SoundEvents.POLAR_BEAR_WARNING, 0),
+	// ...the first dragons of the Nether, all fireproof...
+	/** Molten spray that burns and sticks. Its rider can't burn. Eruption. Eats magma cream. Nether wastes, basalt deltas. */
+	MAGMA("magma", "Magma Dragon", "Magma Egg", ParticleTypes.LAVA, SoundEvents.MAGMA_CUBE_JUMP, 6),
+	/** Crimson spores that weaken and starve. Piglins and hoglins leave its rider alone. Crimson Snare. Eats crimson fungus. */
+	CRIMSON("crimson", "Crimson Dragon", "Crimson Egg", ParticleTypes.CRIMSON_SPORE, SoundEvents.WEEPING_VINES_PLACE, 3),
+	/** Warping spores that send foes reeling a few blocks off. Its rider is quick. Warp Field. Eats warped fungus. */
+	WARPED("warped", "Warped Dragon", "Warped Egg", ParticleTypes.WARPED_SPORE, SoundEvents.ENDERMAN_TELEPORT, 3),
+	/** Soul fire. Its rider heals a little with every blow. Soul Harvest. Eats soul sand. Soul sand valleys. */
+	SOUL("soul", "Soul Dragon", "Soul Egg", ParticleTypes.SOUL_FIRE_FLAME, SoundEvents.SOUL_ESCAPE.value(), 6),
+	/** Ash and cinders that blind. Its rider is hard as stone. Basalt Burst. Eats coal. Basalt deltas. */
+	BASALT("basalt", "Basalt Dragon", "Basalt Egg", ParticleTypes.LARGE_SMOKE, SoundEvents.BASALT_BREAK, 0),
+	/** Fire. Its rider's blows set foes alight. Fireball Volley. Eats blaze rods. Nether wastes. */
+	BLAZE("blaze", "Blaze Dragon", "Blaze Egg", ParticleTypes.SMALL_FLAME, SoundEvents.BLAZE_SHOOT, 8),
+	/** A mournful breath that weakens. Ghasts and blazes leave its rider alone. Wail. Eats ghast tears. Soul sand valleys. */
+	GHAST("ghast", "Ghast Dragon", "Ghast Egg", new DustParticleOptions(0xF4F4F4, 1.6F), SoundEvents.GHAST_WARN, 0),
+	// ...of the End...
+	/** Void breath that drags foes in. Its rider falls gently. Black Hole. Eats eyes of ender. The End's outer islands. */
+	VOID("void", "Void Dragon", "Void Egg", ParticleTypes.REVERSE_PORTAL, SoundEvents.ENDER_EYE_DEATH, 0),
+	/** Chorus spores that hop foes about. Its rider springs high. Chorus Launch. Eats chorus fruit. End highlands. */
+	CHORUS("chorus", "Chorus Dragon", "Chorus Egg", new DustParticleOptions(0xB48CD8, 1.4F), SoundEvents.CHORUS_FLOWER_GROW, 2),
+	/** Shulker sparks that float foes up. Its rider has a shell's toughness. Shell Up. Eats popped chorus fruit. End highlands. */
+	SHULKER("shulker", "Shulker Dragon", "Shulker Egg", ParticleTypes.END_ROD, SoundEvents.SHULKER_SHOOT, 4),
+	/** Stardust that dazzles. Its rider is lucky. Supernova. Eats amethyst shards. End midlands. */
+	NEBULA("nebula", "Nebula Dragon", "Nebula Egg", new DustColorTransitionOptions(0x6A4CFF, 0xFF6AD8, 1.5F), SoundEvents.ENCHANTMENT_TABLE_USE, 6),
+	// ...more of the Overcloud...
+	/** Hailstones. Anything that hits its rider is chilled to a crawl. Hailstorm. Eats snowballs or ice. Storm Heights. */
+	HAIL("hail", "Hail Dragon", "Hail Egg", new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState()), SoundEvents.GLASS_BREAK, 0),
+	/** Darkness itself. Its rider grows strong at night. Eclipse. Eats golden carrots. Dragon Peaks. */
+	ECLIPSE("eclipse", "Eclipse Dragon", "Eclipse Egg", new DustParticleOptions(0x2A1840, 1.6F), SoundEvents.BEACON_DEACTIVATE, 0),
+	/** Prismatic light that dazzles. Anything that hits its rider is dazzled. Prism Beam. Eats prismarine crystals. Crystal Reaches. */
+	PRISM("prism", "Prism Dragon", "Prism Egg", new DustColorTransitionOptions(0x7CF0FF, 0xFF7CE8, 1.3F), SoundEvents.AMETHYST_CLUSTER_BREAK, 7),
+	/** A gale that tosses foes. Its rider runs like the wind. Tailwind. Eats feathers. Sunlit Meadows. */
+	ZEPHYR("zephyr", "Zephyr Dragon", "Zephyr Egg", ParticleTypes.SMALL_GUST, SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), 0),
+	/** A ghostly chill. Phantoms leave its rider alone, who sees in the dark. Night Terror. Eats phantom membrane. Storm Heights. */
+	PHANTOM("phantom", "Phantom Dragon", "Phantom Egg", new DustParticleOptions(0x6AA0E8, 1.4F), SoundEvents.PHANTOM_SWOOP, 0),
+	// ...and three found only on the sky islands.
+	/** A crackle of redstone that numbs. Its rider works fast. Overload. Eats redstone. */
+	REDSTONE("redstone", "Redstone Dragon", "Redstone Egg", new DustParticleOptions(0xFF2020, 1.5F), SoundEvents.REDSTONE_TORCH_BURNOUT, 5),
+	/** A whirr of cogs that slows foes. Time runs fast for its rider. Time Stop. Eats copper. */
+	CLOCKWORK("clockwork", "Clockwork Dragon", "Clockwork Egg", new DustParticleOptions(0xD8A848, 1.2F), SoundEvents.COMPARATOR_CLICK, 0),
+	/** A song that sets foes dancing. Its music heals its rider. Dance Party. Eats cookies or melon. */
+	MELODY("melody", "Melody Dragon", "Melody Egg", ParticleTypes.NOTE, SoundEvents.NOTE_BLOCK_HARP.value(), 0);
 
 	/** Any flower, which is what a Rainbow dragon likes best. */
 	private static final TagKey<Item> FLOWERS = TagKey.create(Registries.ITEM, Identifier.withDefaultNamespace("flowers"));
@@ -90,9 +164,16 @@ public enum DragonElement {
 	/** The kinds that live wild on the sky islands. */
 	public static final DragonElement[] WILD = {EMBER, FROST, STORM, VERDANT, TIDE, CRYSTAL, SHADOW, EARTH, HONEY, RAINBOW, AIR};
 	/** The kinds that live on the ground in the Overworld's biomes (and the Echo dragon in the Deep Dark). */
-	public static final DragonElement[] OVERWORLD_WILDS = {SLIME, MUSHROOM, BLOSSOM, IRON, BONE, JUNGLE, ECHO, CORAL};
+	public static final DragonElement[] OVERWORLD_WILDS = {SLIME, MUSHROOM, BLOSSOM, IRON, BONE, JUNGLE, ECHO, CORAL, CHAMELEON,
+		ICE, SNOW, ABYSS, GLOW, DRIPSTONE, MUD, VENOM, HARVEST, SAND, TIGER, FANG};
 	/** The kinds that live in the Overcloud. */
-	public static final DragonElement[] OVERCLOUD = {SUN, MOON, STAR, AURORA, PHOENIX, NIMBUS, GOLD, PEARL};
+	public static final DragonElement[] OVERCLOUD = {SUN, MOON, STAR, AURORA, PHOENIX, NIMBUS, GOLD, PEARL, HAIL, ECLIPSE, PRISM, ZEPHYR, PHANTOM};
+	/** Since 2.1, the dragons of the Nether. */
+	public static final DragonElement[] NETHER = {MAGMA, CRIMSON, WARPED, SOUL, BASALT, BLAZE, GHAST};
+	/** Since 2.1, the dragons of the End's outer islands. */
+	public static final DragonElement[] END = {VOID, CHORUS, SHULKER, NEBULA};
+	/** Since 2.1, kinds found only guarding sky islands. */
+	public static final DragonElement[] SKY = {REDSTONE, CLOCKWORK, MELODY};
 
 	public final String id;
 	public final String dragonName;
@@ -131,6 +212,36 @@ public enum DragonElement {
 			|| (this == JUNGLE && (stack.is(Items.MELON_SLICE) || stack.is(Items.COCOA_BEANS)))
 			|| (this == ECHO && (stack.is(Items.SCULK) || stack.is(Items.ECHO_SHARD)))
 			|| ((this == CORAL || this == AURORA) && stack.is(ItemTags.FISHES))
+			|| (this == CHAMELEON && (stack.is(Items.SPIDER_EYE) || stack.is(Items.SWEET_BERRIES)))
+			|| (this == ICE || this == TIGER) && stack.is(ItemTags.FISHES)
+			|| this == SNOW && stack.is(Items.PUMPKIN_PIE)
+			|| this == ABYSS && (stack.is(Items.INK_SAC) || stack.is(Items.GLOW_INK_SAC))
+			|| this == GLOW && (stack.is(Items.GLOW_BERRIES) || stack.is(Items.GLOW_LICHEN))
+			|| this == DRIPSTONE && (stack.is(Items.POINTED_DRIPSTONE) || stack.is(Items.CLAY_BALL))
+			|| this == MUD && (stack.is(Items.MUD) || stack.is(Items.MANGROVE_PROPAGULE))
+			|| this == VENOM && (stack.is(Items.POISONOUS_POTATO) || stack.is(Items.FERMENTED_SPIDER_EYE))
+			|| this == HARVEST && (stack.is(Items.WHEAT) || stack.is(Items.BREAD))
+			|| this == SAND && stack.is(Items.CACTUS)
+			|| this == FANG && stack.is(Items.BONE)
+			|| this == MAGMA && stack.is(Items.MAGMA_CREAM)
+			|| this == CRIMSON && stack.is(Items.CRIMSON_FUNGUS)
+			|| this == WARPED && stack.is(Items.WARPED_FUNGUS)
+			|| this == SOUL && (stack.is(Items.SOUL_SAND) || stack.is(Items.SOUL_SOIL))
+			|| this == BASALT && (stack.is(Items.COAL) || stack.is(Items.CHARCOAL))
+			|| this == BLAZE && stack.is(Items.BLAZE_ROD)
+			|| this == GHAST && stack.is(Items.GHAST_TEAR)
+			|| this == VOID && stack.is(Items.ENDER_EYE)
+			|| this == CHORUS && stack.is(Items.CHORUS_FRUIT)
+			|| this == SHULKER && stack.is(Items.POPPED_CHORUS_FRUIT)
+			|| this == NEBULA && stack.is(Items.AMETHYST_SHARD)
+			|| this == HAIL && (stack.is(Items.SNOWBALL) || stack.is(Items.ICE) || stack.is(Items.PACKED_ICE))
+			|| this == ECLIPSE && stack.is(Items.GOLDEN_CARROT)
+			|| this == PRISM && stack.is(Items.PRISMARINE_CRYSTALS)
+			|| this == ZEPHYR && stack.is(Items.FEATHER)
+			|| this == PHANTOM && stack.is(Items.PHANTOM_MEMBRANE)
+			|| this == REDSTONE && stack.is(Items.REDSTONE)
+			|| this == CLOCKWORK && (stack.is(Items.COPPER_INGOT) || stack.is(Items.CLOCK))
+			|| this == MELODY && (stack.is(Items.COOKIE) || stack.is(Items.MELON_SLICE))
 			|| (this == SUN && stack.is(Items.SUNFLOWER))
 			|| (this == MOON && stack.is(Items.COOKIE))
 			|| (this == STAR && (stack.is(Items.GLOW_BERRIES) || stack.is(Items.GLOWSTONE_DUST)))
@@ -142,7 +253,18 @@ public enum DragonElement {
 
 	/** Swims as fast as it flies, and breathes underwater: the Tide and Coral dragons. */
 	public boolean swims() {
-		return this == TIDE || this == CORAL;
+		return this == TIDE || this == CORAL || this == ABYSS;
+	}
+
+	/** Can't burn: the Phoenix, and every dragon of the Nether. */
+	public boolean fireproof() {
+		return this == PHOENIX || this == MAGMA || this == CRIMSON || this == WARPED || this == SOUL || this == BASALT || this == BLAZE
+			|| this == GHAST;
+	}
+
+	/** Since 2.1: the thirty in {@link MoreDragons}. */
+	public boolean isMore() {
+		return this.ordinal() > PEARL.ordinal();
 	}
 
 	/** Since 2.0: the dragons of the Overworld's wilds and of the Overcloud, whose ways are in {@link DragonKinds}. */

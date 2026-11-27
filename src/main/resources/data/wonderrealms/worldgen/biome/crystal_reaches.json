@@ -43,6 +43,41 @@
               "type": "wonderrealms:pearl_dragon",
               "count": 1,
               "weight": 1
+            },
+            {
+              "type": "wonderrealms:prism_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:ice_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:snow_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:glow_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:nebula_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:warped_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:dripstone_dragon",
+              "count": 1,
+              "weight": 1
             }
           ]
         }

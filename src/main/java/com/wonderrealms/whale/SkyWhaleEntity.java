@@ -84,6 +84,8 @@ public class SkyWhaleEntity extends PathfinderMob implements GeoEntity {
 
 	public SkyWhaleEntity(EntityType<? extends SkyWhaleEntity> type, Level level) {
 		super(type, level);
+		// Size its hitbox by its scale attribute as its model is sized (a fresh one isn't, until something changes it).
+		this.refreshDimensions();
 		this.setNoGravity(true);
 		this.xpReward = 10;
 	}

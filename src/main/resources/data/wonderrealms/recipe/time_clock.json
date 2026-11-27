@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "SSS",
+    "SCS",
+    "SSS"
+  ],
+  "key": {
+    "S": "wonderrealms:clockwork_scale",
+    "C": "minecraft:clock"
+  },
+  "result": {
+    "id": "wonderrealms:time_clock",
+    "count": 1
+  }
+}

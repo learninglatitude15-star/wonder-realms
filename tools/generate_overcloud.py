@@ -160,14 +160,16 @@ BIOMES = {
         features={"minecraft:trees_plains", "minecraft:trees_meadow", "minecraft:flower_meadow", "minecraft:wildflowers_meadow",
                   "minecraft:patch_grass_meadow", "minecraft:patch_tall_grass", "minecraft:patch_pumpkin"},
         creatures=[spawn("minecraft:sheep", 12, 2, 4), spawn("minecraft:cow", 8, 2, 4), spawn("minecraft:chicken", 10, 2, 4),
-                   spawn("minecraft:rabbit", 4, 2, 3)] + dragons(sun=2, nimbus=1),
+                   spawn("minecraft:rabbit", 4, 2, 3)] + dragons(sun=2, nimbus=1, zephyr=2, harvest=1, tiger=1, fang=1, chorus=1,
+                                                                 melody=1, venom=1, mud=1),
         particles=None),
     # Dark, wind-bent heights under a grey sky, crackling with sparks: Storm, Nimbus and Pearl dragons nest here.
     "storm_heights": dict(
         name="Storm Heights", temperature=0.2, downfall=0.9, rain=True, sky="#6b78a6", fog="#9aa6c4", water="#3d57a3",
         climate=([-0.2, 0.55], [0.3, 1.0]),
         features={"minecraft:glow_lichen", "minecraft:trees_windswept_hills", "minecraft:patch_grass_normal", "minecraft:patch_dead_bush"},
-        creatures=[spawn("minecraft:goat", 6, 1, 3)] + dragons(storm=3, nimbus=2, pearl=2),
+        creatures=[spawn("minecraft:goat", 6, 1, 3)] + dragons(storm=3, nimbus=2, pearl=2, hail=2, phantom=2, ghast=1, void=1,
+                                                               clockwork=1, redstone=1, shulker=1, abyss=1),
         particles=("minecraft:electric_spark", 0.0015)),
     # Cold, shimmering country of amethyst: geodes in the cliffs, pink cherry groves, and Crystal, Frost, Aurora, Moon and
     # Star dragons.
@@ -176,7 +178,8 @@ BIOMES = {
         climate=([-1.0, -0.2], [-1.0, 1.0]),
         features={f"{NS}:overcloud_geode", "minecraft:glow_lichen", "minecraft:trees_cherry", "minecraft:flower_cherry",
                   "minecraft:patch_grass_normal"},
-        creatures=[spawn("minecraft:rabbit", 4, 2, 3)] + dragons(crystal=3, frost=2, aurora=2, moon=2, star=1, pearl=1),
+        creatures=[spawn("minecraft:rabbit", 4, 2, 3)] + dragons(crystal=3, frost=2, aurora=2, moon=2, star=1, pearl=1, prism=2, ice=1,
+                                                                 snow=1, glow=1, nebula=1, warped=1, dripstone=1),
         particles=("minecraft:end_rod", 0.0008)),
     # Warm, dry peaks under a sunset haze where dragons of every kind gather, the Phoenix and Gold dragons among them.
     "dragon_peaks": dict(
@@ -184,7 +187,7 @@ BIOMES = {
         climate=([0.55, 1.0], [-1.0, 1.0]),
         features={"minecraft:trees_savanna", "minecraft:patch_grass_savanna", "minecraft:flower_meadow"},
         creatures=[spawn("minecraft:llama", 3, 2, 4)] + dragons(ember=3, earth=3, honey=2, verdant=2, air=2, rainbow=1, phoenix=2, gold=2,
-                                                               star=1),
+                                                               star=1, eclipse=2, magma=1, blaze=1, basalt=1, soul=1, crimson=1, sand=1),
         particles=("minecraft:white_ash", 0.0015)),
 }
 
@@ -223,7 +226,7 @@ def dimension():
 
 # The sky islands, villages, citadels and roosts of the Overcloud: the Overworld's feature, far more often (and the
 # feature itself floats them higher and favours the grander kinds there).
-ISLANDS = {"feature": f"{NS}:sky_island", "placement": [{"type": "minecraft:rarity_filter", "chance": 14}, {"type": "minecraft:in_square"},
+ISLANDS = {"feature": f"{NS}:sky_island", "placement": [{"type": "minecraft:rarity_filter", "chance": 28}, {"type": "minecraft:in_square"},
                                                          {"type": "minecraft:biome"}]}
 
 

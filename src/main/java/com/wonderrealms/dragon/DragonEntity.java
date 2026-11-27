@@ -134,6 +134,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private static final EntityDataAccessor<Integer> ARMOR = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> BAGS = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> ELDER = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
+	/** A Chameleon dragon's disguise: the kind of dragon it's made itself look like (its ordinal), or -1. */
+	private static final EntityDataAccessor<Byte> DISGUISE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BYTE);
 
 	// Growth
 	/** Ticks from hatchling to full size without feeding (two in-game days). */
@@ -163,6 +165,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	/** A roost guardian wanders this far from its nest, and flies back if it ends up farther than the leash. */
 	private static final int ROOST_RADIUS = 8;
 	private static final double HOME_LEASH = 20;
+	/** A sky village's dragon keeps closer to home: in and around its stall. */
+	private static final int STABLE_RADIUS = 4;
+	private static final double STABLE_LEASH = 10;
 	/** Taming chance per feeding: hatchlings and freed dragons take to you quickly, wild adults much less so. */
 	private static final int EASY_TAME_ODDS = 3;
 	private static final int ADULT_TAME_ODDS = 8;
@@ -237,6 +242,14 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 	private BlockPos home;
 	/** Raised by pillagers: can't be tamed until their outpost is conquered. */
 	private boolean captive;
+	/** Kept in a sky village's stable: gentle, stays by its stall, and takes to a rider quickly. */
+	private boolean stabled;
+	/** Ticks left of a Chameleon dragon's disguise. */
+	private int disguiseTicks;
+	/** How long a Chameleon dragon has kept still on the ground: long enough, and it's lost against it. */
+	private int stillTicks;
+	/** Client only: the colour a Chameleon dragon's scales are showing (r, g, b in 0..1), easing toward its surroundings. */
+	public final float[] shownColor = {-1F, 0F, 0F};
 	private boolean conquered;
 	/** When the outpost was last checked. It starts far enough back that the first check happens at once (not at
 	 * Long.MIN_VALUE: "now" minus that overflows to a negative number, so the outpost would never be checked again). */
@@ -290,6 +303,7 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		builder.define(ARMOR, 0);
 		builder.define(BAGS, false);
 		builder.define(ELDER, false);
+		builder.define(DISGUISE, (byte) -1);
 	}
 
 	public float growth() {
@@ -482,6 +496,23 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.setPersistenceRequired();
 	}
 
+	/**
+	 * Makes this one of a sky village's dragons, kept in the stable: it stays in and around its stall, never guards
+	 * its ground against anyone, and is won over as easily as a hatchling.
+	 */
+	public void setStableHome(BlockPos stall) {
+		this.home = stall.immutable();
+		this.captive = false;
+		this.stabled = true;
+		this.setHomeTo(this.home, STABLE_RADIUS);
+		this.setPersistenceRequired();
+	}
+
+	/** Whether this is one of a sky village's stabled dragons. */
+	public boolean isStabled() {
+		return this.stabled;
+	}
+
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
@@ -489,6 +520,13 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		output.putBoolean("saddled", this.isSaddled());
 		output.putInt("egg_timer", this.eggTimer);
 		output.putBoolean("captive", this.captive);
+		if (this.stabled) {
+			output.putBoolean("stabled", true);
+		}
+		if (this.disguise() != null) {
+			output.putString("disguise", this.disguise().id);
+			output.putInt("disguise_ticks", this.disguiseTicks);
+		}
 		if (this.armor() != null) {
 			output.putString("armor", this.armor().id);
 		}
@@ -518,11 +556,18 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.entityData.set(SADDLED, input.getBooleanOr("saddled", false));
 		this.eggTimer = input.getIntOr("egg_timer", EGG_INTERVAL);
 		this.captive = input.getBooleanOr("captive", false);
+		this.stabled = input.getBooleanOr("stabled", false);
+		String disguise = input.getStringOr("disguise", "");
+		for (DragonElement kind : DragonElement.values()) {
+			if (kind.id.equals(disguise)) {
+				this.disguiseAs(kind, input.getIntOr("disguise_ticks", 20 * 60));
+			}
+		}
 		this.setArmor(DragonArmor.byId(input.getStringOr("armor", "")));
 		long home = input.getLongOr("island_home", input.getLongOr("home", Long.MIN_VALUE));
 		this.home = home == Long.MIN_VALUE ? null : BlockPos.of(home);
 		if (this.home != null && !this.captive && !this.isTame()) {
-			this.setHomeTo(this.home, ROOST_RADIUS);
+			this.setHomeTo(this.home, this.stabled ? STABLE_RADIUS : ROOST_RADIUS);
 		}
 		this.rebirthCooldown = input.getIntOr("rebirth_cooldown", 0);
 		this.entityData.set(BAGS, input.getBooleanOr("saddlebags", false));
@@ -552,9 +597,12 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
 		// Wild adults guard their island: come within a dozen blocks (or anywhere near a pillager's dragon) and they come for
-		// you. So do the Overcloud's. But the dragons wandering the Overworld's own lands only fight back if attacked.
+		// you. So do the Overcloud's. But the dragons wandering the Overworld's own lands only fight back if attacked, and
+		// a sky village's stabled dragons never mind visitors.
 		this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Player.class, 20, true, false,
-			(target, level) -> !this.isTame() && this.isGrown() && !this.isFreed() && (this.home != null || level.dimension() != Level.OVERWORLD)
+			(target, level) -> !this.isTame() && this.isGrown() && !this.isFreed() && !this.stabled
+				&& !(target.getVehicle() instanceof DragonEntity mount && mount.disguise() == this.element) // one of us, surely
+				&& (this.home != null || level.dimension() != Level.OVERWORLD)
 				&& this.distanceToSqr(target) < (this.isRaiderMounted() ? RAIDER_SIGHT * RAIDER_SIGHT : TERRITORY * TERRITORY)));
 	}
 
@@ -606,8 +654,10 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		}
 		// And now and then it sheds a scale.
 		if (this.isTame() && this.isGrown() && --this.shedTimer <= 0) {
-			this.spawnAtLocation(level, new ItemStack(Dragons.DRAGON_SCALE));
-			this.shedTimer = SHED_INTERVAL + this.random.nextInt(SHED_INTERVAL);
+			// A Clockwork dragon sheds its own brass scales, and twice as often.
+			boolean clockwork = this.element == DragonElement.CLOCKWORK;
+			this.spawnAtLocation(level, new ItemStack(clockwork ? Dragons.CLOCKWORK_SCALE : Dragons.DRAGON_SCALE));
+			this.shedTimer = (SHED_INTERVAL + this.random.nextInt(SHED_INTERVAL)) / (clockwork ? 2 : 1);
 		}
 		boolean airborne = this.isFlying() || (this.isVehicle() && !this.onGround());
 		if (airborne && this.tickCount % 16 == 0) {
@@ -638,6 +688,30 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.element.isNewKind()) {
 			DragonKinds.tick(this, level);
 		}
+		if (this.disguiseTicks > 0 && --this.disguiseTicks == 0) {
+			this.disguiseAs(null, 0);
+		}
+		if (this.element == DragonElement.CHAMELEON) {
+			boolean still = this.onGround() && !this.isFlying() && this.getDeltaMovement().horizontalDistanceSqr() < 0.0004 && this.hurtTime == 0;
+			this.stillTicks = still ? this.stillTicks + 1 : 0;
+		}
+	}
+
+	/** The kind of dragon a Chameleon dragon has disguised itself as, or null if it looks like itself. */
+	public DragonElement disguise() {
+		int kind = this.entityData.get(DISGUISE);
+		return kind >= 0 && kind < DragonElement.values().length ? DragonElement.values()[kind] : null;
+	}
+
+	/** Makes a Chameleon dragon look like a dragon of another kind for {@code ticks} (or like itself again, given null). */
+	void disguiseAs(DragonElement kind, int ticks) {
+		this.entityData.set(DISGUISE, (byte) (kind == null ? -1 : kind.ordinal()));
+		this.disguiseTicks = kind == null ? 0 : ticks;
+	}
+
+	/** A Chameleon dragon that has kept still on the ground long enough to be lost against it (and isn't in disguise). */
+	public boolean isBlended() {
+		return this.element == DragonElement.CHAMELEON && this.stillTicks >= 60 && this.disguise() == null;
 	}
 
 	/** Whether a Phoenix dragon is ready to save its rider from death. */
@@ -753,14 +827,18 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			}
 			if (server) {
 				stack.consume(1, player);
-				// Hatchlings and freed dragons take to you quickly; a wild adult takes patience.
-				int odds = this.captive || !this.isGrown() ? EASY_TAME_ODDS : ADULT_TAME_ODDS;
+				// Hatchlings, freed dragons and stabled ones take to you quickly; a wild adult takes patience.
+				int odds = this.captive || this.stabled || !this.isGrown() ? EASY_TAME_ODDS : ADULT_TAME_ODDS;
 				if (this.random.nextInt(odds) == 0) {
 					if (this.captive && player instanceof ServerPlayer serverPlayer) {
 						WonderAdvancements.award(serverPlayer, "liberate_dragon");
 					}
+					if (this.stabled && player instanceof ServerPlayer serverPlayer) {
+						WonderAdvancements.award(serverPlayer, "stable_dragon");
+					}
 					this.setTarget(null);
 					this.captive = false;
+					this.stabled = false;
 					this.home = null;
 					this.clearHome();
 					this.tame(player);
@@ -918,6 +996,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (!this.isTame() && this.isGrown()) {
 			this.spawnAtLocation(level, this.trophy());
 			this.spawnAtLocation(level, new ItemStack(Dragons.DRAGON_SCALE, 1 + this.random.nextInt(3)));
+		}
+		if (this.element == DragonElement.CLOCKWORK && this.isGrown()) {
+			this.spawnAtLocation(level, new ItemStack(Dragons.CLOCKWORK_SCALE, 3 + this.random.nextInt(3)));
 		}
 		if (this.hasSaddlebags()) {
 			this.dropSaddlebags(level);
@@ -1092,7 +1173,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 		if (this.home != null && !this.isTame()) {
 			Vec3 center = this.homeCenter();
 			double dx = center.x - this.getX(), dz = center.z - this.getZ();
-			if (dx * dx + dz * dz > HOME_LEASH * HOME_LEASH || this.getY() < this.home.getY() - 4) {
+			double leash = this.stabled ? STABLE_LEASH : HOME_LEASH;
+			if (dx * dx + dz * dz > leash * leash || this.getY() < this.home.getY() - 4) {
 				return center.add(0, 2.5, 0);
 			}
 		}
@@ -1233,7 +1315,8 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 				.withStyle(ChatFormatting.GRAY));
 			return;
 		}
-		this.powerCooldown = this.isElder() ? ELDER_POWER_COOLDOWN : POWER_COOLDOWN;
+		// A Clockwork dragon's power (stopping time, and starting it again) is never spent.
+		this.powerCooldown = this.element == DragonElement.CLOCKWORK ? 0 : this.isElder() ? ELDER_POWER_COOLDOWN : POWER_COOLDOWN;
 		this.rearBack(level);
 		List<LivingEntity> foes = this.powerTargets(level, rider, this.element == DragonElement.STORM ? STORM_POWER_RADIUS : POWER_RADIUS);
 		double x = this.getX(), y = this.getY() + this.getBbHeight() * 0.5, z = this.getZ();
@@ -1406,7 +1489,9 @@ public class DragonEntity extends TamableAnimal implements GeoEntity, HasCustomI
 			}
 			default -> DragonKinds.power(this, level, rider, foes);
 		}
-		rider.sendOverlayMessage(Component.translatable("power.wonderrealms." + this.element.id).withStyle(ChatFormatting.GOLD));
+		if (this.element != DragonElement.CLOCKWORK) { // it says for itself whether time has stopped or started
+			rider.sendOverlayMessage(Component.translatable("power.wonderrealms." + this.element.id).withStyle(ChatFormatting.GOLD));
+		}
 		if (rider instanceof ServerPlayer serverRider) {
 			WonderAdvancements.award(serverRider, "dragon_power");
 		}

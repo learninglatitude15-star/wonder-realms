@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "hatch=0": {
+      "model": "wonderrealms:block/glow_egg_0"
+    },
+    "hatch=1": {
+      "model": "wonderrealms:block/glow_egg_1"
+    },
+    "hatch=2": {
+      "model": "wonderrealms:block/glow_egg_2"
+    },
+    "hatch=3": {
+      "model": "wonderrealms:block/glow_egg_3"
+    }
+  }
+}

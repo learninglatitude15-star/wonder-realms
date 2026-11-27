@@ -50,6 +50,46 @@
               "type": "wonderrealms:nimbus_dragon",
               "count": 1,
               "weight": 1
+            },
+            {
+              "type": "wonderrealms:zephyr_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:harvest_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:tiger_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:fang_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:chorus_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:melody_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:venom_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:mud_dragon",
+              "count": 1,
+              "weight": 1
             }
           ]
         }

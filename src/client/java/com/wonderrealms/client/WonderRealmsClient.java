@@ -109,6 +109,8 @@ public class WonderRealmsClient implements ClientModInitializer {
 		tips.put(Overcloud.STORM_EYE, "storm_eye");
 		tips.put(Overcloud.CLOUD_ITEM, "cloud");
 		tips.put(Dragons.DRAGON_SCALE, "dragon_scale");
+		tips.put(Dragons.CLOCKWORK_SCALE, "clockwork_scale");
+		tips.put(Dragons.TIME_CLOCK, "time_clock");
 		tips.put(Dragons.ELDER_SCALE, "elder_scale");
 		tips.put(Dragons.DRAGON_HEART, "dragon_heart");
 		tips.put(Dragons.ELDER_BLADE, "elder_blade");

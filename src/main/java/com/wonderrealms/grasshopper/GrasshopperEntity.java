@@ -73,6 +73,8 @@ public class GrasshopperEntity extends Animal implements GeoEntity, PlayerRideab
 
 	public GrasshopperEntity(EntityType<? extends GrasshopperEntity> type, Level level) {
 		super(type, level);
+		// Size its hitbox by its scale attribute as its model is sized (a fresh one isn't, until something changes it).
+		this.refreshDimensions();
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

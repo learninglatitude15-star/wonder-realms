@@ -20,9 +20,16 @@ NS = "wonderrealms"
 
 DRAGON_KINDS = ("ember", "frost", "storm", "verdant", "tide", "crystal", "shadow", "earth", "honey", "rainbow", "air", "ender")
 # 2.0: the dragons of the Overworld's wilds, and of the Overcloud.
-WILD_KINDS = ("slime", "mushroom", "blossom", "iron", "bone", "jungle", "echo", "coral")
+WILD_KINDS = ("slime", "mushroom", "blossom", "iron", "bone", "jungle", "echo", "coral", "chameleon")
 OVERCLOUD_KINDS = ("sun", "moon", "star", "aurora", "phoenix", "nimbus", "gold", "pearl")
-ALL_KINDS = DRAGON_KINDS + WILD_KINDS + OVERCLOUD_KINDS
+# 2.1: thirty more (and the Chameleon, among the wilds above).
+MORE_WILD_KINDS = ("ice", "snow", "abyss", "glow", "dripstone", "mud", "venom", "harvest", "sand", "tiger", "fang")
+NETHER_KINDS = ("magma", "crimson", "warped", "soul", "basalt", "blaze", "ghast")
+END_KINDS = ("void", "chorus", "shulker", "nebula")
+MORE_OVERCLOUD_KINDS = ("hail", "eclipse", "prism", "zephyr", "phantom")
+SKY_KINDS = ("redstone", "clockwork", "melody")
+MORE_KINDS = MORE_WILD_KINDS + NETHER_KINDS + END_KINDS + MORE_OVERCLOUD_KINDS + SKY_KINDS
+ALL_KINDS = DRAGON_KINDS + WILD_KINDS + OVERCLOUD_KINDS + MORE_KINDS
 DRAGONS = [f"{NS}:{element}_dragon" for element in ALL_KINDS]
 
 # --- Text ------------------------------------------------------------------------------------------------------
@@ -73,6 +80,10 @@ TEXT = {
     "power.wonderrealms.jungle": "Vine Snare!",
     "power.wonderrealms.echo": "Sonic Boom!",
     "power.wonderrealms.coral": "Bubble Trap!",
+    "power.wonderrealms.chameleon": "Disguise!",
+    "message.wonderrealms.disguised": "Your dragon looks just like a %s now",
+    "message.wonderrealms.time_stopped": "Time stands still...",
+    "message.wonderrealms.time_flows": "...and time flows on again.",
     "power.wonderrealms.sun": "Solar Flare!",
     "power.wonderrealms.moon": "Lullaby!",
     "power.wonderrealms.star": "Meteor Shower!",
@@ -81,6 +92,36 @@ TEXT = {
     "power.wonderrealms.nimbus": "Rain Cloud!",
     "power.wonderrealms.gold": "Golden Hoard!",
     "power.wonderrealms.pearl": "Blink!",
+    "power.wonderrealms.ice": "Deep Freeze!",
+    "power.wonderrealms.snow": "Snow Army!",
+    "power.wonderrealms.abyss": "Whirlpool!",
+    "power.wonderrealms.glow": "Glow Burst!",
+    "power.wonderrealms.dripstone": "Stalactite Rain!",
+    "power.wonderrealms.mud": "Mud Slide!",
+    "power.wonderrealms.venom": "Venom Cloud!",
+    "power.wonderrealms.harvest": "Harvest Moon!",
+    "power.wonderrealms.sand": "Sandstorm!",
+    "power.wonderrealms.tiger": "Pounce!",
+    "power.wonderrealms.fang": "Howl!",
+    "power.wonderrealms.magma": "Eruption!",
+    "power.wonderrealms.crimson": "Crimson Snare!",
+    "power.wonderrealms.warped": "Warp Field!",
+    "power.wonderrealms.soul": "Soul Harvest!",
+    "power.wonderrealms.basalt": "Basalt Burst!",
+    "power.wonderrealms.blaze": "Fireball Volley!",
+    "power.wonderrealms.ghast": "Wail!",
+    "power.wonderrealms.void": "Black Hole!",
+    "power.wonderrealms.chorus": "Chorus Launch!",
+    "power.wonderrealms.shulker": "Shell Up!",
+    "power.wonderrealms.nebula": "Supernova!",
+    "power.wonderrealms.hail": "Hailstorm!",
+    "power.wonderrealms.eclipse": "Eclipse!",
+    "power.wonderrealms.prism": "Prism Beam!",
+    "power.wonderrealms.zephyr": "Tailwind!",
+    "power.wonderrealms.phantom": "Night Terror!",
+    "power.wonderrealms.redstone": "Overload!",
+    "power.wonderrealms.clockwork": "Time Stop!",
+    "power.wonderrealms.melody": "Dance Party!",
     "effect.wonderrealms.asleep": "Asleep",
     "effect.wonderrealms.bouncy": "Bouncy",
 }
@@ -116,6 +157,10 @@ TOOLTIPS = {
     "ender_egg": ["Something stirs inside... perhaps it's hungry for chorus fruit?"],
     "dragon_scale": ["Shed now and then by a grown, tamed dragon,",
                      "and dropped by wild ones. Craft it into dragonscale armor."],
+    "clockwork_scale": ["Shed by a tamed Clockwork dragon, and dropped by one",
+                        "that falls. Eight round a clock make a Time Clock."],
+    "time_clock": ["Use it to stop time: everything but you stands still.",
+                   "Use it again to set time going."],
     "elder_scale": ["Only the Elder Dragon of a Sky Citadel has these.",
                     "Eight around netherite dragon armor make Elder Dragon Armor."],
     "dragon_heart": ["Give it to your grown dragon to make it an Elder:",
@@ -170,6 +215,8 @@ ADVANCEMENTS = {
     "touch_the_sky": ("ride_dragon", "minecraft:elytra", "Touch the Sky", "Fly a dragon higher than y 256", "goal", None),
     "liberate_dragon": ("tame_dragon", "minecraft:iron_bars", "Liberator",
                         "Win over a pillager's dragon once you've conquered their sky outpost", "challenge", None),
+    "stable_dragon": ("sky_village", "minecraft:saddle", "Stable Hand",
+                      "Win over one of the dragons in a sky village's stable", "task", None),
 
     # Sky islands and airships
     "airship": ("root", f"{NS}:airship", "Up, Up and Away", "Climb aboard an airship", "task",
@@ -235,7 +282,7 @@ ADVANCEMENTS = {
     "overcloud": ("storm_eye", f"{NS}:cloud", "Above the Storm", "Rise through the storm into the Overcloud", "goal", None),
     # 2.0: sixteen new dragons
     "wild_dragons": ("tame_dragon", f"{NS}:mushroom_egg", "Dragons of the Wild",
-                     "Tame every dragon of the Overworld's wilds: Slime, Mushroom, Blossom, Iron, Bone, Jungle, Echo and Coral", "challenge",
+                     "Tame every dragon of the Overworld's wilds: Slime, Mushroom, Blossom, Iron, Bone, Jungle, Echo, Coral and Chameleon", "challenge",
                      {kind: {"trigger": "minecraft:tame_animal", "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{kind}_dragon"})}}
                       for kind in WILD_KINDS}),
     "overcloud_dragons": ("overcloud", f"{NS}:star_egg", "Lords of the Overcloud",
@@ -252,12 +299,23 @@ ADVANCEMENTS = {
     "cloud_builder": ("tame_dragon", f"{NS}:cloud", "Head in the Clouds", "Build clouds with a Nimbus dragon's breath", "task", None),
     "second_life": ("tame_dragon", "minecraft:totem_of_undying", "Second Life", "Be saved from death by your Phoenix dragon", "goal", None),
     "blink": ("dragon_power", "minecraft:ender_pearl", "Now You See Me", "Blink across the sky with a Pearl dragon's power", "task", None),
+    "nether_dragons": ("tame_dragon", f"{NS}:magma_egg", "Dragons of the Nether",
+                       "Tame every dragon of the Nether: Magma, Crimson, Warped, Soul, Basalt, Blaze and Ghast", "challenge",
+                       {kind: {"trigger": "minecraft:tame_animal", "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{kind}_dragon"})}}
+                        for kind in NETHER_KINDS}),
+    "end_dragons": ("tame_dragon", f"{NS}:void_egg", "Dragons of the End",
+                    "Tame every dragon of the End: Void, Chorus, Shulker and Nebula", "challenge",
+                    {kind: {"trigger": "minecraft:tame_animal", "conditions": {"entity": entity({"minecraft:entity_type": f"{NS}:{kind}_dragon"})}}
+                     for kind in END_KINDS}),
+    "time_lord": ("tame_dragon", f"{NS}:time_clock", "Time Lord", "Stop time itself, with a Clockwork dragon or a Time Clock", "goal", None),
+    "master_of_disguise": ("dragon_power", f"{NS}:chameleon_egg", "Master of Disguise",
+                           "Disguise a Chameleon dragon as a different kind of dragon", "task", None),
     "elder_blade": ("elder_slayer", f"{NS}:elder_blade", "Elemental Edge", "Forge the Elder Blade from Elder Scales", "challenge",
                     {"blade": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": f"{NS}:elder_blade"}]}}}),
 }
 
 # Advancements whose criteria must all be met, rather than any one of them.
-ALL_REQUIRED = {"all_dragons", "wild_dragons", "overcloud_dragons"}
+ALL_REQUIRED = {"all_dragons", "wild_dragons", "overcloud_dragons", "nether_dragons", "end_dragons"}
 
 
 def advancement(key, parent, icon, title, description, frame, criteria):
@@ -351,6 +409,16 @@ LOOT = {
         pool(1, item(f"{NS}:airship"), empty(4)),
         pool(1, item(f"{NS}:airship_cannon"), empty(5)),
         pool(1, item("book", enchant=True), empty(3))),
+    # The tack room of a sky village's dragon stable: riding gear, dragon food of every kind, and once in a while an egg.
+    "dragon_stable": chest("dragon_stable",
+        pool((4, 7),
+             item("saddle", 12), item("lead", 10, (1, 3)), item("leather", 8, (2, 5)), item("wheat", 8, (4, 12)),
+             item("hay_block", 6, (1, 3)), item("apple", 6, (2, 5)), item("cod", 6, (2, 6)), item("bone", 6, (2, 6)),
+             item("slime_ball", 4, (2, 5)), item("gold_nugget", 4, (3, 9)), item("iron_nugget", 4, (3, 9)), item("cookie", 4, (2, 6)),
+             item("glow_berries", 3, (2, 5)), item("melon_slice", 3, (2, 6)), item("snowball", 3, (2, 8)), item("blaze_powder", 2, (1, 3)),
+             item(f"{NS}:dragon_scale", 4, (1, 3)), item(f"{NS}:iron_dragon_armor", 3), item(f"{NS}:golden_dragon_armor", 2),
+             item(f"{NS}:dragon_whistle", 3)),
+        pool(1, *[item(f"{NS}:{kind}_egg") for kind in DRAGON_KINDS + WILD_KINDS if kind != "ender"], empty(100))),
     # The Elder Dragon's hoard in a Sky Citadel: the richest treasure in the sky.
     "sky_citadel": chest("sky_citadel",
         pool((5, 8),
@@ -404,6 +472,39 @@ def main():
          "allowed_search_condition": {"type": "minecraft:matching_block_tag", "tag": "minecraft:air"}},
         {"type": "minecraft:offset", "x": 0, "y": 1, "z": 0},
         {"type": "minecraft:biome"}]})
+
+    # Sky villages (the structure type is registered in SkyVillages): far apart in the Overworld's sky, closer together over
+    # the Overcloud. Built after the plants, so no ground plant ever lands on one.
+    overcloud_biomes = [f"{NS}:{b}" for b in ("sunlit_meadows", "storm_heights", "crystal_reaches", "dragon_peaks")]
+    for name, overcloud, biomes, spacing, separation, salt in (
+            ("sky_village", False, ["#minecraft:is_overworld"], 34, 14, 1704321983),
+            ("overcloud_village", True, overcloud_biomes, 20, 9, 1305527714)):
+        dump(DATA / "tags" / "worldgen" / "biome" / "has_structure" / f"{name}.json", {"values": biomes})
+        dump(DATA / "worldgen" / "structure" / f"{name}.json", {
+            "type": f"{NS}:sky_village", "biomes": f"#{NS}:has_structure/{name}", "step": "top_layer_modification",
+            "spawn_overrides": {}, "terrain_adaptation": "none", "overcloud": overcloud})
+        dump(DATA / "worldgen" / "structure_set" / f"{name}s.json", {
+            "structures": [{"structure": f"{NS}:{name}", "weight": 1}],
+            "placement": {"type": "minecraft:random_spread", "spacing": spacing, "separation": separation, "salt": salt}})
+
+    for kind in ("abyss", "glow", "dripstone"):
+        dump(DATA / "worldgen" / "feature" / f"{kind}_lair.json", {"type": f"{NS}:{kind}_lair"})
+    dump(DATA / "worldgen" / "placed_feature" / "abyss_lair.json", {"feature": f"{NS}:abyss_lair", "placement": [
+        {"type": "minecraft:rarity_filter", "chance": 7},
+        {"type": "minecraft:in_square"},
+        {"type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR_WG"},
+        {"type": "minecraft:biome"}]})
+    for kind, chance in (("glow", 3), ("dripstone", 3)):
+        dump(DATA / "worldgen" / "placed_feature" / f"{kind}_lair.json", {"feature": f"{NS}:{kind}_lair", "placement": [
+            {"type": "minecraft:rarity_filter", "chance": chance},
+            {"type": "minecraft:in_square"},
+            {"type": "minecraft:height_range", "height": {"type": "minecraft:uniform", "min_inclusive": {"absolute": -50},
+                                                          "max_inclusive": {"absolute": 40}}},
+            {"type": "minecraft:environment_scan", "direction_of_search": "down", "max_steps": 24,
+             "target_condition": {"type": "minecraft:solid"},
+             "allowed_search_condition": {"type": "minecraft:matching_block_tag", "tag": "minecraft:air"}},
+            {"type": "minecraft:offset", "x": 0, "y": 1, "z": 0},
+            {"type": "minecraft:biome"}]})
 
     lang_path.write_text(json.dumps(dict(sorted(lang.items())), indent=2) + "\n")
     print(f"Wrote {len(ADVANCEMENTS)} advancements, {len(LOOT)} loot tables, the dragon tag and {len(lang)} lang entries")

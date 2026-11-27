@@ -1,0 +1,332 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": {
+        "type": "minecraft:uniform",
+        "min": 4,
+        "max": 7
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:saddle",
+          "weight": 12
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:lead",
+          "weight": 10,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 1,
+              "max": 3
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:leather",
+          "weight": 8,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 5
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:wheat",
+          "weight": 8,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 4,
+              "max": 12
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:hay_block",
+          "weight": 6,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 1,
+              "max": 3
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:apple",
+          "weight": 6,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 5
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:cod",
+          "weight": 6,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 6
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:bone",
+          "weight": 6,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 6
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:slime_ball",
+          "weight": 4,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 5
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:gold_nugget",
+          "weight": 4,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 3,
+              "max": 9
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:iron_nugget",
+          "weight": 4,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 3,
+              "max": 9
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:cookie",
+          "weight": 4,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 6
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:glow_berries",
+          "weight": 3,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 5
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:melon_slice",
+          "weight": 3,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 6
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:snowball",
+          "weight": 3,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 2,
+              "max": 8
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:blaze_powder",
+          "weight": 2,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 1,
+              "max": 3
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:dragon_scale",
+          "weight": 4,
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 1,
+              "max": 3
+            }
+          }
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:iron_dragon_armor",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:golden_dragon_armor",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:dragon_whistle",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:ember_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:frost_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:storm_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:verdant_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:tide_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:crystal_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:shadow_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:earth_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:honey_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:rainbow_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:air_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:slime_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:mushroom_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:blossom_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:iron_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:bone_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:jungle_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:echo_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:coral_egg"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:chameleon_egg"
+        },
+        {
+          "type": "minecraft:empty",
+          "weight": 100
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:chests/dragon_stable"
+}

@@ -4,6 +4,16 @@ Shrink to the size of a bug, raise and ride elemental dragons, raid pillager out
 
 **Four adventures in one mod.** Drink a potion and explore your own world at insect size. Win a dragon egg, raise the hatchling, and fly it into battle. Discover islands floating high in the sky, where wild dragons nest and pillagers sail airships. Then rise through the storm into the Overcloud, a whole world above the sky. Each adventure stands on its own, and they connect: tiny trips lead to treasure, treasure leads to the sky, and the sky is where the dragons are.
 
+## ✨ New in 2.1
+
+- **Sky villages are way bigger:** a whole island each, with a plaza, four roads, houses, a smithy, a library, farms, an animal pen, a lookout tower and a dock with an airship.
+- **Dragon stables:** two in every sky village, with gentle dragons in the stalls that take to a rider quickly.
+- **Thirty more dragons:** eleven more in the Overworld (some in lairs under the sea and in caves), the **first dragons of the Nether** and **of the End**, five more of the Overcloud, and three found only on sky islands, every one of them roaming the Overcloud too. Fifty-nine kinds in all, each with its own breath, gift, power and egg.
+- **Stop time:** the Clockwork dragon's power freezes the whole world (every mob, arrow in flight, falling block, even the sun) until you use it again, with no cooldown. Surround a clock with eight of its **Clockwork Scales** to make a **Time Clock** that stops and starts time without a dragon.
+- **Fixed:** the Storm Leviathan can be hurt again (its hitbox was far smaller than it looks).
+- **Fewer sky islands:** half as many as before, in both skies.
+- **The Chameleon dragon:** its scales take on the colour of whatever it stands on (or the sky, when it flies), and once it keeps still it's lost against the ground. Monsters only notice its rider up close, and its power **disguises** it as a different kind of dragon, so wild dragons of that kind take it for one of their own. Savannas and birch forests.
+
 ## ✨ New in 2.0
 
 - **The Overcloud:** a new dimension above the sky! Floating continents drift over an endless sea of clouds, in four biomes: **Sunlit Meadows**, **Storm Heights**, **Crystal Reaches** and **Dragon Peaks**. Sky islands, dragons and sky whales are everywhere.
@@ -30,7 +40,7 @@ Shrink to the size of a bug, raise and ride elemental dragons, raid pillager out
 - **Two new dragons:** the **Earth** dragon tunnels through stone with its breath and shakes the ground with an **Earthquake**; the **Honey** dragon gums foes up with sticky honey, fills beehives, and calls a **Swarm** of angry bees.
 - **Two new kinds of sky island:** badlands-striped **Canyon** islands with hoodoos, raw ore and dripstone, and flower-filled **Hive** islands with bee nests and a giant beehive.
 - **Rainbow and Air dragons:** the **Rainbow** dragon turns sheep every colour and repaints wool and glass; the **Air** dragon makes its rider **invisible**, and once tamed it's **invisible itself** to everyone but its owner. They nest on new **Rainbow** and **Cloud** islands.
-- **Sky villages:** villagers living on a fenced island green in the clouds, with cottages, a well, a farm, an iron golem, and sometimes an airship to borrow.
+- **Sky villages:** whole islands of houses, farms, a smithy, a library and two dragon stables, with an airship to borrow.
 - **Dragon Wings:** glide like an elytra, on wings made from dragon scales.
 - **The Storm Leviathan:** a second boss! A huge storm whale that hunts players in the sky during thunderstorms.
 - **Sky whales:** enormous, gentle whales that swim through the sky, some with a calf. Ride on one's back with friends, or saddle it and steer.
@@ -165,6 +175,7 @@ They live on the ground, each in its own biomes, appearing as new land is explor
 | 🌿 **Jungle** | Jungles | A lash of vines that drags foes in and snares them | Its rider strikes harder (Strength) | **Vine Snare**: every foe is yanked in and tied up | Melon slices, cocoa beans |
 | 🔊 **Echo** | Lairs in the Deep Dark, and gloom sky islands | A sonic pulse that no armor stops, leaving foes in darkness | Echolocation: monsters near its rider glow | **Sonic Boom**: the warden's own blast at every foe | Sculk, echo shards |
 | 🫧 **Coral** | Beaches | Bubbles that float foes helplessly away | Swims as fast as it flies; its rider swims like a dolphin | **Bubble Trap**: every foe floats off in a bubble | Fish |
+| 🦎 **Chameleon** (2.1) | Savannas, birch forests | A dazzling spray of colours that blinds and baffles foes | Camouflage: monsters only notice its rider up close | **Disguise**: looks like a different kind of dragon for a minute, and wild dragons of that kind take it for one of their own | Spider eyes, sweet berries |
 
 #### Dragons of the Overcloud
 
@@ -320,7 +331,11 @@ There are four kinds of island:
 
 ### Sky villages
 
-About one island in twenty is a **village in the sky**: a fenced green with a well and a bell, four cottages each with a bed, a job site and a villager, a field of crops, an iron golem keeping watch, a cat, and half the time an **airship** moored on the green for travellers to borrow.
+A **village in the sky** is a whole island, about a hundred blocks across and fenced all round the edge: a paved plaza with a well, a bell and market stalls; four roads out to the edge, lit by lamp posts; cottages and family houses with a bed, a job site and a villager for each bed; a smithy, a library, farms, an animal pen and a lookout tower; a dock with the village's **airship** moored at the end; iron golems and cats; and open meadow left for the village to grow into.
+
+Every sky village has two **dragon stables**: great timber barns with a stall either side of the aisle, a hayloft and a tack room full of riding gear (and sometimes an egg). Most stalls have a dragon in them, gentle and easy to befriend: feed one its favourite food and it's yours.
+
+Find one with `/locate structure wonderrealms:sky_village`, or `wonderrealms:overcloud_village` in the Overcloud.
 
 ### The Storm Leviathan
 
@@ -424,7 +439,7 @@ The Overcloud's sea of clouds is made of **Cloud** blocks: they hold you up, and
 
 ### Sky islands everywhere
 
-Every kind of sky island floats in the Overcloud too, about three times as often as in the Overworld's sky, and more of them are dragon roosts, sky villages and **Sky Citadels** with their Elder Dragons. Sky whales swim at every height.
+Every kind of sky island floats in the Overcloud too, more often than in the Overworld's sky, and more of them are dragon roosts, pillager outposts and **Sky Citadels** with their Elder Dragons. Sky whales swim at every height.
 
 ---
 
@@ -487,4 +502,4 @@ It's built for it: install it on the server and on every player's game.
 - **Fabric API**
 - **GeckoLib** 5.5.6 or newer
 
-Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all twenty-eight dragons, the Elder Dragon, the Storm Leviathan, the Pixel Miner, the rhino beetle, the dragonfly, the grasshopper, the firefly and the sky whale.
+Every item comes with tooltips explaining what it does. Creative mode has spawn eggs for all fifty-nine dragons, the Elder Dragon, the Storm Leviathan, the Pixel Miner, the rhino beetle, the dragonfly, the grasshopper, the firefly and the sky whale.

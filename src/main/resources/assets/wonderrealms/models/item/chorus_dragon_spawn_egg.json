@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wonderrealms:item/chorus_dragon_spawn_egg"
+  }
+}

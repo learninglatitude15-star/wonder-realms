@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:blaze_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/blaze_egg"
+}

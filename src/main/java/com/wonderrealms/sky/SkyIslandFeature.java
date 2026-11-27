@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -93,7 +94,7 @@ import net.minecraft.world.level.storage.loot.LootTable;
 public record SkyIslandFeature() implements Feature {
 	public static final MapCodec<SkyIslandFeature> CODEC = MapCodec.unit(SkyIslandFeature::new);
 
-	private static final ResourceKey<LootTable> ISLAND_LOOT = loot("chests/sky_island");
+	static final ResourceKey<LootTable> ISLAND_LOOT = loot("chests/sky_island");
 	private static final ResourceKey<LootTable> HOARD_LOOT = loot("chests/dragon_hoard");
 	private static final ResourceKey<LootTable> OUTPOST_LOOT = loot("chests/sky_outpost");
 	private static final ResourceKey<LootTable> CITADEL_LOOT = loot("chests/sky_citadel");
@@ -107,9 +108,9 @@ public record SkyIslandFeature() implements Feature {
 	/** How far from the island's middle anything is built: inside the 3x3 chunks a feature may write to. */
 	private static final int REACH = 22;
 
-	private enum Kind { WILD, ROOST, OUTPOST, CITADEL, VILLAGE }
+	private enum Kind { WILD, ROOST, OUTPOST, CITADEL }
 
-	private static ResourceKey<LootTable> loot(String path) {
+	static ResourceKey<LootTable> loot(String path) {
 		return ResourceKey.create(Registries.LOOT_TABLE, WonderRealms.id(path));
 	}
 
@@ -120,25 +121,28 @@ public record SkyIslandFeature() implements Feature {
 
 	@Override
 	public boolean place(WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos origin) {
+		if (SkyVillages.isNear(level, origin)) {
+			return false; // a sky village floats here: it's island enough
+		}
 		boolean overcloud = level.getLevel().dimension() == Overcloud.LEVEL;
 		int top = overcloud ? Math.min(OVERCLOUD_MIN_Y + random.nextInt(OVERCLOUD_Y_SPREAD), level.getMaxY() - 30)
 			: Math.min(MIN_Y + random.nextInt(Y_SPREAD), level.getMaxY() - 40);
 		// Centred on the chunk, so the whole island fits in the area this chunk's decoration may build in.
 		BlockPos center = new BlockPos((origin.getX() & ~15) + 8, top, (origin.getZ() & ~15) + 8);
 		int roll = random.nextInt(20);
+		// (Sky villages are their own structure, far too big for one of these: see SkyVillages.)
 		Kind kind = overcloud
-			? roll < 5 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 8 ? Kind.CITADEL : roll < 11 ? Kind.VILLAGE : Kind.WILD
-			: roll < 4 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 19 ? Kind.CITADEL : roll == 18 ? Kind.VILLAGE : Kind.WILD;
+			? roll < 5 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 8 ? Kind.CITADEL : Kind.WILD
+			: roll < 4 ? Kind.ROOST : roll < 8 ? Kind.OUTPOST : roll == 19 ? Kind.CITADEL : Kind.WILD;
 		DragonElement guardian = roostGuardian(overcloud, random);
 		Theme theme = switch (kind) {
 			case ROOST -> Theme.of(guardian);
 			case OUTPOST -> random.nextBoolean() ? Theme.MEADOW : Theme.STORM;
 			case CITADEL -> random.nextBoolean() ? Theme.STORM : Theme.GLOOM;
-			case VILLAGE -> Theme.MEADOW;
 			// Meadows are the commonest wild islands (three in ten); every other theme is one in ten.
 			case WILD -> random.nextInt(10) < 3 ? Theme.MEADOW : Theme.ELEMENTAL[random.nextInt(Theme.ELEMENTAL.length)];
 		};
-		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : kind == Kind.CITADEL || kind == Kind.VILLAGE ? 13 + random.nextInt(2)
+		int radius = kind == Kind.OUTPOST ? 9 + random.nextInt(3) : kind == Kind.CITADEL ? 13 + random.nextInt(2)
 			: theme == Theme.OCEAN ? 12 + random.nextInt(2) : 7 + random.nextInt(5);
 
 		decorate(level, center, kind, theme, guardian, radius, random);
@@ -152,13 +156,12 @@ public record SkyIslandFeature() implements Feature {
 
 	private static void decorate(WorldGenLevel level, BlockPos center, Kind kind, Theme theme, DragonElement guardian, int radius,
 			RandomSource random) {
-		Island island = Island.shape(level, center, radius, theme, random);
+		Island island = Island.shape(new IslandCanvas.World(level), center, radius, theme, random);
 		island.build(random);
 		switch (kind) {
 			case ROOST -> roost(island, guardian, random);
 			case OUTPOST -> outpost(island, random);
 			case CITADEL -> citadel(island, random);
-			case VILLAGE -> village(island, random);
 			case WILD -> {
 				if (theme == Theme.OCEAN) {
 					sea(island, random); // its own little ocean, with treasure at the bottom
@@ -171,8 +174,8 @@ public record SkyIslandFeature() implements Feature {
 				}
 			}
 		}
-		if (kind != Kind.CITADEL && kind != Kind.VILLAGE) {
-			landmarks(island, random); // the castle is a citadel's landmark, and the houses a village's
+		if (kind != Kind.CITADEL) {
+			landmarks(island, random); // the castle is a citadel's landmark
 		}
 		trees(island, kind, random);
 		int waterfalls = theme == Theme.OCEAN ? 2 + random.nextInt(2) : theme == Theme.LAGOON ? 1 + random.nextInt(2)
@@ -192,11 +195,15 @@ public record SkyIslandFeature() implements Feature {
 	 * Who guards a roost: any of the sky islands' own eleven kinds, or (since 2.0) one of the new dragons: the
 	 * Overworld's wild kinds on its islands, and on the Overcloud's islands any kind at all.
 	 */
-	private static DragonElement roostGuardian(boolean overcloud, RandomSource random) {
+	static DragonElement roostGuardian(boolean overcloud, RandomSource random) {
 		List<DragonElement> kinds = new ArrayList<>(Arrays.asList(DragonElement.WILD));
 		kinds.addAll(Arrays.asList(DragonElement.OVERWORLD_WILDS));
+		kinds.addAll(Arrays.asList(DragonElement.SKY)); // the Redstone, Clockwork and Melody dragons live nowhere else
 		if (overcloud) {
+			// Over the Overcloud, every kind of dragon there is: even those of the Nether and the End.
 			kinds.addAll(Arrays.asList(DragonElement.OVERCLOUD));
+			kinds.addAll(Arrays.asList(DragonElement.NETHER));
+			kinds.addAll(Arrays.asList(DragonElement.END));
 		}
 		return kinds.get(random.nextInt(kinds.size()));
 	}
@@ -204,7 +211,7 @@ public record SkyIslandFeature() implements Feature {
 	// ---- Themes ---------------------------------------------------------------------------------------------
 
 	/** What an island is made of and what grows on it. Roosts take on their dragon's element. */
-	private enum Theme {
+	enum Theme {
 		MEADOW, EMBER, FROST, STORM, VERDANT, LAGOON, CRYSTAL, GLOOM, CANYON, HIVE, RAINBOW, CLOUD,
 		/** A sea in the sky: a ring of beach round a little ocean, with a reef, kelp, fish and sunken treasure. */
 		OCEAN;
@@ -226,7 +233,7 @@ public record SkyIslandFeature() implements Feature {
 				case RAINBOW -> RAINBOW;
 				case AIR -> CLOUD;
 				// The 2.0 dragons nest on the islands most like home.
-				case SLIME, JUNGLE -> VERDANT;
+				case SLIME, JUNGLE, CHAMELEON -> VERDANT;
 				case MUSHROOM, ECHO -> GLOOM;
 				case BLOSSOM -> HIVE;
 				case IRON -> STORM;
@@ -237,6 +244,18 @@ public record SkyIslandFeature() implements Feature {
 				case PHOENIX -> EMBER;
 				case NIMBUS, PEARL -> CLOUD;
 				case GOLD -> RAINBOW;
+				// The 2.1 dragons.
+				case ICE, SNOW, HAIL -> FROST;
+				case ABYSS -> OCEAN;
+				case GLOW, MUD, VENOM, TIGER -> VERDANT;
+				case DRIPSTONE, SAND, REDSTONE -> CANYON;
+				case HARVEST -> HIVE;
+				case MAGMA, BLAZE, BASALT, SOUL, CRIMSON, WARPED, GHAST -> EMBER;
+				case VOID, CHORUS, SHULKER, NEBULA, ECLIPSE, PHANTOM -> GLOOM;
+				case PRISM -> CRYSTAL;
+				case ZEPHYR -> CLOUD;
+				case CLOCKWORK -> STORM;
+				case MELODY -> RAINBOW;
 				default -> MEADOW;
 			};
 		}
@@ -415,27 +434,34 @@ public record SkyIslandFeature() implements Feature {
 
 	// ---- Shape ----------------------------------------------------------------------------------------------
 
-	/** The island being built: its shape, column by column, its theme, and the level it goes into. */
-	private static final class Island {
-		private static final int SIZE = REACH * 2 + 1;
+	/** The island being built: its shape, column by column, its theme, and where it's built (see {@link IslandCanvas}). */
+	static final class Island {
 		private static final int NONE = Integer.MIN_VALUE;
 
-		final WorldGenLevel level;
+		final IslandCanvas canvas;
 		final BlockPos center;
 		final int radius;
+		/** How far from the middle anything may be built: {@link #REACH} for a sky island, further for a sky village. */
+		final int reach;
 		final Theme theme;
-		private final int[] surface = new int[SIZE * SIZE];
-		private final int[] bottom = new int[SIZE * SIZE];
-		private final float[] inner = new float[SIZE * SIZE];
+		private final int size;
+		private final int[] surface;
+		private final int[] bottom;
+		private final float[] inner;
 		/** An ocean island's sea: its columns (dx, dz, floor) and the height of its surface (see {@code sea}). */
 		List<int[]> sea = List.of();
 		int seaLevel;
 
-		private Island(WorldGenLevel level, BlockPos center, int radius, Theme theme) {
-			this.level = level;
+		private Island(IslandCanvas canvas, BlockPos center, int radius, int reach, Theme theme) {
+			this.canvas = canvas;
 			this.center = center;
 			this.radius = radius;
+			this.reach = reach;
 			this.theme = theme;
+			this.size = reach * 2 + 1;
+			this.surface = new int[this.size * this.size];
+			this.bottom = new int[this.size * this.size];
+			this.inner = new float[this.size * this.size];
 			Arrays.fill(this.surface, NONE);
 		}
 
@@ -444,8 +470,8 @@ public record SkyIslandFeature() implements Feature {
 		 * ground rolls gently and rises toward the middle; the underside hangs down in rough cones, deepest under
 		 * the middle of each lobe.
 		 */
-		static Island shape(WorldGenLevel level, BlockPos center, int radius, Theme theme, RandomSource random) {
-			Island island = new Island(level, center, radius, theme);
+		static Island shape(IslandCanvas canvas, BlockPos center, int radius, Theme theme, RandomSource random) {
+			Island island = new Island(canvas, center, radius, REACH, theme);
 			Noise edge = new Noise(random.nextLong());
 			Noise ground = new Noise(random.nextLong());
 			int lobes = 2 + random.nextInt(2);
@@ -468,7 +494,7 @@ public record SkyIslandFeature() implements Feature {
 					if (inside <= 0) {
 						continue;
 					}
-					int i = index(dx, dz);
+					int i = island.index(dx, dz);
 					int y = center.getY() + (int) Math.round((ground.at(dx * 0.12, dz * 0.12) - 0.5) * 3 + inside * 2);
 					int depth = 2 + (int) (Math.pow(inside, 1.3) * radius * 1.6 + edge.at(dx * 0.5 + 50, dz * 0.5) * 4 * inside);
 					island.surface[i] = y;
@@ -479,34 +505,73 @@ public record SkyIslandFeature() implements Feature {
 			return island;
 		}
 
-		private static int index(int dx, int dz) {
-			return (dx + REACH) * SIZE + dz + REACH;
+		/**
+		 * A sky village's island: one great, roundish mass with a lobe or two, gently rolling and rising toward the
+		 * middle, its underside a long rough cone, shallower for its size than a little island's.
+		 */
+		static Island grand(IslandCanvas canvas, BlockPos center, int radius, int reach, Theme theme, RandomSource random) {
+			Island island = new Island(canvas, center, radius, reach, theme);
+			Noise edge = new Noise(random.nextLong());
+			Noise ground = new Noise(random.nextLong());
+			int lobes = 2 + random.nextInt(2);
+			double[][] blobs = new double[lobes + 1][];
+			blobs[0] = new double[] {0, 0, radius};
+			double start = random.nextDouble() * Math.PI * 2;
+			for (int i = 1; i <= lobes; i++) {
+				double angle = start + i * Math.PI * 2 / lobes + (random.nextDouble() - 0.5) * 0.8;
+				double distance = radius * (0.5 + random.nextDouble() * 0.25);
+				blobs[i] = new double[] {Math.cos(angle) * distance, Math.sin(angle) * distance, radius * (0.35 + random.nextDouble() * 0.15)};
+			}
+			for (int dx = -reach; dx <= reach; dx++) {
+				for (int dz = -reach; dz <= reach; dz++) {
+					double wobble = 0.8 + 0.25 * edge.at(dx * 0.07, dz * 0.07) + 0.1 * edge.at(dx * 0.35 + 90, dz * 0.35);
+					double inside = 0;
+					for (double[] blob : blobs) {
+						inside = Math.max(inside, 1 - Math.sqrt((dx - blob[0]) * (dx - blob[0]) + (dz - blob[1]) * (dz - blob[1])) / (blob[2] * wobble));
+					}
+					inside -= Math.max(0, Math.max(Math.abs(dx), Math.abs(dz)) - (reach - 8)) * 0.2;
+					if (inside <= 0) {
+						continue;
+					}
+					int i = island.index(dx, dz);
+					int y = center.getY() + (int) Math.round((ground.at(dx * 0.06, dz * 0.06) - 0.5) * 4 + Math.min(inside, 0.6) * 4);
+					int depth = 3 + (int) (Math.pow(inside, 1.2) * radius * 0.75 + edge.at(dx * 0.3 + 50, dz * 0.3) * 6 * inside);
+					island.surface[i] = y;
+					island.bottom[i] = y - depth;
+					island.inner[i] = (float) inside;
+				}
+			}
+			return island;
 		}
 
-		private static boolean inReach(int dx, int dz) {
-			return Math.abs(dx) <= REACH && Math.abs(dz) <= REACH;
+		private int index(int dx, int dz) {
+			return (dx + this.reach) * this.size + dz + this.reach;
+		}
+
+		private boolean inReach(int dx, int dz) {
+			return Math.abs(dx) <= this.reach && Math.abs(dz) <= this.reach;
 		}
 
 		boolean has(int dx, int dz) {
-			return inReach(dx, dz) && this.surface[index(dx, dz)] != NONE;
+			return this.inReach(dx, dz) && this.surface[this.index(dx, dz)] != NONE;
 		}
 
 		int surface(int dx, int dz) {
-			return this.surface[index(dx, dz)];
+			return this.surface[this.index(dx, dz)];
 		}
 
 		void setSurface(int dx, int dz, int y) {
-			this.surface[index(dx, dz)] = y;
+			this.surface[this.index(dx, dz)] = y;
 		}
 
 		/** The lowest block of a column's underside. */
 		int bottom(int dx, int dz) {
-			return this.bottom[index(dx, dz)];
+			return this.bottom[this.index(dx, dz)];
 		}
 
 		/** How far inside the island a column is: 0 at (or beyond) the edge, 1 in the middle of a lobe. */
 		float inner(int dx, int dz) {
-			return this.has(dx, dz) ? this.inner[index(dx, dz)] : 0F;
+			return this.has(dx, dz) ? this.inner[this.index(dx, dz)] : 0F;
 		}
 
 		/** The top block of a column. */
@@ -528,28 +593,47 @@ public record SkyIslandFeature() implements Feature {
 		}
 
 		void set(BlockPos pos, BlockState state) {
-			if (inReach(pos.getX() - this.center.getX(), pos.getZ() - this.center.getZ())) {
-				this.level.setBlock(pos, state, Block.UPDATE_CLIENTS);
+			if (this.inReach(pos.getX() - this.center.getX(), pos.getZ() - this.center.getZ())) {
+				this.canvas.set(pos, state);
 			}
 		}
 
 		BlockState get(BlockPos pos) {
-			return this.level.getBlockState(pos);
+			return this.canvas.get(pos);
 		}
 
 		boolean isAir(BlockPos pos) {
-			return this.level.isEmptyBlock(pos);
+			return this.canvas.get(pos).isAir();
+		}
+
+		/** Something to do once the block at {@code pos} is in the world (see {@link IslandCanvas#then}). */
+		void then(BlockPos pos, Consumer<WorldGenLevel> action) {
+			if (this.inReach(pos.getX() - this.center.getX(), pos.getZ() - this.center.getZ())) {
+				this.canvas.then(pos.immutable(), action);
+			}
+		}
+
+		/** Sets water at {@code pos} flowing: over the edge, out of a crack, down from a spring. */
+		void flow(BlockPos pos) {
+			BlockPos at = pos.immutable();
+			this.then(at, world -> world.scheduleTick(at, Fluids.WATER, 0));
+		}
+
+		/** A two-block plant: tall grass, a lilac, a sunflower... */
+		void doublePlant(BlockState plant, BlockPos pos) {
+			this.set(pos, plant.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER));
+			this.set(pos.above(), plant.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER));
 		}
 
 		/** The theme's ground over a layer or two of soil, over stone that gets richer toward the tip. */
 		void build(RandomSource random) {
-			for (int dx = -REACH; dx <= REACH; dx++) {
-				for (int dz = -REACH; dz <= REACH; dz++) {
+			for (int dx = -this.reach; dx <= this.reach; dx++) {
+				for (int dz = -this.reach; dz <= this.reach; dz++) {
 					if (!this.has(dx, dz)) {
 						continue;
 					}
 					int top = this.surface(dx, dz);
-					int low = this.bottom[index(dx, dz)];
+					int low = this.bottom[this.index(dx, dz)];
 					int soil = this.inner(dx, dz) < 0.25F ? 1 : 2 + random.nextInt(2);
 					for (int y = low; y <= top; y++) {
 						int below = top - y;
@@ -571,12 +655,12 @@ public record SkyIslandFeature() implements Feature {
 		void hangUnderside(RandomSource random) {
 			float chance = this.theme == Theme.VERDANT || this.theme == Theme.GLOOM || this.theme == Theme.HIVE ? 0.22F
 				: this.theme == Theme.CANYON || this.theme == Theme.RAINBOW || this.theme == Theme.CLOUD ? 0.18F : 0.14F;
-			for (int dx = -REACH; dx <= REACH; dx++) {
-				for (int dz = -REACH; dz <= REACH; dz++) {
+			for (int dx = -this.reach; dx <= this.reach; dx++) {
+				for (int dz = -this.reach; dz <= this.reach; dz++) {
 					if (!this.has(dx, dz) || this.inner(dx, dz) > 0.6F || random.nextFloat() > chance) {
 						continue;
 					}
-					BlockPos tip = this.column(dx, this.bottom[index(dx, dz)] - 1, dz);
+					BlockPos tip = this.column(dx, this.bottom[this.index(dx, dz)] - 1, dz);
 					if (!this.isAir(tip)) {
 						continue;
 					}
@@ -725,7 +809,7 @@ public record SkyIslandFeature() implements Feature {
 	}
 
 	/** Smooth value noise in [0, 1], for ragged coastlines and rolling ground. */
-	private record Noise(long seed) {
+	record Noise(long seed) {
 		double at(double x, double z) {
 			int x0 = Mth.floor(x);
 			int z0 = Mth.floor(z);
@@ -988,11 +1072,18 @@ public record SkyIslandFeature() implements Feature {
 	private static void beeNest(Island island, BlockPos pos, Direction facing, boolean full, RandomSource random) {
 		island.set(pos, Blocks.BEE_NEST.defaultBlockState().setValue(BeehiveBlock.FACING, facing)
 			.setValue(BeehiveBlock.HONEY_LEVEL, full ? BeehiveBlock.MAX_HONEY_LEVELS : random.nextInt(BeehiveBlock.MAX_HONEY_LEVELS)));
-		if (island.level.getBlockEntity(pos) instanceof BeehiveBlockEntity hive) {
-			for (int bees = 2 + random.nextInt(2); bees > 0; bees--) {
-				hive.storeBee(BeehiveBlockEntity.Occupant.create(random.nextInt(599)));
-			}
+		int[] waits = new int[2 + random.nextInt(2)];
+		for (int i = 0; i < waits.length; i++) {
+			waits[i] = random.nextInt(599);
 		}
+		BlockPos at = pos.immutable();
+		island.then(at, world -> {
+			if (world.getBlockEntity(at) instanceof BeehiveBlockEntity hive) {
+				for (int wait : waits) {
+					hive.storeBee(BeehiveBlockEntity.Occupant.create(wait));
+				}
+			}
+		});
 	}
 
 	/** A weathered prismarine pillar crowned with a sea lantern, like a lighthouse for dragons. */
@@ -1122,9 +1213,8 @@ public record SkyIslandFeature() implements Feature {
 			case ROOST -> 1 + random.nextInt(2);
 			case OUTPOST -> random.nextInt(2);
 			case CITADEL -> 1 + random.nextInt(3);
-			case VILLAGE -> 2 + random.nextInt(3);
 		};
-		int clearing = kind == Kind.WILD ? 3 : kind == Kind.CITADEL ? 11 : kind == Kind.VILLAGE ? 12 : 6; // keep the middle free for the nest, tower or castle
+		int clearing = kind == Kind.WILD ? 3 : kind == Kind.CITADEL ? 11 : 6; // keep the middle free for the nest, tower or castle
 		List<BlockPos> planted = new ArrayList<>();
 		for (int attempt = 0; attempt < 40 && planted.size() < wanted; attempt++) {
 			int dx = random.nextInt(island.radius * 2 + 1) - island.radius;
@@ -1153,7 +1243,7 @@ public record SkyIslandFeature() implements Feature {
 	 * A tree in keeping with the island: oak, birch, azalea, snowy spruce, a charred, leafless trunk, a palm, a
 	 * cherry in blossom, or a pale oak hung with moss.
 	 */
-	private static void tree(Island island, BlockPos base, RandomSource random) {
+	static void tree(Island island, BlockPos base, RandomSource random) {
 		List<BlockPos> logs = new ArrayList<>();
 		Map<BlockPos, BlockState> leaves = new HashMap<>();
 		BlockState log = Blocks.OAK_LOG.defaultBlockState();
@@ -1386,10 +1476,10 @@ public record SkyIslandFeature() implements Feature {
 	}
 
 	/** Whatever grows on each theme's open ground. */
-	private static void plants(Island island, RandomSource random) {
+	static void plants(Island island, RandomSource random) {
 		Block[] flowers = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY, Blocks.ALLIUM, Blocks.LILY_OF_THE_VALLEY};
-		for (int dx = -REACH; dx <= REACH; dx++) {
-			for (int dz = -REACH; dz <= REACH; dz++) {
+		for (int dx = -island.reach; dx <= island.reach; dx++) {
+			for (int dz = -island.reach; dz <= island.reach; dz++) {
 				if (!island.isOpenGround(dx, dz)) {
 					continue;
 				}
@@ -1404,7 +1494,7 @@ public record SkyIslandFeature() implements Feature {
 						} else if (roll < 0.34F) {
 							island.set(above, Blocks.FERN.defaultBlockState());
 						} else if (roll < 0.38F && island.isAir(above.above())) {
-							DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+							island.doublePlant(Blocks.TALL_GRASS.defaultBlockState(), above);
 						} else if (roll < 0.45F) {
 							island.set(above, flowers[random.nextInt(flowers.length)].defaultBlockState());
 						} else if (roll < 0.49F) {
@@ -1427,7 +1517,7 @@ public record SkyIslandFeature() implements Feature {
 						} else if (roll < 0.56F) {
 							island.set(above, petals(Blocks.PINK_PETALS, random));
 						} else if (roll < 0.58F && island.isAir(above.above())) {
-							DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+							island.doublePlant(Blocks.TALL_GRASS.defaultBlockState(), above);
 						} else if (roll < 0.59F) {
 							island.set(above, Blocks.FIREFLY_BUSH.defaultBlockState());
 						}
@@ -1442,7 +1532,7 @@ public record SkyIslandFeature() implements Feature {
 							if (roll < 0.3F) {
 								island.set(above, Blocks.SHORT_GRASS.defaultBlockState());
 							} else if (roll < 0.34F && island.isAir(above.above())) {
-								DoublePlantBlock.placeAt(island.level, Blocks.TALL_GRASS.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+								island.doublePlant(Blocks.TALL_GRASS.defaultBlockState(), above);
 							}
 						}
 					}
@@ -1479,7 +1569,7 @@ public record SkyIslandFeature() implements Feature {
 							} else if (roll < 0.38F) {
 								island.set(above, petals(Blocks.PINK_PETALS, random));
 							} else if (roll < 0.41F && island.isAir(above.above())) {
-								DoublePlantBlock.placeAt(island.level, Blocks.LILAC.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+								island.doublePlant(Blocks.LILAC.defaultBlockState(), above);
 							}
 						}
 					}
@@ -1541,7 +1631,7 @@ public record SkyIslandFeature() implements Feature {
 								case 2 -> Blocks.ROSE_BUSH;
 								default -> Blocks.PEONY;
 							};
-							DoublePlantBlock.placeAt(island.level, tall.defaultBlockState(), above, Block.UPDATE_CLIENTS);
+							island.doublePlant(tall.defaultBlockState(), above);
 						}
 					}
 					default -> {
@@ -1551,7 +1641,7 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	private static final Block[] HIVE_FLOWERS = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY,
+	static final Block[] HIVE_FLOWERS = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY,
 		Blocks.ALLIUM, Blocks.LILY_OF_THE_VALLEY, Blocks.ORANGE_TULIP, Blocks.PINK_TULIP, Blocks.RED_TULIP, Blocks.WHITE_TULIP, Blocks.BLUE_ORCHID};
 
 	/** A cactus a block or three tall, sometimes in flower, if nothing's crowding it. */
@@ -1570,7 +1660,7 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	private static BlockState petals(Block block, RandomSource random) {
+	static BlockState petals(Block block, RandomSource random) {
 		return block.defaultBlockState()
 			.setValue(FlowerBedBlock.AMOUNT, 1 + random.nextInt(4))
 			.setValue(FlowerBedBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random));
@@ -1679,8 +1769,8 @@ public record SkyIslandFeature() implements Feature {
 	private static void sea(Island island, RandomSource random) {
 		int level = island.center.getY(); // the sea's surface
 		List<int[]> cells = new ArrayList<>();
-		for (int dx = -REACH; dx <= REACH; dx++) {
-			for (int dz = -REACH; dz <= REACH; dz++) {
+		for (int dx = -island.reach; dx <= island.reach; dx++) {
+			for (int dz = -island.reach; dz <= island.reach; dz++) {
 				boolean inside = island.inner(dx, dz) >= SEA_INNER;
 				for (Direction side : Direction.Plane.HORIZONTAL) {
 					inside &= island.has(dx + side.getStepX(), dz + side.getStepZ());
@@ -1768,7 +1858,7 @@ public record SkyIslandFeature() implements Feature {
 		island.set(treasure.above(), Blocks.WATER.defaultBlockState());
 		island.set(treasure, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random))
 			.setValue(ChestBlock.WATERLOGGED, true));
-		RandomizableContainer.setBlockEntityLootTable(island.level, random, treasure, SUNKEN_LOOT);
+		fill(island, treasure, SUNKEN_LOOT, random);
 		for (Direction side : Direction.Plane.HORIZONTAL) {
 			int x = deepest[0] + side.getStepX(), z = deepest[1] + side.getStepZ();
 			if (isCell(cells, x, z) && random.nextInt(3) == 0) {
@@ -1788,13 +1878,17 @@ public record SkyIslandFeature() implements Feature {
 			swimmer(island, random.nextInt(3) == 0 ? EntityTypes.GLOW_SQUID : EntityTypes.SQUID, water.get(random.nextInt(water.size())), level, random);
 		}
 		if (random.nextInt(3) == 0) {
-			DragonEntity dragon = Dragons.TYPES.get(DragonElement.CORAL).create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
-			if (dragon != null) {
-				BlockPos at = island.column(deepest[0], level - 1, deepest[1]);
-				dragon.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
-				dragon.setIslandHome(island.column(0, level, 0), false);
-				island.level.addFreshEntity(dragon);
-			}
+			BlockPos at = island.column(deepest[0], level - 1, deepest[1]);
+			BlockPos home = island.column(0, level, 0);
+			float yaw = random.nextFloat() * 360F;
+			island.then(at, world -> {
+				DragonEntity dragon = Dragons.TYPES.get(DragonElement.CORAL).create(world.getLevel(), EntitySpawnReason.STRUCTURE);
+				if (dragon != null) {
+					dragon.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, yaw, 0F);
+					dragon.setIslandHome(home, false);
+					world.addFreshEntity(dragon);
+				}
+			});
 		}
 	}
 
@@ -1844,15 +1938,15 @@ public record SkyIslandFeature() implements Feature {
 					island.setSurface(step[0], step[1], level);
 				}
 				int[] lip = path.get(path.size() - 1);
-				island.level.scheduleTick(island.column(lip[0], level, lip[1]), Fluids.WATER, 0); // and over the edge it goes
+				island.flow(island.column(lip[0], level, lip[1])); // and over the edge it goes
 				channels--;
 				break;
 			}
 		}
 		// Springs bursting from cracks in the island's sides.
 		List<int[]> rim = new ArrayList<>();
-		for (int dx = -REACH; dx <= REACH; dx++) {
-			for (int dz = -REACH; dz <= REACH; dz++) {
+		for (int dx = -island.reach; dx <= island.reach; dx++) {
+			for (int dz = -island.reach; dz <= island.reach; dz++) {
 				if (island.isRim(dx, dz)) {
 					rim.add(new int[] {dx, dz});
 				}
@@ -1866,7 +1960,7 @@ public record SkyIslandFeature() implements Feature {
 				continue;
 			}
 			island.set(crack, Blocks.WATER.defaultBlockState());
-			island.level.scheduleTick(crack, Fluids.WATER, 0);
+			island.flow(crack);
 			springs--;
 		}
 		// Holes in the sea floor, and the sea streaming out of the bottom of the island.
@@ -1881,7 +1975,7 @@ public record SkyIslandFeature() implements Feature {
 			for (int y = bottom - 1; y >= bottom - 4; y--) {
 				island.set(island.column(cell[0], y, cell[1]), Blocks.AIR.defaultBlockState()); // nothing hanging there to plug it
 			}
-			island.level.scheduleTick(island.column(cell[0], bottom, cell[1]), Fluids.WATER, 0);
+			island.flow(island.column(cell[0], bottom, cell[1]));
 		}
 	}
 
@@ -1936,10 +2030,10 @@ public record SkyIslandFeature() implements Feature {
 	}
 
 	/** A spring at the island's edge that spills over and falls all the way to the ground: a sign in the sky. */
-	private static void waterfall(Island island, RandomSource random) {
+	static void waterfall(Island island, RandomSource random) {
 		List<int[]> rim = new ArrayList<>();
-		for (int dx = -REACH; dx <= REACH; dx++) {
-			for (int dz = -REACH; dz <= REACH; dz++) {
+		for (int dx = -island.reach; dx <= island.reach; dx++) {
+			for (int dz = -island.reach; dz <= island.reach; dz++) {
 				if (island.isRim(dx, dz) && island.theme.isGround(island.get(island.ground(dx, dz)))) {
 					rim.add(new int[] {dx, dz});
 				}
@@ -1960,21 +2054,21 @@ public record SkyIslandFeature() implements Feature {
 			BlockPos spring = island.ground(spot[0], spot[1]);
 			if (outward && island.isAir(spring.above())) {
 				island.set(spring, Blocks.WATER.defaultBlockState());
-				island.level.scheduleTick(spring, Fluids.WATER, 0);
+				island.flow(spring);
 				return;
 			}
 		}
 	}
 
 	/** A few small rocks drifting near the island. */
-	private static void islets(Island island, RandomSource random) {
+	static void islets(Island island, RandomSource random) {
 		int count = random.nextInt(4);
 		for (int i = 0; i < count; i++) {
 			double angle = random.nextDouble() * Math.PI * 2;
 			double distance = island.radius + 4 + random.nextInt(4);
 			int cx = (int) Math.round(Math.cos(angle) * distance);
 			int cz = (int) Math.round(Math.sin(angle) * distance);
-			if (Math.abs(cx) > REACH - 3 || Math.abs(cz) > REACH - 3 || island.has(cx, cz) || island.inner(cx + 2, cz) > 0
+			if (Math.abs(cx) > island.reach - 3 || Math.abs(cz) > island.reach - 3 || island.has(cx, cz) || island.inner(cx + 2, cz) > 0
 					|| island.inner(cx - 2, cz) > 0 || island.inner(cx, cz + 2) > 0 || island.inner(cx, cz - 2) > 0) {
 				continue; // keep clear of the island itself
 			}
@@ -2044,9 +2138,20 @@ public record SkyIslandFeature() implements Feature {
 		}
 	}
 
-	private static void chest(Island island, BlockPos pos, ResourceKey<LootTable> loot, RandomSource random) {
+	static void chest(Island island, BlockPos pos, ResourceKey<LootTable> loot, RandomSource random) {
 		island.set(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.Plane.HORIZONTAL.getRandomDirection(random)));
-		RandomizableContainer.setBlockEntityLootTable(island.level, random, pos, loot);
+		fill(island, pos, loot, random);
+	}
+
+	/** Gives the chest (or barrel) at {@code pos} its loot table, once it's in the world. */
+	static void fill(Island island, BlockPos pos, ResourceKey<LootTable> loot, RandomSource random) {
+		long seed = random.nextLong();
+		BlockPos at = pos.immutable();
+		island.then(at, world -> {
+			if (world.getBlockEntity(at) instanceof RandomizableContainer container) {
+				container.setLootTable(loot, seed);
+			}
+		});
 	}
 
 	// ---- Dragon roosts --------------------------------------------------------------------------------------
@@ -2071,13 +2176,17 @@ public record SkyIslandFeature() implements Feature {
 			}
 		}
 		chest(island, island.ground(0, 0).above(), HOARD_LOOT, random);
-		DragonEntity guard = Dragons.TYPES.get(element).create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
-		if (guard != null) {
-			BlockPos at = island.ground(1, 1).above();
-			guard.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
-			guard.setIslandHome(island.ground(0, 0).above(), false);
-			island.level.addFreshEntity(guard);
-		}
+		BlockPos at = island.ground(1, 1).above();
+		BlockPos nest = island.ground(0, 0).above();
+		float yaw = random.nextFloat() * 360F;
+		island.then(at, world -> {
+			DragonEntity guard = Dragons.TYPES.get(element).create(world.getLevel(), EntitySpawnReason.STRUCTURE);
+			if (guard != null) {
+				guard.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, yaw, 0F);
+				guard.setIslandHome(nest, false);
+				world.addFreshEntity(guard);
+			}
+		});
 	}
 
 	private static BlockState nestRing(Theme theme, RandomSource random) {
@@ -2121,129 +2230,17 @@ public record SkyIslandFeature() implements Feature {
 
 	// ---- Sky villages ---------------------------------------------------------------------------------------
 
-	/** Half the width of a sky village's fenced green, and how far out from the well its four houses stand. */
-	private static final int VILLAGE_HALF = 10, HOUSE_OFFSET = 6;
 	/** Job sites: each house gets a different one, so its villager takes up that trade. */
-	private static final Block[] JOB_SITES = {Blocks.LECTERN, Blocks.COMPOSTER, Blocks.BARREL, Blocks.SMOKER, Blocks.BLAST_FURNACE,
+	static final Block[] JOB_SITES = {Blocks.LECTERN, Blocks.COMPOSTER, Blocks.BARREL, Blocks.SMOKER, Blocks.BLAST_FURNACE,
 		Blocks.CARTOGRAPHY_TABLE, Blocks.FLETCHING_TABLE, Blocks.LOOM, Blocks.SMITHING_TABLE, Blocks.STONECUTTER, Blocks.BREWING_STAND,
 		Blocks.CAULDRON};
-	private static final Block[] VILLAGE_CROPS = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
-
-	/**
-	 * A sky village: a fenced green round a well and a bell, four cottages (each with a bed, a job site and a
-	 * villager), a field of crops, an iron golem keeping watch, a cat, and sometimes an airship the villagers lend to
-	 * travellers. The fence and its gates keep everyone from wandering off the edge.
-	 */
-	private static void village(Island island, RandomSource random) {
-		int floor = island.surface(0, 0);
-		int half = VILLAGE_HALF;
-		// Level the green, with foundations wherever the island falls away under it.
-		for (int dx = -half; dx <= half; dx++) {
-			for (int dz = -half; dz <= half; dz++) {
-				int top = island.has(dx, dz) ? island.surface(dx, dz) : floor - 4;
-				for (int y = top + 1; y < floor; y++) {
-					island.set(island.column(dx, y, dz), y > floor - 3 ? Blocks.DIRT.defaultBlockState() : island.theme.rock(random, 0.5F, y));
-				}
-				for (int y = floor + 1; y <= top; y++) {
-					island.set(island.column(dx, y, dz), Blocks.AIR.defaultBlockState());
-				}
-				island.set(island.column(dx, floor, dz), Blocks.GRASS_BLOCK.defaultBlockState());
-				if (island.has(dx, dz)) {
-					island.setSurface(dx, dz, floor);
-				}
-			}
-		}
-		// The well: water in a ring of cobblestone under a little roof on posts, a lantern hanging over it.
-		for (int dx = -1; dx <= 1; dx++) {
-			for (int dz = -1; dz <= 1; dz++) {
-				BlockPos pos = island.column(dx, floor, dz);
-				boolean corner = Math.abs(dx) == 1 && Math.abs(dz) == 1;
-				if (dx == 0 && dz == 0) {
-					island.set(pos.below(), Blocks.COBBLESTONE.defaultBlockState());
-					island.set(pos, Blocks.WATER.defaultBlockState());
-				} else {
-					island.set(pos, Blocks.COBBLESTONE.defaultBlockState());
-					island.set(pos.above(), (corner ? Blocks.COBBLESTONE : Blocks.COBBLESTONE_SLAB).defaultBlockState());
-				}
-				if (corner) {
-					island.set(pos.above(2), Blocks.OAK_FENCE.defaultBlockState());
-					island.set(pos.above(3), Blocks.OAK_FENCE.defaultBlockState());
-				}
-				island.set(pos.above(4), Blocks.COBBLESTONE_SLAB.defaultBlockState());
-			}
-		}
-		island.set(island.column(0, floor + 3, 0), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
-		island.set(island.column(2, floor + 1, 2), Blocks.BELL.defaultBlockState()
-			.setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR).setValue(BellBlock.FACING, Direction.NORTH));
-		// Four cottages round the well, each with its door facing it and a path up to the door.
-		List<Block> jobs = new ArrayList<>(Arrays.asList(JOB_SITES));
-		int storehouse = random.nextInt(4);
-		int house = 0;
-		for (Direction front : Direction.Plane.HORIZONTAL) {
-			BlockPos middle = island.column(-front.getStepX() * HOUSE_OFFSET, floor, -front.getStepZ() * HOUSE_OFFSET);
-			cottage(island, middle, front, jobs.remove(random.nextInt(jobs.size())), house++ == storehouse, random);
-			for (int step = 2; step <= HOUSE_OFFSET - 3; step++) {
-				island.set(island.column(-front.getStepX() * step, floor, -front.getStepZ() * step), Blocks.DIRT_PATH.defaultBlockState());
-			}
-		}
-		// A field of crops round a pool of water, edged with logs.
-		Block crop = VILLAGE_CROPS[random.nextInt(VILLAGE_CROPS.length)];
-		for (int dx = 3; dx <= 9; dx++) {
-			for (int dz = 3; dz <= 9; dz++) {
-				BlockPos pos = island.column(dx, floor, dz);
-				if (dx == 3 || dx == 9 || dz == 3 || dz == 9) {
-					island.set(pos, Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, dx == 3 || dx == 9 ? Direction.Axis.Z : Direction.Axis.X));
-				} else if (dx == 6 && dz == 6) {
-					island.set(pos, Blocks.WATER.defaultBlockState());
-				} else {
-					island.set(pos, Blocks.FARMLAND.defaultBlockState().setValue(BlockStateProperties.MOISTURE, 7));
-					island.set(pos.above(), crop.defaultBlockState().setValue(CropBlock.AGE, random.nextInt(CropBlock.MAX_AGE + 1)));
-				}
-			}
-		}
-		// Lamp posts, so nothing nasty spawns on the green at night.
-		for (int[] lamp : new int[][] {{-3, -3}, {3, -3}, {-3, 3}}) {
-			BlockPos post = island.column(lamp[0], floor + 1, lamp[1]);
-			island.set(post, Blocks.OAK_FENCE.defaultBlockState());
-			island.set(post.above(), Blocks.OAK_FENCE.defaultBlockState());
-			island.set(post.above(2), Blocks.LANTERN.defaultBlockState());
-		}
-		// The fence round the green, with two gates and lanterns along it.
-		for (int dx = -half; dx <= half; dx++) {
-			for (int dz = -half; dz <= half; dz++) {
-				if (!onVillageFence(dx, dz)) {
-					continue;
-				}
-				BlockPos pos = island.column(dx, floor + 1, dz);
-				if (dz == -half && dx == 3 || dz == half && dx == -3) {
-					island.set(pos, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, dz < 0 ? Direction.NORTH : Direction.SOUTH));
-					continue;
-				}
-				island.set(pos, Blocks.OAK_FENCE.defaultBlockState()
-					.setValue(FenceBlock.NORTH, onVillageFence(dx, dz - 1)).setValue(FenceBlock.SOUTH, onVillageFence(dx, dz + 1))
-					.setValue(FenceBlock.WEST, onVillageFence(dx - 1, dz)).setValue(FenceBlock.EAST, onVillageFence(dx + 1, dz)));
-				if (Math.floorMod(dx + dz, 5) == 0) {
-					island.set(pos.above(), Blocks.LANTERN.defaultBlockState());
-				}
-			}
-		}
-		// Its guardian, its cat, and sometimes an airship moored on the green for travellers to borrow.
-		spawnVillager(island, EntityTypes.IRON_GOLEM, island.column(6, floor + 1, -6), random);
-		spawnVillager(island, EntityTypes.CAT, island.column(-6, floor + 1, -6), random);
-		if (random.nextBoolean()) {
-			AirshipEntity.spawnVillageShip(island.level, island.column(-6, floor + 1, 6));
-		}
-	}
-
-	private static boolean onVillageFence(int dx, int dz) {
-		return Math.abs(dx) == VILLAGE_HALF && Math.abs(dz) <= VILLAGE_HALF || Math.abs(dz) == VILLAGE_HALF && Math.abs(dx) <= VILLAGE_HALF;
-	}
+	static final Block[] VILLAGE_CROPS = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
 
 	/**
 	 * A cottage five blocks across: an oak frame filled in with planks, windows either side and at the back, a roof of
 	 * spruce, a door facing the well, and inside, a bed, a job site, a lantern and the villager who lives there.
 	 */
-	private static void cottage(Island island, BlockPos middle, Direction front, Block job, boolean store, RandomSource random) {
+	static void cottage(Island island, BlockPos middle, Direction front, Block job, boolean store, RandomSource random) {
 		Direction right = front.getClockWise();
 		for (int a = -2; a <= 2; a++) {
 			for (int b = -2; b <= 2; b++) {
@@ -2278,16 +2275,20 @@ public record SkyIslandFeature() implements Feature {
 		spawnVillager(island, EntityTypes.VILLAGER, middle.above(), random);
 	}
 
-	/** A villager (or a golem or cat) who lives in a sky village, and stays there. */
-	private static void spawnVillager(Island island, EntityType<? extends Mob> type, BlockPos at, RandomSource random) {
-		Mob mob = type.create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
-		if (mob == null) {
-			return;
-		}
-		mob.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
-		mob.finalizeSpawn(island.level, island.level.getCurrentDifficultyAt(at), EntitySpawnReason.STRUCTURE, null);
-		mob.setPersistenceRequired();
-		island.level.addFreshEntity(mob);
+	/** A villager (or a golem, a cat, a sheep, a fish...) who lives on an island, and stays there. */
+	static void spawnVillager(Island island, EntityType<? extends Mob> type, BlockPos at, RandomSource random) {
+		float yaw = random.nextFloat() * 360F;
+		BlockPos spot = at.immutable();
+		island.then(spot, world -> {
+			Mob mob = type.create(world.getLevel(), EntitySpawnReason.STRUCTURE);
+			if (mob == null) {
+				return;
+			}
+			mob.snapTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, yaw, 0F);
+			mob.finalizeSpawn(world, world.getCurrentDifficultyAt(spot), EntitySpawnReason.STRUCTURE, null);
+			mob.setPersistenceRequired();
+			world.addFreshEntity(mob);
+		});
 	}
 
 	// ---- Sky citadels ---------------------------------------------------------------------------------------
@@ -2359,13 +2360,17 @@ public record SkyIslandFeature() implements Feature {
 				}
 			}
 		}
-		ElderDragonEntity elder = Dragons.ELDER.create(island.level.getLevel(), EntitySpawnReason.STRUCTURE);
-		if (elder != null) {
-			BlockPos at = island.column(0, floor + 1, 4);
-			elder.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, random.nextFloat() * 360F, 0F);
-			elder.setIslandHome(island.column(0, floor + 1, 0), false);
-			island.level.addFreshEntity(elder);
-		}
+		BlockPos at = island.column(0, floor + 1, 4);
+		BlockPos lair = island.column(0, floor + 1, 0);
+		float yaw = random.nextFloat() * 360F;
+		island.then(at, world -> {
+			ElderDragonEntity elder = Dragons.ELDER.create(world.getLevel(), EntitySpawnReason.STRUCTURE);
+			if (elder != null) {
+				elder.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, yaw, 0F);
+				elder.setIslandHome(lair, false);
+				world.addFreshEntity(elder);
+			}
+		});
 	}
 
 	/** A solid corner tower, three blocks across, with merlons at its corners and a lantern on top. */
@@ -2415,24 +2420,30 @@ public record SkyIslandFeature() implements Feature {
 		garrison.post(EntityTypes.PILLAGER, tower.at(0, 1, 0));
 		garrison.post(EntityTypes.PILLAGER, tower.at(-3, 1, -3)); // in the yard
 		garrison.post(EntityTypes.VINDICATOR, tower.at(4, 1, 1)); // minding the dock
-		AirshipEntity.spawnRaiderShip(island.level, tower.at(dockEnd + 3, 1, 0), 2);
+		BlockPos moored = tower.at(dockEnd + 3, 1, 0);
+		island.then(moored, world -> AirshipEntity.spawnRaiderShip(world, moored, 2));
 		// Up here, pillagers ride wild dragons instead of ravagers.
 		BlockPos base = tower.at(0, 1, 0);
-		DragonEntity.spawnRaiderMount(island.level, tower.at(-8, 8, 6), base);
-		DragonEntity.spawnRaiderMount(island.level, tower.at(5, 12, -8), base);
+		BlockPos west = tower.at(-8, 8, 6);
+		BlockPos east = tower.at(5, 12, -8);
+		island.then(west, world -> DragonEntity.spawnRaiderMount(world, west, base));
+		island.then(east, world -> DragonEntity.spawnRaiderMount(world, east, base));
 	}
 
 	/** Posts the outpost's illagers, for good, in the world being generated. */
 	private record Garrison(Island island, RandomSource random) {
 		void post(EntityType<? extends Mob> type, BlockPos at) {
-			Mob mob = type.create(this.island.level.getLevel(), EntitySpawnReason.STRUCTURE);
-			if (mob == null) {
-				return;
-			}
-			mob.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, this.random.nextFloat() * 360F, 0F);
-			mob.finalizeSpawn(this.island.level, this.island.level.getCurrentDifficultyAt(at), EntitySpawnReason.STRUCTURE, null);
-			mob.setPersistenceRequired();
-			this.island.level.addFreshEntityWithPassengers(mob);
+			float yaw = this.random.nextFloat() * 360F;
+			this.island.then(at, world -> {
+				Mob mob = type.create(world.getLevel(), EntitySpawnReason.STRUCTURE);
+				if (mob == null) {
+					return;
+				}
+				mob.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, yaw, 0F);
+				mob.finalizeSpawn(world, world.getCurrentDifficultyAt(at), EntitySpawnReason.STRUCTURE, null);
+				mob.setPersistenceRequired();
+				world.addFreshEntityWithPassengers(mob);
+			});
 		}
 	}
 
@@ -2557,21 +2568,21 @@ public record SkyIslandFeature() implements Feature {
 			this.put(1, 1, 1, Blocks.CRAFTING_TABLE.defaultBlockState());
 			this.put(1, 1, -1, Blocks.FLETCHING_TABLE.defaultBlockState());
 			this.put(1, TOP + 1, 1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST));
-			RandomizableContainer.setBlockEntityLootTable(this.island.level, random, this.at(1, TOP + 1, 1), OUTPOST_LOOT);
+			fill(this.island, this.at(1, TOP + 1, 1), OUTPOST_LOOT, random);
 		}
 
 		/** A plank dock from the door out past the island's edge, railed over the drop. Returns how far out it runs. */
 		int dock() {
 			int y0 = this.origin.getY();
 			int end = 4;
-			while (end < REACH - 6) {
+			while (end < this.island.reach - 6) {
 				int[] c = this.column(end, 0);
 				if (!this.island.has(c[0], c[1])) {
 					break;
 				}
 				end++;
 			}
-			end = Math.min(end + 3, REACH - 6);
+			end = Math.min(end + 3, this.island.reach - 6);
 			BlockState beam = Blocks.DARK_OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X);
 			for (int x = 3; x <= end; x++) {
 				for (int z = -2; z <= 2; z++) {

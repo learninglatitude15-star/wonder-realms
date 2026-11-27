@@ -19,7 +19,7 @@ DATA = ROOT / "data" / "wonderrealms"
 NS = "wonderrealms"
 
 
-SCALE_COLORS = {"dragon_scale": (0x2a, 0xa8, 0x8a), "elder_scale": (0xc0, 0x8a, 0x30)}
+SCALE_COLORS = {"dragon_scale": (0x2a, 0xa8, 0x8a), "elder_scale": (0xc0, 0x8a, 0x30), "clockwork_scale": (0xc8, 0x94, 0x3c)}
 ITEMS = {
     **{f"{metal}_dragon_armor": (f"{metal.capitalize()} Dragon Armor", lambda metal=metal: art.dragon_armor(metal)) for metal in art.METAL_COLORS},
     "dragon_whistle": ("Dragon Whistle", art.whistle_icon),
@@ -28,6 +28,8 @@ ITEMS = {
     "airship_cannon": ("Airship Cannon", art.cannon_icon),
     "dragon_scale": ("Dragon Scale", lambda: art.scale_icon(SCALE_COLORS["dragon_scale"])),
     "elder_scale": ("Elder Scale", lambda: art.scale_icon(SCALE_COLORS["elder_scale"])),
+    "clockwork_scale": ("Clockwork Scale", lambda: art.scale_icon(SCALE_COLORS["clockwork_scale"])),
+    "time_clock": ("Time Clock", art.time_clock_icon),
     "dragon_heart": ("Dragon Heart", art.heart_icon),
     "dragon_wings": ("Dragon Wings", art.wings_icon),
     **{f"dragonscale_{piece}": (f"Dragonscale {piece.capitalize()}", lambda piece=piece: art.dragonscale_icon(piece))
@@ -66,6 +68,8 @@ RECIPES = {
     # Dragon scales stretched over phantom membrane.
     "dragon_wings": shaped("equipment", ["SMS", "SMS", "S S"], {"S": f"{NS}:dragon_scale", "M": "minecraft:phantom_membrane"},
                            f"{NS}:dragon_wings"),
+    # A clock set round with eight Clockwork dragon scales.
+    "time_clock": shaped("equipment", ["SSS", "SCS", "SSS"], {"S": f"{NS}:clockwork_scale", "C": "minecraft:clock"}, f"{NS}:time_clock"),
     # Two Elder Scales worked onto a netherite sword.
     "elder_blade": shaped("equipment", ["S", "S", "N"], {"S": f"{NS}:elder_scale", "N": "minecraft:netherite_sword"}, f"{NS}:elder_blade"),
     # Dragonscale armor takes the shapes of any other armor.

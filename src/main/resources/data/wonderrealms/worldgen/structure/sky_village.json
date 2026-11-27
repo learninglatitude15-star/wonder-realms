@@ -1,0 +1,8 @@
+{
+  "type": "wonderrealms:sky_village",
+  "biomes": "#wonderrealms:has_structure/sky_village",
+  "step": "top_layer_modification",
+  "spawn_overrides": {},
+  "terrain_adaptation": "none",
+  "overcloud": false
+}

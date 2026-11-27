@@ -1,0 +1,79 @@
+{
+  "criteria": {
+    "void": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:void_dragon"
+          }
+        }
+      }
+    },
+    "chorus": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:chorus_dragon"
+          }
+        }
+      }
+    },
+    "shulker": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:shulker_dragon"
+          }
+        }
+      }
+    },
+    "nebula": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:nebula_dragon"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:void_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.end_dragons.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.end_dragons.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "void"
+    ],
+    [
+      "chorus"
+    ],
+    [
+      "shulker"
+    ],
+    [
+      "nebula"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

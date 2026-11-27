@@ -202,6 +202,32 @@ def whistle_icon():
                             "k": flat((0x4a, 0x3a, 0x2a)), "s": flat((0xc8, 0xa8, 0x70))}, overlay="k")
 
 
+TIME_CLOCK = [
+    "................",
+    ".......ll.......",
+    "......l..l......",
+    ".......cc.......",
+    ".....BBBBBB.....",
+    "....BFFFFFFB....",
+    "...BFFFkFFFFB...",
+    "...BFFFkFFFFB...",
+    "...BFFFkkkFFB...",
+    "...BFFFFFFFFB...",
+    "...BFFFFFFFFB...",
+    "....BFFFFFFB....",
+    ".....BBBBBBGG...",
+    "...........GGG..",
+    "............G...",
+    "................",
+]
+
+
+def time_clock_icon():
+    """A brass pocket watch with a cog of weathered copper caught on its case."""
+    return sprite(TIME_CLOCK, {"B": mat((0xd8, 0xa8, 0x48), -0.6, 0.5), "F": flat((0xf6, 0xee, 0xd8)), "k": flat((0x2a, 0x22, 0x1a)),
+                               "l": mat((0xc8, 0x98, 0x40)), "c": mat((0xa8, 0x78, 0x30)), "G": mat((0x58, 0x9c, 0x88))}, overlay="k")
+
+
 WINGS = [
     "................",
     "..BBB......BBB..",

@@ -1,5 +1,8 @@
 package com.wonderrealms.dragon;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.core.particles.DustColorTransitionOptions;
+import java.util.ArrayList;
 import com.wonderrealms.WonderAdvancements;
 import com.wonderrealms.overcloud.Overcloud;
 import java.util.List;
@@ -76,6 +79,10 @@ public final class DragonKinds {
 	private static final double BLINK_RANGE = 32;
 	/** Baby animals near a tamed Blossom dragon grow up this many ticks more every two seconds. */
 	private static final int BLOSSOM_GROWTH = 600;
+	/** Monsters only notice a Chameleon dragon's rider this close. */
+	private static final double CAMO_SIGHT = 8;
+	/** How long a Chameleon dragon's disguise lasts. */
+	private static final int DISGUISE_TICKS = 20 * 60;
 	private static final ParticleOptions SUN_DUST = new DustParticleOptions(0xFFE070, 1.8F);
 	private static final ParticleOptions MOON_DUST = new DustParticleOptions(0xD8E0FF, 1.6F);
 	private static final ParticleOptions[] AURORA_DUST = {new DustParticleOptions(0x40F080, 1.6F), new DustParticleOptions(0x30E0D0, 1.6F),
@@ -109,7 +116,7 @@ public final class DragonKinds {
 
 	/** An Iron dragon's blast hits harder than most. */
 	static float breathDamageScale(DragonElement element) {
-		return element == DragonElement.IRON ? 1.35F : 1F;
+		return element == DragonElement.IRON ? 1.35F : MoreDragons.breathDamageScale(element);
 	}
 
 	/**
@@ -211,14 +218,20 @@ public final class DragonKinds {
 				target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0), dragon);
 				target.push(dir.x * 0.5, 0.15, dir.z * 0.5);
 			}
+			case CHAMELEON -> { // A dazzling spray of colours: blinded, dizzy, and often baffled about who they were after.
+				target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 40, 0), dragon);
+				target.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 80, 0), dragon);
+				if (target instanceof Mob mob && dragon.getRandom().nextInt(3) == 0) {
+					mob.setTarget(null);
+				}
+			}
 			case PEARL -> {
 				if (target.getMaxHealth() <= 150F) { // bosses stand their ground
 					blinkAway(level, target, 6);
 					target.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 60, 0), dragon);
 				}
 			}
-			default -> {
-			}
+			default -> MoreDragons.breathHit(dragon, level, target, dir);
 		}
 	}
 
@@ -369,8 +382,7 @@ public final class DragonKinds {
 					enderman.setTarget(null);
 				}
 			}
-			default -> {
-			}
+			default -> MoreDragons.gift(dragon, level, rider);
 		}
 	}
 
@@ -398,13 +410,26 @@ public final class DragonKinds {
 		}
 	}
 
-	/** Whether {@code mob} should leave {@code target} alone: the undead don't see a Bone dragon's rider, nor endermen a Pearl's. */
+	/**
+	 * Whether {@code mob} should leave {@code target} alone: the undead don't see a Bone dragon's rider, nor endermen a
+	 * Pearl's; monsters only notice a Chameleon dragon's rider up close, and lose a Chameleon dragon itself once it keeps
+	 * still against the ground; and a wild dragon takes a Chameleon disguised as its own kind for one of its own. (Not
+	 * if they've just been hurt by them, though: that gives anyone away.)
+	 */
 	public static boolean ignores(Mob mob, LivingEntity target) {
-		if (!(target instanceof Player) || !(target.getVehicle() instanceof DragonEntity dragon)) {
+		if (target instanceof DragonEntity chameleon && chameleon.isBlended() && !(mob instanceof DragonEntity)) {
+			return mob.getLastHurtByMob() != chameleon;
+		}
+		if (!(target instanceof Player) || !(target.getVehicle() instanceof DragonEntity dragon) || mob.getLastHurtByMob() == target) {
 			return false;
 		}
+		if (mob instanceof DragonEntity wild && !wild.isTame() && dragon.disguise() == wild.element()) {
+			return true;
+		}
 		return dragon.element() == DragonElement.BONE && undead(mob)
-			|| dragon.element() == DragonElement.PEARL && mob instanceof Enderman;
+			|| dragon.element() == DragonElement.PEARL && mob instanceof Enderman
+			|| dragon.element() == DragonElement.CHAMELEON && mob instanceof Enemy && mob.distanceToSqr(target) > CAMO_SIGHT * CAMO_SIGHT
+			|| MoreDragons.ignores(mob, dragon);
 	}
 
 	// ---- Every tick -----------------------------------------------------------------------------------------
@@ -452,8 +477,7 @@ public final class DragonKinds {
 						dragon.getBbWidth() * 0.5, 0.01);
 				}
 			}
-			default -> {
-			}
+			default -> MoreDragons.tick(dragon, level);
 		}
 	}
 
@@ -711,8 +735,24 @@ public final class DragonKinds {
 				}
 			}
 			case PEARL -> blink(dragon, level, rider); // Blink: across the sky in the blink of an eye
-			default -> {
+			case CHAMELEON -> { // Disguise: it takes on the look of a different kind of dragon for a minute
+				List<DragonElement> looks = new ArrayList<>();
+				for (DragonElement kind : DragonElement.values()) {
+					if (kind != DragonElement.CHAMELEON && kind != DragonElement.ENDER && kind != dragon.disguise()) {
+						looks.add(kind);
+					}
+				}
+				DragonElement look = looks.get(dragon.getRandom().nextInt(looks.size()));
+				dragon.disguiseAs(look, DISGUISE_TICKS);
+				level.sendParticles(new DustColorTransitionOptions(0x7CD64A, 0xFF6FB4, 2F), dragon.getX(), dragon.getY() + dragon.getBbHeight() * 0.5,
+					dragon.getZ(), 50, dragon.getBbWidth() * 0.6, dragon.getBbHeight() * 0.5, dragon.getBbWidth() * 0.6, 0);
+				level.playSound(null, dragon.blockPosition(), SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.NEUTRAL, 1.5F, 1F);
+				if (rider instanceof ServerPlayer player) {
+					player.sendOverlayMessage(Component.translatable("message.wonderrealms.disguised", Dragons.TYPES.get(look).getDescription()));
+				}
+				dragon.awardBreath("master_of_disguise");
 			}
+			default -> MoreDragons.power(dragon, level, rider, foes);
 		}
 	}
 
@@ -740,7 +780,7 @@ public final class DragonKinds {
 	}
 
 	/** Teleports {@code entity} a few blocks away at random, as chorus fruit does, in a puff of portal particles. */
-	private static void blinkAway(ServerLevel level, LivingEntity entity, int spread) {
+	static void blinkAway(ServerLevel level, LivingEntity entity, int spread) {
 		double x = entity.getX(), y = entity.getY(), z = entity.getZ();
 		for (int i = 0; i < 12; i++) {
 			double tx = x + (entity.getRandom().nextDouble() - 0.5) * 2 * spread;
@@ -797,6 +837,7 @@ public final class DragonKinds {
 
 	/** A Phoenix dragon's rider cheats death; arrows pass a Nimbus dragon's rider by; a Star dragon's rider gets more experience. */
 	static void registerEvents() {
+		MoreDragons.registerEvents();
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof Player player && player.getVehicle() instanceof DragonEntity dragon && dragon.element() == DragonElement.PHOENIX
 					&& dragon.isTame() && dragon.rebirthReady() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)

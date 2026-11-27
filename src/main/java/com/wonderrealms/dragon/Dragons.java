@@ -1,5 +1,6 @@
 package com.wonderrealms.dragon;
 
+import net.minecraft.world.level.Level;
 import com.wonderrealms.WonderAdvancements;
 import com.wonderrealms.WonderRealms;
 import java.util.EnumMap;
@@ -86,6 +87,10 @@ public final class Dragons {
 	public static final Item WHISTLE = item("dragon_whistle", properties -> new DragonWhistleItem(properties.stacksTo(1)));
 	/** Shed by tamed dragons and dropped by wild ones; made into dragonscale armor. */
 	public static final Item DRAGON_SCALE = item("dragon_scale", Item::new);
+	/** A Clockwork dragon's scale: brass, with a tick to it. Eight round a clock make a Time Clock. */
+	public static final Item CLOCKWORK_SCALE = item("clockwork_scale", Item::new);
+	/** Stops time, and starts it again. */
+	public static final Item TIME_CLOCK = item("time_clock", properties -> new TimeClockItem(properties.stacksTo(1).rarity(Rarity.EPIC)));
 	/**
 	 * Dragon Wings: a glider like an elytra, with wings of dragon membrane and scale. Made from dragon scales and phantom
 	 * membranes, and mended with dragon scales.
@@ -143,8 +148,8 @@ public final class Dragons {
 				.sized(2.2F, 1.9F)
 				.eyeHeight(1.6F)
 				.clientTrackingRange(10);
-			if (element == DragonElement.PHOENIX) {
-				builder = builder.fireImmune(); // born of fire
+			if (element.fireproof()) {
+				builder = builder.fireImmune(); // born of fire, or of the Nether
 			}
 			EntityType<DragonEntity> type = Registry.register(BuiltInRegistries.ENTITY_TYPE, typeKey, builder.build(typeKey));
 			TYPES.put(element, type);
@@ -178,6 +183,7 @@ public final class Dragons {
 					case JUNGLE -> MapColor.COLOR_GREEN;
 					case ECHO -> MapColor.COLOR_CYAN;
 					case CORAL -> MapColor.COLOR_ORANGE;
+					case CHAMELEON -> MapColor.COLOR_LIGHT_GREEN;
 					case SUN -> MapColor.GOLD;
 					case MOON -> MapColor.COLOR_LIGHT_GRAY;
 					case STAR -> MapColor.COLOR_BLUE;
@@ -223,7 +229,7 @@ public final class Dragons {
 	 */
 	private static boolean canSpawn(EntityType<DragonEntity> type, ServerLevelAccessor level, EntitySpawnReason reason, BlockPos pos, RandomSource random) {
 		return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
-			&& level.canSeeSky(pos) && random.nextInt(4) == 0;
+			&& (level.canSeeSky(pos) || level.getLevel().dimension() == Level.NETHER) && random.nextInt(4) == 0; // the Nether has no sky
 	}
 
 	public static void init() {
@@ -246,9 +252,11 @@ public final class Dragons {
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(output -> {
 			output.accept(WHISTLE);
 			output.accept(DRAGON_WINGS);
+			output.accept(TIME_CLOCK);
 		});
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(output -> {
 			output.accept(DRAGON_SCALE);
+			output.accept(CLOCKWORK_SCALE);
 			output.accept(ELDER_SCALE);
 			output.accept(DRAGON_HEART);
 		});
@@ -303,6 +311,31 @@ public final class Dragons {
 		home(DragonElement.BONE, 2, Biomes.PALE_GARDEN);
 		home(DragonElement.JUNGLE, 5, Biomes.JUNGLE, Biomes.BAMBOO_JUNGLE, Biomes.SPARSE_JUNGLE);
 		home(DragonElement.CORAL, 4, Biomes.BEACH);
+		home(DragonElement.CHAMELEON, 4, Biomes.SAVANNA, Biomes.SAVANNA_PLATEAU, Biomes.WINDSWEPT_SAVANNA);
+		home(DragonElement.CHAMELEON, 3, Biomes.BIRCH_FOREST, Biomes.OLD_GROWTH_BIRCH_FOREST);
+		// Since 2.1: more of the Overworld's (the Abyss, Glow and Dripstone dragons have lairs: see MoreDragons)...
+		home(DragonElement.ICE, 4, Biomes.ICE_SPIKES, Biomes.FROZEN_PEAKS);
+		home(DragonElement.SNOW, 4, Biomes.SNOWY_PLAINS, Biomes.SNOWY_TAIGA, Biomes.GROVE, Biomes.SNOWY_SLOPES);
+		home(DragonElement.MUD, 5, Biomes.MANGROVE_SWAMP);
+		home(DragonElement.VENOM, 3, Biomes.SWAMP, Biomes.SPARSE_JUNGLE);
+		home(DragonElement.HARVEST, 3, Biomes.PLAINS, Biomes.SUNFLOWER_PLAINS);
+		home(DragonElement.SAND, 3, Biomes.DESERT);
+		home(DragonElement.TIGER, 4, Biomes.BAMBOO_JUNGLE, Biomes.JUNGLE);
+		home(DragonElement.FANG, 4, Biomes.TAIGA, Biomes.OLD_GROWTH_PINE_TAIGA, Biomes.OLD_GROWTH_SPRUCE_TAIGA);
+		// ...the Nether's...
+		home(DragonElement.MAGMA, 6, Biomes.NETHER_WASTES, Biomes.BASALT_DELTAS);
+		home(DragonElement.CRIMSON, 6, Biomes.CRIMSON_FOREST);
+		home(DragonElement.WARPED, 6, Biomes.WARPED_FOREST);
+		home(DragonElement.SOUL, 6, Biomes.SOUL_SAND_VALLEY);
+		home(DragonElement.BASALT, 6, Biomes.BASALT_DELTAS);
+		home(DragonElement.BLAZE, 5, Biomes.NETHER_WASTES);
+		home(DragonElement.GHAST, 4, Biomes.SOUL_SAND_VALLEY, Biomes.NETHER_WASTES);
+		// ...and the End's, out on its far islands.
+		home(DragonElement.VOID, 4, Biomes.SMALL_END_ISLANDS, Biomes.END_BARRENS);
+		home(DragonElement.CHORUS, 5, Biomes.END_HIGHLANDS);
+		home(DragonElement.SHULKER, 4, Biomes.END_HIGHLANDS, Biomes.END_MIDLANDS);
+		home(DragonElement.NEBULA, 4, Biomes.END_MIDLANDS, Biomes.END_BARRENS);
+		MoreDragons.lairs();
 		Registry.register(BuiltInRegistries.FEATURE_TYPE, WonderRealms.id("echo_lair"), EchoLairFeature.CODEC);
 		BiomeModifications.addFeature(BiomeSelectors.includeByKey(Biomes.DEEP_DARK), GenerationStep.Decoration.UNDERGROUND_DECORATION, ECHO_LAIR);
 	}

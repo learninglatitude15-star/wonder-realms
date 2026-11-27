@@ -1,0 +1,124 @@
+{
+  "criteria": {
+    "magma": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:magma_dragon"
+          }
+        }
+      }
+    },
+    "crimson": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:crimson_dragon"
+          }
+        }
+      }
+    },
+    "warped": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:warped_dragon"
+          }
+        }
+      }
+    },
+    "soul": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:soul_dragon"
+          }
+        }
+      }
+    },
+    "basalt": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:basalt_dragon"
+          }
+        }
+      }
+    },
+    "blaze": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:blaze_dragon"
+          }
+        }
+      }
+    },
+    "ghast": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:entity_type": "wonderrealms:ghast_dragon"
+          }
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:magma_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.nether_dragons.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.nether_dragons.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "magma"
+    ],
+    [
+      "crimson"
+    ],
+    [
+      "warped"
+    ],
+    [
+      "soul"
+    ],
+    [
+      "basalt"
+    ],
+    [
+      "blaze"
+    ],
+    [
+      "ghast"
+    ]
+  ],
+  "parent": "wonderrealms:tame_dragon"
+}

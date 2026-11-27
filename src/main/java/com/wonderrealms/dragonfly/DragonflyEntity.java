@@ -66,6 +66,8 @@ public class DragonflyEntity extends Animal implements GeoEntity {
 
 	public DragonflyEntity(EntityType<? extends DragonflyEntity> type, Level level) {
 		super(type, level);
+		// Size its hitbox by its scale attribute as its model is sized (a fresh one isn't, until something changes it).
+		this.refreshDimensions();
 		this.moveControl = new FlyingMoveControl(this, 20, true);
 		this.setNoGravity(true);
 	}

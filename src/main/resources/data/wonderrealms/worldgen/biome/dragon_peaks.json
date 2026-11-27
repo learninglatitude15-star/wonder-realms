@@ -58,6 +58,41 @@
               "type": "wonderrealms:star_dragon",
               "count": 1,
               "weight": 1
+            },
+            {
+              "type": "wonderrealms:eclipse_dragon",
+              "count": 1,
+              "weight": 2
+            },
+            {
+              "type": "wonderrealms:magma_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:blaze_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:basalt_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:soul_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:crimson_dragon",
+              "count": 1,
+              "weight": 1
+            },
+            {
+              "type": "wonderrealms:sand_dragon",
+              "count": 1,
+              "weight": 1
             }
           ]
         }

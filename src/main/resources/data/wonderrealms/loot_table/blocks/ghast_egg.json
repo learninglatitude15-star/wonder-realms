@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wonderrealms:ghast_egg"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wonderrealms:blocks/ghast_egg"
+}

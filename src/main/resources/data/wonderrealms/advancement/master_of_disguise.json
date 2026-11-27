@@ -1,0 +1,24 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "wonderrealms:chameleon_egg"
+    },
+    "title": {
+      "translate": "advancements.wonderrealms.master_of_disguise.title"
+    },
+    "description": {
+      "translate": "advancements.wonderrealms.master_of_disguise.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "parent": "wonderrealms:dragon_power"
+}

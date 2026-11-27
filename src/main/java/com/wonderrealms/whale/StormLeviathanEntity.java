@@ -85,6 +85,8 @@ public class StormLeviathanEntity extends Monster implements GeoEntity {
 
 	public StormLeviathanEntity(EntityType<? extends StormLeviathanEntity> type, Level level) {
 		super(type, level);
+		// Size its hitbox by its scale attribute as its model is sized (a fresh one isn't, until something changes it).
+		this.refreshDimensions();
 		this.setNoGravity(true);
 		this.xpReward = 300;
 	}

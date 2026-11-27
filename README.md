@@ -10,6 +10,24 @@ A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) w
 - **The Overcloud**: rise through the storm into a new world above the sky, where floating continents drift over an
   endless sea of clouds.
 
+## What's new in 2.1
+
+- **Sky villages are way bigger**: a whole island each, about a hundred blocks across, with a plaza, four roads,
+  houses, a smithy, a library, farms, an animal pen, a lookout tower and a dock with an airship.
+- **Dragon stables**: two in every sky village, with gentle dragons in the stalls that take to a rider quickly.
+- **The Chameleon dragon**: its scales take on the colour of whatever it stands on, it vanishes against the ground
+  when it keeps still, and its power disguises it as a different kind of dragon. Savannas and birch forests.
+- **Thirty more dragons**: in the Overworld (Ice, Snow, Abyss, Glow, Dripstone, Mud, Venom, Harvest, Sand, Tiger, Fang),
+  the first of the Nether (Magma, Crimson, Warped, Soul, Basalt, Blaze, Ghast) and of the End (Void, Chorus, Shulker,
+  Nebula), more of the Overcloud (Hail, Eclipse, Prism, Zephyr, Phantom), and three only on sky islands (Redstone,
+  Clockwork, Melody). All of them roam the Overcloud too. Fifty-nine kinds in all.
+- **Stop time**: the Clockwork dragon's power freezes the whole world (every mob, arrow in flight, falling block,
+  even the sun) until you use it again, with no cooldown. Eight of its Clockwork Scales around a clock make a
+  **Time Clock** that stops and starts time without a dragon.
+- **Fixes**: the Storm Leviathan can be hurt again (its hitbox was far smaller than it looks), and sky whales and the
+  little creatures have hitboxes that fit them.
+- **Fewer sky islands**: half as many as before, in both skies. See [the changelog](UPDATE-2.1.0.md).
+
 ## What's new in 2.0
 
 - **The Overcloud**: a new dimension above the sky. Floating continents in four biomes (Sunlit Meadows, Storm
@@ -49,7 +67,7 @@ A Fabric mod for Minecraft 26.3 (needs Fabric API and GeckoLib 5.5.6 or newer) w
 - **Rainbow and Air dragons**: the **Rainbow** dragon's breath turns sheep every colour and repaints wool and glass
   (its power is a **Rainbow Burst**); the **Air** dragon turns its rider invisible, and once tamed is invisible itself,
   to everyone but its owner (its power is a **Tornado**). They live on **Rainbow** and **Cloud** islands.
-- **Sky villages**: villagers living on a fenced island green, with cottages, a well, a farm, a golem, and sometimes
+- **Sky villages**: whole islands of houses, farms, a smithy, a library and two dragon stables, and sometimes
   an airship to borrow.
 - **Dragon Wings**: glide like an elytra on wings made from dragon scales and phantom membranes.
 - **The Storm Leviathan**: a second boss, a huge storm whale that hunts players in the sky during thunderstorms.
@@ -258,6 +276,7 @@ islands can have any of its eight new kinds as well as the first eleven, and the
 | **Jungle** | Jungles | A lash of vines that drags foes in and snares them | Its rider strikes harder (Strength) | **Vine Snare**: every foe is yanked in and tied up | Melon slices, cocoa beans |
 | **Echo** | Lairs in the Deep Dark, and gloom sky islands | A sonic pulse that no armor stops, leaving foes in darkness | Echolocation: monsters near its rider glow | **Sonic Boom**: the warden's own blast at every foe | Sculk, echo shards |
 | **Coral** | Beaches | Bubbles that float foes helplessly away | Swims as fast as it flies; its rider swims like a dolphin | **Bubble Trap**: every foe floats off in a bubble | Fish |
+| **Chameleon** (2.1) | Savannas, birch forests | A dazzling spray of colours that blinds and baffles foes | Camouflage: monsters only notice its rider up close | **Disguise**: looks like a different kind of dragon for a minute, and wild dragons of that kind take it for one of their own | Spider eyes, sweet berries |
 | **Sun** | Sunlit Meadows | A sunbeam that blinds foes and burns the undead. Ridden, it bakes sand into glass, clay into terracotta and more | Golden hearts, topped up by the sun | **Solar Flare**: a blinding flash that sets the undead ablaze | Sunflowers |
 | **Moon** | Crystal Reaches | Moon dust that sends foes to sleep | Slow falling, as if on the moon | **Lullaby**: every foe falls asleep | Cookies |
 | **Star** | Crystal Reaches, Dragon Peaks | Stardust that lights foes up and bursts | Lucky star: more experience from kills | **Meteor Shower**: falling stars strike every foe | Glow berries, glowstone dust |
@@ -299,9 +318,19 @@ themes:
 - **Cloud**: lumpy white ground of wool and snow, a windmill, little clouds drifting round it, and rain streaking
   down from beneath. Air dragons nest here.
 
-**Sky villages** (about one island in twenty): a fenced green with a well and a bell, four cottages each with a bed, a
-job site and a villager, a field of crops, an iron golem and a cat, and half the time an airship moored for
-travellers to borrow.
+**Sky villages**: whole islands about a hundred blocks across, fenced all round the edge, far apart in the Overworld's
+sky and closer together above the Overcloud. A paved plaza with a well, a bell and market stalls; four roads out to
+the edge, lit by lamp posts; along them cottages and family houses (a bed, a job site and a villager for each bed), a
+smithy, a library, farms, an animal pen and a lookout tower; a plank dock with the village's airship moored at the end
+(most villages have one to lend); iron golems and cats; and open meadow left between it all for the village to grow
+into. Find one with `/locate structure wonderrealms:sky_village` (or `wonderrealms:overcloud_village` in the
+Overcloud).
+
+**Dragon stables**: every sky village has two, great timber barns with a stall either side of the aisle, a hayloft up
+a ladder, and a tack room at the back with a chest of riding gear, dragon food and sometimes an egg. Most stalls have
+a dragon in them (sometimes still young): stabled dragons are gentle, stay by their stall, never mind visitors, and
+take to a rider as quickly as a hatchling. Feed one its favourite food to make it yours (the *Stable Hand*
+advancement). An empty stall makes a fine home for your own dragon.
 
 **The Storm Leviathan**: in a thunderstorm, players up past y 110 may meet this second boss, a dark whale more than
 sixteen blocks long with 300 health and a boss bar. It circles, charges to ram, and calls lightning down where you
@@ -402,7 +431,7 @@ to sink through them. Sink out of the bottom and you fall back into the Overworl
   dragons.
 
 **Sky islands.** Every kind of sky island from the Overworld floats in the Overcloud too: higher (from y 240), about
-three times as often, and more of them are dragon roosts, sky villages and Sky Citadels. Sky whales swim at every
+more often, and more of them are dragon roosts, pillager outposts and Sky Citadels. Sky whales swim at every
 height.
 
 ## Advancements

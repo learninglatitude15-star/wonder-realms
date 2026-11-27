@@ -27,6 +27,7 @@ public final class SkyIslands {
 
 	public static void init() {
 		Registry.register(BuiltInRegistries.FEATURE_TYPE, WonderRealms.id("sky_island"), SkyIslandFeature.CODEC);
+		SkyVillages.init(); // the villages are a structure of their own, too big for a feature
 		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.SURFACE_STRUCTURES, PLACED);
 		// Villagers high in the sky can only mean a sky village.
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
